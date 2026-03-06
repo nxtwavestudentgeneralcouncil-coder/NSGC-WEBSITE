@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, User, Sun, Moon, Settings, LayoutDashboard, Shield, Bell, Monitor, LogOut, Crown, Megaphone, Calendar, Vote, MessageCircleWarning, Users, Trophy, ShoppingBag, MessageSquare, TerminalSquare, Flag } from 'lucide-react';
+import { Menu, X, User, Sun, Moon, Settings, LayoutDashboard, Shield, Bell, Monitor, LogOut, Crown, Megaphone, Calendar, Vote, MessageCircleWarning, Users, Trophy, ShoppingBag, MessageSquare, TerminalSquare, Flag, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,7 @@ const navItems = [
     { name: 'Events', href: '/events' },
     { name: 'Elections', href: '/elections' },
     { name: 'Achievements', href: '/achievements' },
+    { name: 'Gallery', href: '/gallery' },
     { name: 'Feedback', href: '/feedback' },
     { name: 'Complaints', href: '/complaints' },
 ];
@@ -30,6 +31,7 @@ const navIcons: Record<string, any> = {
     'Events': Calendar,
     'Elections': Vote,
     'Achievements': Trophy,
+    'Gallery': ImageIcon,
     'Feedback': MessageSquare,
     'Complaints': MessageCircleWarning,
 };

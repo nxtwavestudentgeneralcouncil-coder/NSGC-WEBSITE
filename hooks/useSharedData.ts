@@ -118,6 +118,15 @@ export interface Survey {
     dueDate?: string;
 }
 
+export interface GalleryImage {
+    id: string;
+    src: string; // Base64 image string or URL
+    alt: string; // Title or description
+    span: string; // CSS grid span (e.g., 'col-span-1 row-span-1')
+    addedByRole?: string; // Track who uploaded it
+    dateAdded?: string;
+}
+
 // Default Data (Empty)
 const DEFAULT_ANNOUNCEMENTS: Announcement[] = [];
 const DEFAULT_MEMBERS: CouncilMember[] = [];
@@ -128,6 +137,15 @@ const DEFAULT_ACHIEVEMENTS: Achievement[] = [];
 const DEFAULT_USERS: User[] = [];
 const DEFAULT_POLLS: Poll[] = [];
 const DEFAULT_SURVEYS: Survey[] = [];
+const DEFAULT_GALLERY: GalleryImage[] = [
+    { id: "g1", src: "https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=800&h=600&fit=crop", alt: "Convocation 2024", span: "col-span-2 row-span-2" },
+    { id: "g2", src: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=400&h=400&fit=crop", alt: "Tech Fest", span: "col-span-1 row-span-1" },
+    { id: "g3", src: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=400&fit=crop", alt: "Hackathon", span: "col-span-1 row-span-1" },
+    { id: "g4", src: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=400&fit=crop", alt: "Cultural Night", span: "col-span-2 row-span-1" },
+    { id: "g5", src: "https://images.unsplash.com/photo-1475721027767-p42f563d6ce9?w=400&h=800&fit=crop", alt: "Sports Meet", span: "col-span-1 row-span-2" },
+    { id: "g6", src: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=400&h=400&fit=crop", alt: "Workshop", span: "col-span-1 row-span-1" },
+    { id: "g7", src: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400&h=400&fit=crop", alt: "Seminar", span: "col-span-1 row-span-1" },
+];
 
 export function useSharedData() {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -139,6 +157,7 @@ export function useSharedData() {
     const [users, setUsers] = useState<User[]>([]);
     const [polls, setPolls] = useState<Poll[]>([]);
     const [surveys, setSurveys] = useState<Survey[]>([]); // "Feedback" forms
+    const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
     const [totalUsers, setTotalUsers] = useState(0);
     const [isLoaded, setIsLoaded] = useState(false);
 
@@ -171,6 +190,7 @@ export function useSharedData() {
         load('nsgc_v3_totalUsers', 1250, setTotalUsers); // Might want to change this to actual count later
         load('nsgc_v3_polls', DEFAULT_POLLS, setPolls);
         load('nsgc_v3_surveys', DEFAULT_SURVEYS, setSurveys);
+        load('nsgc_v3_gallery', DEFAULT_GALLERY, setGalleryImages);
 
         // Load Total Users count - Deprecated in favor of users.length but kept for backward compatibility if needed
         const storedUsersCount = localStorage.getItem('nsgc_users_count');
@@ -289,6 +309,15 @@ export function useSharedData() {
         });
     };
 
+    const updateGalleryImages = (newData: GalleryImage[] | ((prev: GalleryImage[]) => GalleryImage[])) => {
+        setGalleryImages(prev => {
+            const updated = typeof newData === 'function' ? newData(prev) : newData;
+            localStorage.setItem('nsgc_v3_gallery', JSON.stringify(updated));
+            window.dispatchEvent(new Event('nsgc-data-update'));
+            return updated;
+        });
+    };
+
     return {
         announcements, setAnnouncements: updateAnnouncements,
         members, setMembers: updateMembers,
@@ -299,6 +328,7 @@ export function useSharedData() {
         users, setUsers: updateUsers,
         polls, setPolls: updatePolls,
         surveys, setSurveys: updateSurveys,
+        galleryImages, setGalleryImages: updateGalleryImages,
         isLoaded,
         totalUsers
     };

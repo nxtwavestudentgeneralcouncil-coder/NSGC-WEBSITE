@@ -17,7 +17,7 @@ import { useTickets, TicketProvider, TicketStatus } from '@/lib/ticket-context';
 import Link from 'next/link';
 
 // --- Types ---
-import { useSharedData, Announcement, CouncilMember, Club, Event, Election, Achievement, User } from '@/hooks/useSharedData';
+import { useSharedData, Announcement, CouncilMember, Club, Event, Election, Achievement, User, GalleryImage } from '@/hooks/useSharedData';
 import { ImageCropper } from '@/components/ui/image-cropper';
 
 function PresidentDashboardContent() {
@@ -33,9 +33,9 @@ function PresidentDashboardContent() {
         elections, setElections,
         achievements, setAchievements,
         users, setUsers,
-
         polls, setPolls,
         surveys, setSurveys,
+        galleryImages, setGalleryImages,
         totalUsers
     } = useSharedData();
 
@@ -47,7 +47,7 @@ function PresidentDashboardContent() {
 
     // Add Modal State
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [addModalType, setAddModalType] = useState<'announcement' | 'member' | 'club' | 'event' | 'election' | 'achievement' | 'user' | 'poll' | 'survey'>('announcement');
+    const [addModalType, setAddModalType] = useState<'announcement' | 'member' | 'club' | 'event' | 'election' | 'achievement' | 'user' | 'poll' | 'survey' | 'gallery'>('announcement');
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<{ type: string, id: string } | null>(null);
@@ -91,7 +91,7 @@ function PresidentDashboardContent() {
     }, [router]);
 
     // --- Helpers ---
-    const openAddModal = (type: 'announcement' | 'member' | 'club' | 'event' | 'election' | 'achievement' | 'user' | 'poll' | 'survey', data?: any) => {
+    const openAddModal = (type: 'announcement' | 'member' | 'club' | 'event' | 'election' | 'achievement' | 'user' | 'poll' | 'survey' | 'gallery', data?: any) => {
         setAddModalType(type);
         setFormData(data || {}); // Reset form or load existing data
         setIsAddModalOpen(true);
@@ -197,6 +197,7 @@ function PresidentDashboardContent() {
             case 'user': setUsers(prev => prev.filter(i => i.id !== id)); break;
             case 'poll': setPolls(prev => prev.filter(i => i.id !== id)); break;
             case 'survey': setSurveys(prev => prev.filter(i => i.id !== id)); break;
+            case 'gallery': setGalleryImages(prev => prev.filter(i => i.id !== id)); break;
         }
         setIsDeleteModalOpen(false);
         setItemToDelete(null);
@@ -248,6 +249,15 @@ function PresidentDashboardContent() {
                 break;
             case 'survey':
                 setSurveys(prev => updateState(prev, { ...newData, status: (newData as any).status || 'Active' }));
+                break;
+            case 'gallery':
+                setGalleryImages(prev => updateState(prev, {
+                    ...newData,
+                    src: (newData as GalleryImage).src || '',
+                    span: (newData as GalleryImage).span || 'col-span-1 row-span-1',
+                    addedByRole: 'President',
+                    dateAdded: (newData as GalleryImage).dateAdded || new Date().toISOString().split('T')[0]
+                }));
                 break;
         }
         setIsAddModalOpen(false);
@@ -328,6 +338,7 @@ function PresidentDashboardContent() {
                             <TabsTrigger value="announcements" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Megaphone className="w-4 h-4 mr-2" /> Announcements</TabsTrigger>
                             <TabsTrigger value="members" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Users className="w-4 h-4 mr-2" /> Council Members</TabsTrigger>
                             <TabsTrigger value="clubs" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Flag className="w-4 h-4 mr-2" /> Clubs</TabsTrigger>
+                            <TabsTrigger value="gallery" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Camera className="w-4 h-4 mr-2" /> Gallery</TabsTrigger>
                             <TabsTrigger value="events" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Calendar className="w-4 h-4 mr-2" /> Events</TabsTrigger>
                             <TabsTrigger value="elections" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Vote className="w-4 h-4 mr-2" /> Elections</TabsTrigger>
                             <TabsTrigger value="achievements" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Trophy className="w-4 h-4 mr-2" /> Achievements</TabsTrigger>
@@ -915,6 +926,54 @@ function PresidentDashboardContent() {
                                     </Card>
                                 ))}
                             </div>
+                        </div>
+                    </TabsContent>
+
+                    {/* Gallery Content */}
+                    <TabsContent value="gallery" className="space-y-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-bold">Manage Gallery</h2>
+                            <Button onClick={() => openAddModal('gallery')} className="bg-cyan-500 text-black hover:bg-cyan-400">
+                                <Plus className="w-4 h-4 mr-2" /> Add Image
+                            </Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {galleryImages.map((image) => (
+                                <Card key={image.id} className="bg-white/5 border-white/10 overflow-hidden group">
+                                    <div className="relative h-64 overflow-hidden">
+                                        <img
+                                            src={image.src}
+                                            alt={image.alt}
+                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                            <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                                                <div>
+                                                    <h3 className="text-white font-bold">{image.alt}</h3>
+                                                    <p className="text-xs text-gray-300">Added: {image.dateAdded || 'N/A'}</p>
+                                                </div>
+                                                <Button variant="ghost" size="icon" onClick={() => confirmDelete('gallery', image.id)} className="text-red-500 hover:bg-red-500/20 bg-black/50">
+                                                    <Trash2 className="w-5 h-5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="p-3 bg-white/5 flex gap-2">
+                                        <Badge variant="outline" className="border-cyan-500/30 text-cyan-500 bg-cyan-500/10 text-xs">
+                                            Span: {image.span.split(' ')[0].replace('col-span-', '')}x{image.span.split(' ')[1].replace('row-span-', '')}
+                                        </Badge>
+                                        <Badge variant="outline" className="border-gray-500/30 text-gray-400 text-xs">
+                                            By: {image.addedByRole || 'System'}
+                                        </Badge>
+                                    </div>
+                                </Card>
+                            ))}
+                            {galleryImages.length === 0 && (
+                                <div className="col-span-full py-12 text-center text-gray-400">
+                                    <Camera className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                                    <p>No images in gallery</p>
+                                </div>
+                            )}
                         </div>
                     </TabsContent>
                 </Tabs>
@@ -1576,6 +1635,78 @@ function PresidentDashboardContent() {
                                     />
                                     {formData.image && (
                                         <p className="text-xs text-green-500 mt-1">Image loaded successfully!</p>
+                                    )}
+                                </div>
+                            </>
+                        )}
+
+                        {addModalType === 'gallery' && (
+                            <>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-300">Image Title / Description</label>
+                                    <Input required value={formData.alt || ''} onChange={e => setFormData({ ...formData, alt: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" placeholder="e.g. Convocation 2024" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-gray-300">Grid Width (Columns)</label>
+                                        <select
+                                            value={formData.span ? formData.span.split(' ')[0] : 'col-span-1'}
+                                            onChange={(e) => {
+                                                const currentSpan = formData.span || 'col-span-1 row-span-1';
+                                                const newSpan = `${e.target.value} ${currentSpan.split(' ')[1]}`;
+                                                setFormData({ ...formData, span: newSpan });
+                                            }}
+                                            className="w-full bg-black/50 border border-white/10 rounded-md p-2 text-white focus:border-cyan-500/50 outline-none"
+                                        >
+                                            <option value="col-span-1">1 Column</option>
+                                            <option value="col-span-2">2 Columns</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-gray-300">Grid Height (Rows)</label>
+                                        <select
+                                            value={formData.span ? formData.span.split(' ')[1] : 'row-span-1'}
+                                            onChange={(e) => {
+                                                const currentSpan = formData.span || 'col-span-1 row-span-1';
+                                                const newSpan = `${currentSpan.split(' ')[0]} ${e.target.value}`;
+                                                setFormData({ ...formData, span: newSpan });
+                                            }}
+                                            className="w-full bg-black/50 border border-white/10 rounded-md p-2 text-white focus:border-cyan-500/50 outline-none"
+                                        >
+                                            <option value="row-span-1">1 Row</option>
+                                            <option value="row-span-2">2 Rows</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-300">Image (Max 1MB)</label>
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        required
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                if (file.size > 1048576) { // 1MB limit for gallery to allow better quality
+                                                    alert("File size exceeds 1MB. Please upload a smaller image.");
+                                                    e.target.value = ''; // Clear input
+                                                    return;
+                                                }
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => {
+                                                    setFormData({ ...formData, src: reader.result as string });
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }}
+                                        className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50 file:bg-cyan-500 file:text-black file:border-0 file:rounded-md file:mr-4 file:px-2 file:py-1 file:text-sm file:font-semibold hover:file:bg-cyan-400"
+                                    />
+                                    {formData.src && (
+                                        <div className="mt-4 pt-4 border-t border-white/10">
+                                            <p className="text-sm text-gray-400 mb-2">Preview:</p>
+                                            <img src={formData.src} alt="Preview" className="w-full h-48 object-cover rounded-md border border-white/10" />
+                                        </div>
                                     )}
                                 </div>
                             </>
