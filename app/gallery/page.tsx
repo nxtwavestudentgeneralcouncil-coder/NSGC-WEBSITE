@@ -33,11 +33,13 @@ export default function GalleryPage() {
                                 viewport={{ once: true }}
                                 transition={{ delay: Math.min(index * 0.1, 1) }}
                             >
-                                <img
-                                    src={img.src}
-                                    alt={img.alt}
-                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                />
+                                {img.src && (
+                                    <img
+                                        src={img.src}
+                                        alt={img.alt}
+                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                    />
+                                )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end">
                                     <div className="p-4 w-full">
                                         <p className="text-white font-bold text-lg">{img.alt}</p>

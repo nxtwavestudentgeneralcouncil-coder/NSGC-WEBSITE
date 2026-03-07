@@ -1,84 +1,170 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users, Flag, User, ExternalLink } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Card, CardContent } from '@/components/ui/card';
+import { Search, Bot, Palette, Dribbble, Music, Clapperboard, Globe, User } from 'lucide-react';
 import { useSharedData } from '@/hooks/useSharedData';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
+// Helper to determine category icon and colors
+const getCategoryDetails = (club: any) => {
+    const nameStr = (club.name + ' ' + (club.category || '')).toLowerCase();
+    if (nameStr.includes('tech') || nameStr.includes('robo') || nameStr.includes('algo') || nameStr.includes('code')) {
+        return { icon: Bot, color: 'text-green-400', bg: 'bg-green-500/10', label: 'TECH' };
+    }
+    if (nameStr.includes('art') || nameStr.includes('canvas') || nameStr.includes('design')) {
+        return { icon: Palette, color: 'text-purple-400', bg: 'bg-purple-500/10', label: 'ARTS' };
+    }
+    if (nameStr.includes('sport') || nameStr.includes('striker') || nameStr.includes('athlet')) {
+        return { icon: Dribbble, color: 'text-orange-400', bg: 'bg-orange-500/10', label: 'SPORTS' };
+    }
+    if (nameStr.includes('music') || nameStr.includes('sonic') || nameStr.includes('cultur')) {
+        return { icon: Music, color: 'text-yellow-400', bg: 'bg-yellow-500/10', label: 'CULTURAL' };
+    }
+    if (nameStr.includes('media') || nameStr.includes('cine') || nameStr.includes('film')) {
+        return { icon: Clapperboard, color: 'text-pink-400', bg: 'bg-pink-500/10', label: 'MEDIA' };
+    }
+    return { icon: Globe, color: 'text-cyan-400', bg: 'bg-cyan-500/10', label: 'GENERAL' };
+};
 
 export default function ClubsPage() {
     const { clubs } = useSharedData();
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredClubs = useMemo(() => {
+        return clubs.filter(club => {
+            return club.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                   club.description.toLowerCase().includes(searchQuery.toLowerCase());
+        });
+    }, [clubs, searchQuery]);
 
     return (
-        <div className="min-h-screen bg-black text-white pt-24 md:pt-10 pb-20">
-            <div className="container mx-auto px-4">
-
-                <div className="text-center mb-16">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4">Student Clubs</h1>
-                    <p className="text-gray-400">Join a community. Pursue your passion.</p>
+        <div className="min-h-screen bg-[#030616] text-white pt-24 pb-20 selection:bg-cyan-500/30">
+            <div className="max-w-7xl mx-auto px-6">
+                
+                {/* Header & Search */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+                    <div>
+                        <motion.h1 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-2"
+                        >
+                            Student Clubs
+                        </motion.h1>
+                        <motion.p 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
+                            className="text-slate-400 text-base"
+                        >
+                            Join a community. Pursue your passion.
+                        </motion.p>
+                    </div>
+                    
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="flex items-center gap-4 w-full md:w-auto"
+                    >
+                        <div className="relative w-full md:w-72">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            <Input 
+                                placeholder="Search clubs..." 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-[#0B1224] border-white/5 pl-10 pr-4 h-11 text-white placeholder:text-slate-500 rounded-xl focus-visible:ring-1 focus-visible:ring-cyan-500/50"
+                            />
+                        </div>
+                        <div className="w-11 h-11 shrink-0 bg-[#0B1224] border border-white/5 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors">
+                            <User className="w-5 h-5 text-slate-400" />
+                        </div>
+                    </motion.div>
                 </div>
 
-                {clubs.length === 0 ? (
-                    <div className="flex justify-center items-center h-64">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.5 }}
-                        >
-                            <Card className="bg-white/5 border-white/10 p-10 text-center flex flex-col items-center gap-4 max-w-md">
-                                <Users className="w-16 h-16 text-cyan-500" />
-                                <h2 className="text-2xl font-bold">No Clubs Active Yet</h2>
-                                <p className="text-gray-400">
-                                    New clubs will appear here once registered by the Student Council.
-                                </p>
-                            </Card>
-                        </motion.div>
-                    </div>
+                {/* Grid */}
+                {filteredClubs.length === 0 ? (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-center py-24 bg-[#0B1224]/50 border border-dashed border-white/10 rounded-2xl"
+                    >
+                        <Search className="w-12 h-12 mx-auto text-slate-600 mb-4" />
+                        <h3 className="text-xl font-bold text-white mb-2">No clubs found</h3>
+                        <p className="text-slate-400">Try adjusting your filters or search terms.</p>
+                    </motion.div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {clubs.map((club, index) => (
-                            <motion.div
-                                key={club.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                            >
-                                <Card className="bg-white/5 border-white/10 hover:border-cyan-500/50 transition-colors h-full">
-                                    <CardHeader>
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div className="w-12 h-12 rounded-lg bg-cyan-500/20 text-cyan-500 flex items-center justify-center">
-                                                <Flag className="w-6 h-6" />
-                                            </div>
-                                            <Badge variant="secondary" className="bg-white/10 text-gray-300">
-                                                {club.members} Members
-                                            </Badge>
-                                        </div>
-                                        <CardTitle className="text-2xl">{club.name}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <p className="text-gray-400 mb-6 min-h-[48px]">{club.description}</p>
-                                        <div className="pt-4 border-t border-white/5 space-y-4">
-                                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                                                <User className="w-4 h-4" />
-                                                <span>Lead by <span className="text-cyan-500 font-medium">{club.lead}</span></span>
-                                            </div>
-                                            {club.website && (
-                                                <a href={club.website} target="_blank" rel="noopener noreferrer" className="block w-full">
-                                                    <Button variant="outline" className="w-full border-white/10 hover:bg-white/5 hover:text-cyan-500 group">
-                                                        <ExternalLink className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                                                        Visit Website
-                                                    </Button>
-                                                </a>
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </motion.div>
-                        ))}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <AnimatePresence mode="popLayout">
+                            {filteredClubs.map((club, index) => {
+                                const { icon: Icon, color, bg, label } = getCategoryDetails(club);
+                                const mockAvatars = ["bg-slate-700", "bg-slate-600", "bg-slate-500"];
+                                const remainingMembers = Math.max(0, club.members - mockAvatars.length);
+
+                                return (
+                                    <motion.div
+                                        key={club.id}
+                                        layout
+                                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                                    >
+                                        <Card className="bg-[#0B1224]/80 border-white/5 backdrop-blur-md overflow-hidden hover:border-white/10 transition-all duration-500 group h-full cursor-pointer hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+                                            <CardContent className="p-6 flex flex-col h-full">
+                                                
+                                                {/* Top Row: Icon & Badge */}
+                                                <div className="flex justify-between items-start mb-6">
+                                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${bg} ${color} shadow-inner transition-transform duration-500 group-hover:scale-110`}>
+                                                        <Icon className="w-6 h-6" />
+                                                    </div>
+                                                    <Badge className="bg-white/5 hover:bg-white/10 text-slate-300 border-none px-2 py-0.5 text-[9px] font-bold tracking-widest uppercase rounded-sm">
+                                                        {label}
+                                                    </Badge>
+                                                </div>
+
+                                                {/* Titles & Desc */}
+                                                <div className="flex-grow">
+                                                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors line-clamp-1">
+                                                        {club.name}
+                                                    </h3>
+                                                    <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed h-[42px]">
+                                                        {club.description}
+                                                    </p>
+                                                </div>
+
+                                                {/* Bottom Row: Avatars & Count */}
+                                                <div className="flex justify-between items-end mt-6 pt-6 border-t border-white/5">
+                                                    <div className="flex -space-x-3">
+                                                        {mockAvatars.map((bgColor, i) => (
+                                                            <div 
+                                                                key={i} 
+                                                                className={`w-8 h-8 rounded-full border-2 border-[#0B1224] ${bgColor} relative`}
+                                                                style={{ zIndex: 30 - i * 10 }}
+                                                            />
+                                                        ))}
+                                                        {remainingMembers > 0 && (
+                                                            <div className="w-8 h-8 rounded-full border-2 border-[#0B1224] bg-white/10 flex items-center justify-center text-[10px] font-bold text-white relative z-0 backdrop-blur-sm">
+                                                                +{Math.min(remainingMembers, 99)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-xs font-medium text-slate-500">
+                                                        {club.members} Members
+                                                    </span>
+                                                </div>
+
+                                            </CardContent>
+                                        </Card>
+                                    </motion.div>
+                                );
+                            })}
+                        </AnimatePresence>
                     </div>
                 )}
-
             </div>
         </div>
     );

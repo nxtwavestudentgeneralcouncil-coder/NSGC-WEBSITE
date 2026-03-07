@@ -251,9 +251,13 @@ function PresidentDashboardContent() {
                 setSurveys(prev => updateState(prev, { ...newData, status: (newData as any).status || 'Active' }));
                 break;
             case 'gallery':
+                if (!(newData as any).src) {
+                    alert("Please upload an image before saving.");
+                    return;
+                }
                 setGalleryImages(prev => updateState(prev, {
                     ...newData,
-                    src: (newData as GalleryImage).src || '',
+                    src: (newData as GalleryImage).src,
                     span: (newData as GalleryImage).span || 'col-span-1 row-span-1',
                     addedByRole: 'President',
                     dateAdded: (newData as GalleryImage).dateAdded || new Date().toISOString().split('T')[0]
@@ -268,49 +272,50 @@ function PresidentDashboardContent() {
     }
 
     return (
-        <div className="min-h-screen bg-black text-white pt-24 md:pt-10 pb-20">
-            <div className="container mx-auto px-4">
+        <div className="min-h-screen bg-[#0B0B14] text-white pt-24 md:pt-16 pb-20 font-sans">
+            <div className="container mx-auto px-4 lg:px-8 max-w-[1400px]">
 
                 {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-12 relative">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-cyan-600">
-                                President's Office
-                            </h1>
-                            <Badge className="bg-cyan-500/20 text-cyan-500 border-cyan-500/50">Authorized</Badge>
-                        </div>
-                        <p className="text-gray-400">Manage campus activities, board members, and announcements.</p>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 mt-4 relative">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+                        <h1 className="text-3xl md:text-[40px] font-extrabold tracking-widest text-[#0ea5e9] uppercase leading-none font-mono">
+                            President's Office
+                        </h1>
+                        <Badge variant="outline" className="border-[#0ea5e9]/50 text-[#0ea5e9] bg-transparent rounded-full px-4 py-1 text-[10px] font-bold tracking-[0.2em] uppercase mt-2 md:mt-0">
+                            Authorized Access
+                        </Badge>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="text-sm text-[#94a3b8] md:absolute md:left-0 md:-bottom-6 mt-2 md:mt-0">
+                        Manage campus activities, board members, and announcements.
+                    </div>
+                    <div className="flex items-center gap-4 self-end md:self-auto mt-4 md:mt-0">
                         {/* Quick Access Hamburger */}
                         <div className="relative">
                             <Button
                                 variant="outline"
-                                className="border-white/20 hover:bg-white/10 text-white"
-                                onClick={() => setActiveTab(activeTab === 'quick-access' ? 'announcements' : 'quick-access')} // Toggle state or simplified logic
+                                className="border-white/10 bg-transparent hover:bg-white/5 text-white rounded-lg h-10 px-4 text-xs font-bold tracking-widest uppercase transition-colors"
+                                onClick={() => setActiveTab(activeTab === 'quick-access' ? 'announcements' : 'quick-access')}
                             >
-                                <Menu className="w-4 h-4 mr-2" /> Quick Access
+                                <Menu className="w-4 h-4 md:mr-2" /> <span className="hidden md:inline">Quick Access</span>
                             </Button>
-                            {/* Note: User asked for a hamburger menu. I will implement a dropdown below. */}
                             {activeTab === 'quick-access' && (
-                                <div className="absolute top-full right-0 mt-2 w-56 bg-black/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-xl overflow-hidden z-50 p-1">
-                                    <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Quick Links</div>
+                                <div className="absolute top-full right-0 mt-2 w-56 bg-[#111625] border border-white/5 rounded-xl shadow-2xl overflow-hidden z-50 p-2">
+                                    <div className="px-3 py-2 text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Quick Links</div>
                                     <Link href="/complaints">
-                                        <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer">
-                                            <FileText className="w-4 h-4 text-red-500" />
+                                        <div className="flex items-center gap-3 px-3 py-2.5 text-sm text-[#94a3b8] hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer font-medium">
+                                            <FileText className="w-4 h-4 text-[#ef4444]" />
                                             Submit Complaint
                                         </div>
                                     </Link>
                                     <Link href="/marketplace">
-                                        <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer">
-                                            <ShoppingBag className="w-4 h-4 text-cyan-500" />
+                                        <div className="flex items-center gap-3 px-3 py-2.5 text-sm text-[#94a3b8] hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer font-medium">
+                                            <ShoppingBag className="w-4 h-4 text-[#0ea5e9]" />
                                             Sell Item
                                         </div>
                                     </Link>
                                     <Link href="/feedback">
-                                        <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer">
-                                            <BarChart2 className="w-4 h-4 text-blue-500" />
+                                        <div className="flex items-center gap-3 px-3 py-2.5 text-sm text-[#94a3b8] hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer font-medium">
+                                            <BarChart2 className="w-4 h-4 text-[#8b5cf6]" />
                                             Take Survey
                                         </div>
                                     </Link>
@@ -318,43 +323,57 @@ function PresidentDashboardContent() {
                             )}
                         </div>
 
+
+
                         <Button
                             variant="ghost"
-                            className="text-gray-400 hover:text-white"
+                            className="text-[#64748B] hover:text-white hover:bg-white/5 text-xs font-bold tracking-widest uppercase h-10 px-3"
                             onClick={() => {
                                 localStorage.removeItem('userRole');
                                 router.push('/login');
                             }}
                         >
-                            <LogOut className="w-4 h-4 mr-2" /> Sign Out
+                            <span className="hidden sm:inline mr-2">Sign Out</span> <LogOut className="w-4 h-4" />
                         </Button>
                     </div>
                 </div>
 
                 {/* Tabs */}
-                <Tabs defaultValue="announcements" value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-                    <div className="overflow-x-auto pb-2">
-                        <TabsList className="bg-white/5 border border-white/10 p-1">
-                            <TabsTrigger value="announcements" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Megaphone className="w-4 h-4 mr-2" /> Announcements</TabsTrigger>
-                            <TabsTrigger value="members" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Users className="w-4 h-4 mr-2" /> Council Members</TabsTrigger>
-                            <TabsTrigger value="clubs" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Flag className="w-4 h-4 mr-2" /> Clubs</TabsTrigger>
-                            <TabsTrigger value="gallery" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Camera className="w-4 h-4 mr-2" /> Gallery</TabsTrigger>
-                            <TabsTrigger value="events" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Calendar className="w-4 h-4 mr-2" /> Events</TabsTrigger>
-                            <TabsTrigger value="elections" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Vote className="w-4 h-4 mr-2" /> Elections</TabsTrigger>
-                            <TabsTrigger value="achievements" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Trophy className="w-4 h-4 mr-2" /> Achievements</TabsTrigger>
-                            <TabsTrigger value="complaints" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><MessageSquare className="w-4 h-4 mr-2" /> Complaints</TabsTrigger>
-                            <TabsTrigger value="students" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><Users className="w-4 h-4 mr-2" /> Students</TabsTrigger>
-                            <TabsTrigger value="polls" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"><BarChart2 className="w-4 h-4 mr-2" /> Feedback & Polls</TabsTrigger>
+                <Tabs defaultValue="announcements" value={activeTab} onValueChange={setActiveTab} className="space-y-10">
+                    <div className="bg-[#111625] rounded-[24px] p-2 border border-white/5 mb-10 shadow-xl overflow-hidden hidden md:block">
+                        <TabsList className="grid grid-cols-4 grid-rows-2 h-auto gap-2 bg-transparent p-0 w-full">
+                            <TabsTrigger value="announcements" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Megaphone className="w-4 h-4 mr-3" /> Announcements</TabsTrigger>
+                            <TabsTrigger value="members" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Users className="w-4 h-4 mr-3" /> Council Members</TabsTrigger>
+                            <TabsTrigger value="clubs" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Flag className="w-4 h-4 mr-3" /> Clubs</TabsTrigger>
+                            <TabsTrigger value="gallery" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Camera className="w-4 h-4 mr-3" /> Gallery</TabsTrigger>
+                            <TabsTrigger value="events" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Calendar className="w-4 h-4 mr-3" /> Events</TabsTrigger>
+                            <TabsTrigger value="elections" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Vote className="w-4 h-4 mr-3" /> Elections</TabsTrigger>
+                            <TabsTrigger value="achievements" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Trophy className="w-4 h-4 mr-3" /> Achievements</TabsTrigger>
+                            <TabsTrigger value="complaints" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><MessageSquare className="w-4 h-4 mr-3" /> Complaints</TabsTrigger>
+                        </TabsList>
+                    </div>
+
+                    {/* Mobile fallback for tabs */}
+                    <div className="md:hidden overflow-x-auto pb-4 mb-2 -mx-4 px-4 scrollbar-hide">
+                        <TabsList className="inline-flex h-auto bg-[#111625] p-1 rounded-full border border-white/5">
+                            <TabsTrigger value="announcements" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Megaphone className="w-3.5 h-3.5 mr-2" /> Announcements</TabsTrigger>
+                            <TabsTrigger value="members" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Users className="w-3.5 h-3.5 mr-2" /> Members</TabsTrigger>
+                            <TabsTrigger value="clubs" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Flag className="w-3.5 h-3.5 mr-2" /> Clubs</TabsTrigger>
+                            <TabsTrigger value="gallery" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Camera className="w-3.5 h-3.5 mr-2" /> Gallery</TabsTrigger>
+                            <TabsTrigger value="events" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Calendar className="w-3.5 h-3.5 mr-2" /> Events</TabsTrigger>
+                            <TabsTrigger value="elections" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Vote className="w-3.5 h-3.5 mr-2" /> Elections</TabsTrigger>
+                            <TabsTrigger value="achievements" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Trophy className="w-3.5 h-3.5 mr-2" /> Achievements</TabsTrigger>
+                            <TabsTrigger value="complaints" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><MessageSquare className="w-3.5 h-3.5 mr-2" /> Complaints</TabsTrigger>
                         </TabsList>
                     </div>
 
                     {/* Announcements Content */}
-                    <TabsContent value="announcements" className="space-y-6">
+                    <TabsContent value="announcements" className="space-y-8">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <h2 className="text-2xl font-bold">Announcements</h2>
-                            <div className="flex gap-2 w-full md:w-auto">
+                            <h2 className="text-2xl font-mono uppercase tracking-widest text-white">Announcements</h2>
+                            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                                 <select
-                                    className="bg-black/50 border border-white/10 rounded-md p-2 text-sm text-gray-300 outline-none focus:border-cyan-500/50"
+                                    className="bg-[#111625] border border-white/5 rounded-lg px-4 py-2.5 text-sm text-[#94a3b8] font-medium outline-none focus:border-[#0ea5e9]/50 transition-colors w-full sm:w-[200px]"
                                     value={announcementFilter}
                                     onChange={(e) => setAnnouncementFilter(e.target.value as any)}
                                 >
@@ -363,119 +382,149 @@ function PresidentDashboardContent() {
                                     <option value="Council">Added by Council</option>
                                     <option value="Club Manager">Added by Clubs</option>
                                 </select>
-                                <Button onClick={() => openAddModal('announcement')} className="bg-cyan-500 text-black hover:bg-cyan-400 whitespace-nowrap"><Plus className="w-4 h-4 mr-2 md:mr-0 lg:mr-2" /> <span className="hidden lg:inline">New Announcement</span></Button>
+                                <Button onClick={() => openAddModal('announcement')} className="bg-[#0ea5e9] text-black hover:bg-[#38bdf8] font-bold tracking-wide rounded-lg px-6 py-2.5 h-auto transition-colors w-full sm:w-auto">
+                                    <Plus className="w-4 h-4 mr-2" /> New Announcement
+                                </Button>
                             </div>
                         </div>
-                        <div className="grid gap-4">
-                            {announcements
-                                .filter(a => announcementFilter === 'All' ? true : a.addedByRole === announcementFilter)
-                                .map((item) => (
-                                    <Card key={item.id} className="bg-white/5 border-white/10 hover:border-cyan-500/50 transition-colors">
-                                        <div className="p-6 flex flex-col md:flex-row justify-between gap-4">
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <h3 className="text-xl font-bold">{item.title}</h3>
-                                                    <Badge variant="outline" className={item.priority === 'High' ? 'text-red-500 border-red-500' : 'text-blue-500 border-blue-500'}>{item.priority}</Badge>
-                                                    <Badge variant="secondary" className="bg-white/10 text-gray-300">{item.category || 'General'}</Badge>
+
+                        {announcements.filter(a => announcementFilter === 'All' ? true : a.addedByRole === announcementFilter).length === 0 ? (
+                            <div className="border-2 border-dashed border-white/5 rounded-[32px] p-20 flex flex-col items-center justify-center text-center bg-[#111625]/20 mt-8 min-h-[400px]">
+                                <Megaphone className="w-20 h-20 text-[#64748B] mb-8 opacity-20" />
+                                <h3 className="text-2xl font-mono uppercase tracking-[0.2em] text-[#94a3b8] mb-4">No Active Announcements</h3>
+                                <p className="text-[#64748B] italic max-w-sm">All broadcasts to the campus community will appear here. Start by creating your first update.</p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-4 mt-8">
+                                {announcements
+                                    .filter(a => announcementFilter === 'All' ? true : a.addedByRole === announcementFilter)
+                                    .map((item) => (
+                                        <Card key={item.id} className="bg-white/5 border-white/10 hover:border-cyan-500/50 transition-colors">
+                                            <div className="p-6 flex flex-col md:flex-row justify-between gap-4">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <h3 className="text-xl font-bold">{item.title}</h3>
+                                                        <Badge variant="outline" className={item.priority === 'High' ? 'text-red-500 border-red-500' : 'text-blue-500 border-blue-500'}>{item.priority}</Badge>
+                                                        <Badge variant="secondary" className="bg-white/10 text-gray-300">{item.category || 'General'}</Badge>
+                                                    </div>
+                                                    <p className="text-gray-400 mb-2">{item.content}</p>
+                                                    <p className="text-xs text-gray-500">Posted: {item.date}</p>
                                                 </div>
-                                                <p className="text-gray-400 mb-2">{item.content}</p>
-                                                <p className="text-xs text-gray-500">Posted: {item.date}</p>
+                                                <div className="flex flex-col gap-2">
+                                                    {item.link && (
+                                                        <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer">
+                                                            <Button variant="outline" size="sm" className="w-full border-cyan-500/20 text-cyan-500 hover:bg-cyan-500/10 hover:text-cyan-400 mb-2 md:mb-0">
+                                                                <ExternalLink className="w-4 h-4 mr-2" /> View Link
+                                                            </Button>
+                                                        </a>
+                                                    )}
+                                                    <Button variant="outline" size="sm" onClick={() => openAddModal('announcement', item)} className="border-white/20 text-gray-300 hover:text-white mb-2 md:mb-0">
+                                                        Edit
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" onClick={() => confirmDelete('announcement', item.id)} className="text-red-500 hover:bg-red-500/10 hover:text-red-400 self-start md:self-center bg-black/20">
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </Button>
+                                                </div>
                                             </div>
-                                            <div className="flex flex-col gap-2">
-                                                {item.link && (
-                                                    <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer">
-                                                        <Button variant="outline" size="sm" className="w-full border-cyan-500/20 text-cyan-500 hover:bg-cyan-500/10 hover:text-cyan-400 mb-2 md:mb-0">
-                                                            <ExternalLink className="w-4 h-4 mr-2" /> View Link
-                                                        </Button>
-                                                    </a>
-                                                )}
-                                                <Button variant="outline" size="sm" onClick={() => openAddModal('announcement', item)} className="border-white/20 text-gray-300 hover:text-white mb-2 md:mb-0">
-                                                    Edit
-                                                </Button>
-                                                <Button variant="ghost" size="icon" onClick={() => confirmDelete('announcement', item.id)} className="text-red-500 hover:bg-red-500/10 hover:text-red-400 self-start md:self-center bg-black/20">
-                                                    <Trash2 className="w-5 h-5" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
-                            {announcements.length === 0 && <p className="text-gray-500 italic">No active announcements.</p>}
-                        </div>
+                                        </Card>
+                                    ))}
+                            </div>
+                        )}
                     </TabsContent>
 
                     {/* Council Members Content */}
-                    <TabsContent value="members" className="space-y-6">
-                        <div className="flex justify-between items-center">
-                            <h2 className="text-2xl font-bold">Council Members</h2>
-                            <Button onClick={() => openAddModal('member')} className="bg-cyan-500 text-black hover:bg-cyan-400"><Plus className="w-4 h-4 mr-2" /> Add Member</Button>
+                    <TabsContent value="members" className="space-y-8">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <h2 className="text-2xl font-mono uppercase tracking-widest text-white">Council Members</h2>
+                            <Button onClick={() => openAddModal('member')} className="bg-[#0ea5e9] text-black hover:bg-[#38bdf8] font-bold tracking-wide rounded-lg px-6 py-2.5 h-auto transition-colors w-full sm:w-auto">
+                                <Plus className="w-4 h-4 mr-2" /> Add Member
+                            </Button>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {members.map((member) => (
-                                <Card key={member.id} className="bg-white/5 border-white/10">
-                                    <CardContent className="p-6 flex flex-col items-center text-center gap-3">
-                                        <div className="w-16 h-16 rounded-full bg-cyan-500/20 text-cyan-500 flex items-center justify-center mb-2 overflow-hidden border border-cyan-500/30">
-                                            {member.image ? (
-                                                <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <Users className="w-8 h-8" />
-                                            )}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-lg">{member.name}</h3>
-                                            <p className="text-cyan-500 text-sm">{member.role}</p>
-                                            <p className="text-gray-500 text-xs mt-1">{member.email}</p>
-                                        </div>
-                                        <div className="flex gap-2 w-full mt-2">
-                                            <Button variant="outline" size="sm" onClick={() => openAddModal('member', member)} className="flex-1 border-white/20 text-gray-300 hover:text-white">Edit</Button>
-                                            <Button variant="ghost" size="sm" onClick={() => confirmDelete('member', member.id)} className="flex-1 text-red-500 hover:text-red-400">Remove</Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
+                        {members.length === 0 ? (
+                            <div className="border-2 border-dashed border-white/5 rounded-[32px] p-20 flex flex-col items-center justify-center text-center bg-[#111625]/20 mt-8 min-h-[400px]">
+                                <Users className="w-20 h-20 text-[#64748B] mb-8 opacity-20" />
+                                <h3 className="text-2xl font-mono uppercase tracking-[0.2em] text-[#94a3b8] mb-4">No Council Members</h3>
+                                <p className="text-[#64748B] italic max-w-sm">There are no registered council members yet. Add members to build your team.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+                                {members.map((member) => (
+                                    <Card key={member.id} className="bg-white/5 border-white/10">
+                                        <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+                                            <div className="w-16 h-16 rounded-full bg-cyan-500/20 text-cyan-500 flex items-center justify-center mb-2 overflow-hidden border border-cyan-500/30">
+                                                {member.image ? (
+                                                    <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <Users className="w-8 h-8" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-lg">{member.name}</h3>
+                                                <p className="text-cyan-500 text-sm">{member.role}</p>
+                                                <p className="text-gray-500 text-xs mt-1">{member.email}</p>
+                                            </div>
+                                            <div className="flex gap-2 w-full mt-2">
+                                                <Button variant="outline" size="sm" onClick={() => openAddModal('member', member)} className="flex-1 border-white/20 text-gray-300 hover:text-white">Edit</Button>
+                                                <Button variant="ghost" size="sm" onClick={() => confirmDelete('member', member.id)} className="flex-1 text-red-500 hover:text-red-400">Remove</Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
                     </TabsContent>
 
                     {/* Clubs Content */}
-                    <TabsContent value="clubs" className="space-y-6">
-                        <div className="flex justify-between items-center">
-                            <h2 className="text-2xl font-bold">Student Clubs</h2>
-                            <Button onClick={() => openAddModal('club')} className="bg-cyan-500 text-black hover:bg-cyan-400"><Plus className="w-4 h-4 mr-2" /> Register Club</Button>
+                    <TabsContent value="clubs" className="space-y-8">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <h2 className="text-2xl font-mono uppercase tracking-widest text-white">Student Clubs</h2>
+                            <Button onClick={() => openAddModal('club')} className="bg-[#0ea5e9] text-black hover:bg-[#38bdf8] font-bold tracking-wide rounded-lg px-6 py-2.5 h-auto transition-colors w-full sm:w-auto">
+                                <Plus className="w-4 h-4 mr-2" /> Register Club
+                            </Button>
                         </div>
-                        <div className="grid gap-4">
-                            {clubs.map((club) => (
-                                <Card key={club.id} className="bg-white/5 border-white/10">
-                                    <CardContent className="p-6 flex flex-col md:flex-row justify-between items-center gap-4">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-lg bg-cyan-500/20 text-cyan-500 flex items-center justify-center">
-                                                <Flag className="w-6 h-6" />
+                        {clubs.length === 0 ? (
+                            <div className="border-2 border-dashed border-white/5 rounded-[32px] p-20 flex flex-col items-center justify-center text-center bg-[#111625]/20 mt-8 min-h-[400px]">
+                                <Flag className="w-20 h-20 text-[#64748B] mb-8 opacity-20" />
+                                <h3 className="text-2xl font-mono uppercase tracking-[0.2em] text-[#94a3b8] mb-4">No Student Clubs</h3>
+                                <p className="text-[#64748B] italic max-w-sm">No clubs have been registered yet. Create clubs to engage the student community.</p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-4 mt-8">
+                                {clubs.map((club) => (
+                                    <Card key={club.id} className="bg-white/5 border-white/10">
+                                        <CardContent className="p-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-lg bg-cyan-500/20 text-cyan-500 flex items-center justify-center">
+                                                    <Flag className="w-6 h-6" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold">{club.name}</h3>
+                                                    <p className="text-sm text-gray-400">{club.description}</p>
+                                                    <p className="text-xs text-gray-500 mt-1">Lead: {club.lead} • {club.members} Members</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h3 className="font-bold">{club.name}</h3>
-                                                <p className="text-sm text-gray-400">{club.description}</p>
-                                                <p className="text-xs text-gray-500 mt-1">Lead: {club.lead} • {club.members} Members</p>
+                                            <div className="flex items-center gap-2">
+                                                <Button variant="outline" size="sm" onClick={() => openAddModal('club', club)} className="border-white/20 text-gray-300 hover:text-white">
+                                                    Edit
+                                                </Button>
+                                                <Button variant="ghost" size="icon" onClick={() => confirmDelete('club', club.id)} className="text-red-500 hover:bg-red-500/10">
+                                                    <Trash2 className="w-5 h-5" />
+                                                </Button>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Button variant="outline" size="sm" onClick={() => openAddModal('club', club)} className="border-white/20 text-gray-300 hover:text-white">
-                                                Edit
-                                            </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => confirmDelete('club', club.id)} className="text-red-500 hover:bg-red-500/10">
-                                                <Trash2 className="w-5 h-5" />
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
                     </TabsContent>
 
                     {/* Events Content */}
-                    <TabsContent value="events" className="space-y-6">
+                    <TabsContent value="events" className="space-y-8">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <h2 className="text-2xl font-bold">Upcoming Events</h2>
-                            <div className="flex gap-2 w-full md:w-auto">
+                            <h2 className="text-2xl font-mono uppercase tracking-widest text-white">Upcoming Events</h2>
+                            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                                 <select
-                                    className="bg-black/50 border border-white/10 rounded-md p-2 text-sm text-gray-300 outline-none focus:border-cyan-500/50"
+                                    className="bg-[#111625] border border-white/5 rounded-lg px-4 py-2.5 text-sm text-[#94a3b8] font-medium outline-none focus:border-[#0ea5e9]/50 transition-colors w-full sm:w-[200px]"
                                     value={eventFilter}
                                     onChange={(e) => setEventFilter(e.target.value as any)}
                                 >
@@ -484,130 +533,151 @@ function PresidentDashboardContent() {
                                     <option value="Council">Added by Council</option>
                                     <option value="Club Manager">Added by Clubs</option>
                                 </select>
-                                <Button onClick={() => openAddModal('event')} className="bg-cyan-500 text-black hover:bg-cyan-400 whitespace-nowrap"><Plus className="w-4 h-4 mr-2 md:mr-0 lg:mr-2" /> <span className="hidden lg:inline">Create Event</span></Button>
+                                <Button onClick={() => openAddModal('event')} className="bg-[#0ea5e9] text-black hover:bg-[#38bdf8] font-bold tracking-wide rounded-lg px-6 py-2.5 h-auto transition-colors w-full sm:w-auto">
+                                    <Plus className="w-4 h-4 mr-2" /> Create Event
+                                </Button>
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {events
-                                .filter(e => eventFilter === 'All' ? true : e.addedByRole === eventFilter)
-                                .map((event) => (
-                                    <Card key={event.id} className="bg-white/5 border-white/10 group relative overflow-hidden">
-                                        {event.image ? (
-                                            <div className="h-32 w-full relative">
-                                                <img src={event.image} alt={event.name} className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity" />
-                                                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80" />
-                                                <div className="absolute bottom-2 left-4">
-                                                    <Badge variant="outline" className="border-white/20 bg-black/50 backdrop-blur-md">{event.type}</Badge>
+
+                        {events.filter(e => eventFilter === 'All' ? true : e.addedByRole === eventFilter).length === 0 ? (
+                            <div className="border-2 border-dashed border-white/5 rounded-[32px] p-20 flex flex-col items-center justify-center text-center bg-[#111625]/20 mt-8 min-h-[400px]">
+                                <Calendar className="w-20 h-20 text-[#64748B] mb-8 opacity-20" />
+                                <h3 className="text-2xl font-mono uppercase tracking-[0.2em] text-[#94a3b8] mb-4">No Upcoming Events</h3>
+                                <p className="text-[#64748B] italic max-w-sm">There are no events scheduled at the moment. Plan and create new events for the campus.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                                {events
+                                    .filter(e => eventFilter === 'All' ? true : e.addedByRole === eventFilter)
+                                    .map((event) => (
+                                        <Card key={event.id} className="bg-white/5 border-white/10 group relative overflow-hidden">
+                                            {event.image ? (
+                                                <div className="h-32 w-full relative">
+                                                    <img src={event.image} alt={event.name} className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity" />
+                                                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80" />
+                                                    <div className="absolute bottom-2 left-4">
+                                                        <Badge variant="outline" className="border-white/20 bg-black/50 backdrop-blur-md">{event.type}</Badge>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ) : (
-                                            <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500" />
-                                        )}
-                                        <CardContent className={`p-6 ${event.image ? 'pt-4' : 'pl-8'}`}>
-                                            <div className="flex justify-between items-start mb-4">
-                                                {!event.image && <Badge variant="outline" className="border-white/20">{event.type}</Badge>}
-                                                <div className="flex items-center gap-1 -mt-2 -mr-2 ml-auto z-10 relative">
-                                                    <Button variant="ghost" size="sm" onClick={() => openAddModal('event', event)} className="text-gray-300 hover:text-white h-8 px-2">
-                                                        Edit
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" onClick={() => confirmDelete('event', event.id)} className="text-red-500 hover:bg-red-500/10 h-8 w-8">
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                            <h3 className="text-xl font-bold mb-2">{event.name}</h3>
-                                            <div className="flex items-center gap-2 text-sm text-gray-400">
-                                                <Calendar className="w-4 h-4" />
-                                                <span>{event.date}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
-                                                <Star className="w-4 h-4" />
-                                                <span>{event.location}</span>
-                                            </div>
-                                            {event.registrationLink && (
-                                                <div className="mt-3 pt-3 border-t border-white/10">
-                                                    <a href={event.registrationLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-cyan-500 hover:text-cyan-400 font-medium">
-                                                        <ExternalLink className="w-3 h-3" />
-                                                        Registration Link
-                                                    </a>
-                                                </div>
+                                            ) : (
+                                                <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500" />
                                             )}
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                        </div>
+                                            <CardContent className={`p-6 ${event.image ? 'pt-4' : 'pl-8'}`}>
+                                                <div className="flex justify-between items-start mb-4">
+                                                    {!event.image && <Badge variant="outline" className="border-white/20">{event.type}</Badge>}
+                                                    <div className="flex items-center gap-1 -mt-2 -mr-2 ml-auto z-10 relative">
+                                                        <Button variant="ghost" size="sm" onClick={() => openAddModal('event', event)} className="text-gray-300 hover:text-white h-8 px-2">
+                                                            Edit
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => confirmDelete('event', event.id)} className="text-red-500 hover:bg-red-500/10 h-8 w-8">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                                <h3 className="text-xl font-bold mb-2">{event.name}</h3>
+                                                <div className="flex items-center gap-2 text-sm text-gray-400">
+                                                    <Calendar className="w-4 h-4" />
+                                                    <span>{event.date}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
+                                                    <Star className="w-4 h-4" />
+                                                    <span>{event.location}</span>
+                                                </div>
+                                                {event.registrationLink && (
+                                                    <div className="mt-3 pt-3 border-t border-white/10">
+                                                        <a href={event.registrationLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-cyan-500 hover:text-cyan-400 font-medium">
+                                                            <ExternalLink className="w-3 h-3" />
+                                                            Registration Link
+                                                        </a>
+                                                    </div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                            </div>
+                        )}
                     </TabsContent>
 
                     {/* Elections Content */}
-                    <TabsContent value="elections" className="space-y-6">
-                        <div className="flex justify-between items-center">
-                            <h2 className="text-2xl font-bold">Elections</h2>
-                            <Button onClick={() => openAddModal('election')} className="bg-cyan-500 text-black hover:bg-cyan-400"><Plus className="w-4 h-4 mr-2" /> Schedule Election</Button>
+                    <TabsContent value="elections" className="space-y-8">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <h2 className="text-2xl font-mono uppercase tracking-widest text-white">Elections</h2>
+                            <Button onClick={() => openAddModal('election')} className="bg-[#0ea5e9] text-black hover:bg-[#38bdf8] font-bold tracking-wide rounded-lg px-6 py-2.5 h-auto transition-colors w-full sm:w-auto">
+                                <Plus className="w-4 h-4 mr-2" /> Schedule Election
+                            </Button>
                         </div>
-                        <div className="grid gap-4">
-                            {elections.map((election) => (
-                                <Card key={election.id} className="bg-white/5 border-white/10">
-                                    <div className="p-6 flex flex-col md:flex-row justify-between gap-4">
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <h3 className="text-xl font-bold">{election.title}</h3>
-                                                <Badge variant="outline" className={election.status === 'Ongoing' ? 'text-green-500 border-green-500' : 'text-gray-500 border-gray-500'}>{election.status}</Badge>
-                                            </div>
-                                            <p className="text-gray-400 mb-2">{election.description}</p>
-                                            <div className="flex items-center gap-2 text-sm text-gray-500">
-                                                <Calendar className="w-4 h-4" />
-                                                {election.date}
-                                            </div>
-
-                                            {/* Results Section */}
-                                            {election.candidates && election.candidates.length > 0 && (
-                                                <div className="mt-4 space-y-3">
-                                                    <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Results</h4>
-                                                    <div className="space-y-2">
-                                                        {election.candidates.map(candidate => {
-                                                            const totalVotes = election.candidates.reduce((sum: number, c: any) => sum + (c.votes || 0), 0);
-                                                            // Percentage based on total registered users
-                                                            const percentage = totalUsers > 0 ? Math.round(((candidate.votes || 0) / totalUsers) * 100) : 0;
-                                                            return (
-                                                                <div key={candidate.id} className="space-y-1">
-                                                                    <div className="flex justify-between text-sm">
-                                                                        <span className="text-gray-300">{candidate.name}</span>
-                                                                        <span className="font-mono text-cyan-500">{candidate.votes || 0} votes ({percentage}%)</span>
-                                                                    </div>
-                                                                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                                                                        <div
-                                                                            className="h-full bg-cyan-500 rounded-full transition-all duration-500"
-                                                                            style={{ width: `${percentage}%` }}
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
+                        {elections.length === 0 ? (
+                            <div className="border-2 border-dashed border-white/5 rounded-[32px] p-20 flex flex-col items-center justify-center text-center bg-[#111625]/20 mt-8 min-h-[400px]">
+                                <Vote className="w-20 h-20 text-[#64748B] mb-8 opacity-20" />
+                                <h3 className="text-2xl font-mono uppercase tracking-[0.2em] text-[#94a3b8] mb-4">No Active Elections</h3>
+                                <p className="text-[#64748B] italic max-w-sm">There are no ongoing or upcoming elections across the student body.</p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-4 mt-8">
+                                {elections.map((election) => (
+                                    <Card key={election.id} className="bg-white/5 border-white/10">
+                                        <div className="p-6 flex flex-col md:flex-row justify-between gap-4">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <h3 className="text-xl font-bold">{election.title}</h3>
+                                                    <Badge variant="outline" className={election.status === 'Ongoing' ? 'text-green-500 border-green-500' : 'text-gray-500 border-gray-500'}>{election.status}</Badge>
                                                 </div>
-                                            )}
+                                                <p className="text-gray-400 mb-2">{election.description}</p>
+                                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                    <Calendar className="w-4 h-4" />
+                                                    {election.date}
+                                                </div>
+
+                                                {/* Results Section */}
+                                                {election.candidates && election.candidates.length > 0 && (
+                                                    <div className="mt-4 space-y-3">
+                                                        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Results</h4>
+                                                        <div className="space-y-2">
+                                                            {election.candidates.map(candidate => {
+                                                                const totalVotes = election.candidates.reduce((sum: number, c: any) => sum + (c.votes || 0), 0);
+                                                                // Percentage based on total registered users
+                                                                const percentage = totalUsers > 0 ? Math.round(((candidate.votes || 0) / totalUsers) * 100) : 0;
+                                                                return (
+                                                                    <div key={candidate.id} className="space-y-1">
+                                                                        <div className="flex justify-between text-sm">
+                                                                            <span className="text-gray-300">{candidate.name}</span>
+                                                                            <span className="font-mono text-cyan-500">{candidate.votes || 0} votes ({percentage}%)</span>
+                                                                        </div>
+                                                                        <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                                                                            <div
+                                                                                className="h-full bg-cyan-500 rounded-full transition-all duration-500"
+                                                                                style={{ width: `${percentage}%` }}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-2 self-start md:self-center">
+                                                <Button variant="outline" size="sm" onClick={() => openAddModal('election', election)} className="border-white/20 text-gray-300 hover:text-white mt-1 border">
+                                                    Edit
+                                                </Button>
+                                                <Button variant="ghost" size="icon" onClick={() => confirmDelete('election', election.id)} className="text-red-500 hover:bg-red-500/10">
+                                                    <Trash2 className="w-5 h-5" />
+                                                </Button>
+                                            </div>
                                         </div>
-                                        <div className="flex gap-2 self-start md:self-center">
-                                            <Button variant="outline" size="sm" onClick={() => openAddModal('election', election)} className="border-white/20 text-gray-300 hover:text-white mt-1 border">
-                                                Edit
-                                            </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => confirmDelete('election', election.id)} className="text-red-500 hover:bg-red-500/10">
-                                                <Trash2 className="w-5 h-5" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))}
-                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
                     </TabsContent>
 
                     {/* Achievements Content */}
-                    <TabsContent value="achievements" className="space-y-6">
+                    <TabsContent value="achievements" className="space-y-8">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <h2 className="text-2xl font-bold">Hall of Fame</h2>
-                            <div className="flex gap-2 w-full md:w-auto">
+                            <h2 className="text-2xl font-mono uppercase tracking-widest text-white">Hall of Fame</h2>
+                            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                                 <select
-                                    className="bg-black/50 border border-white/10 rounded-md p-2 text-sm text-gray-300 outline-none focus:border-cyan-500/50"
+                                    className="bg-[#111625] border border-white/5 rounded-lg px-4 py-2.5 text-sm text-[#94a3b8] font-medium outline-none focus:border-[#0ea5e9]/50 transition-colors w-full sm:w-[200px]"
                                     value={achievementFilter}
                                     onChange={(e) => setAchievementFilter(e.target.value as any)}
                                 >
@@ -616,67 +686,82 @@ function PresidentDashboardContent() {
                                     <option value="Council">Added by Council</option>
                                     <option value="Club Manager">Added by Clubs</option>
                                 </select>
-                                <Button onClick={() => openAddModal('achievement')} className="bg-cyan-500 text-black hover:bg-cyan-400 whitespace-nowrap"><Plus className="w-4 h-4 mr-2 md:mr-0 lg:mr-2" /> <span className="hidden lg:inline">Add Achievement</span></Button>
+                                <Button onClick={() => openAddModal('achievement')} className="bg-[#0ea5e9] text-black hover:bg-[#38bdf8] font-bold tracking-wide rounded-lg px-6 py-2.5 h-auto transition-colors w-full sm:w-auto whitespace-nowrap">
+                                    <Plus className="w-4 h-4 mr-2 md:mr-0 lg:mr-2" /> Add Achievement
+                                </Button>
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {achievements
-                                .filter(a => achievementFilter === 'All' ? true : a.addedByRole === achievementFilter)
-                                .map((achievement) => (
-                                    <Card key={achievement.id} className="bg-white/5 border-white/10 overflow-hidden">
-                                        <div className="h-40 bg-zinc-900 relative">
-                                            {achievement.image ? (
-                                                <img src={achievement.image} alt={achievement.title} className="w-full h-full object-cover opacity-80" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center bg-cyan-500/10 text-cyan-500">
-                                                    <Trophy className="w-12 h-12" />
-                                                </div>
-                                            )}
-                                            <div className="absolute top-2 right-2">
-                                                <Badge className="bg-black/50 text-white border-white/10 backdrop-blur-md">{achievement.category}</Badge>
-                                            </div>
-                                        </div>
-                                        <CardContent className="p-6">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <div>
-                                                    <h3 className="font-bold text-lg">{achievement.title}</h3>
-                                                    <p className="text-cyan-500 text-sm">{achievement.student}</p>
-                                                </div>
-                                                <div className="flex items-center gap-1 -mt-2 -mr-2">
-                                                    <Button variant="ghost" size="sm" onClick={() => openAddModal('achievement', achievement)} className="text-gray-300 hover:text-white h-8 px-2">
-                                                        Edit
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" onClick={() => confirmDelete('achievement', achievement.id)} className="text-red-500 hover:bg-red-500/10 h-8 w-8">
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
+
+                        {achievements.filter(a => achievementFilter === 'All' ? true : a.addedByRole === achievementFilter).length === 0 ? (
+                            <div className="border-2 border-dashed border-white/5 rounded-[32px] p-20 flex flex-col items-center justify-center text-center bg-[#111625]/20 mt-8 min-h-[400px]">
+                                <Trophy className="w-20 h-20 text-[#64748B] mb-8 opacity-20" />
+                                <h3 className="text-2xl font-mono uppercase tracking-[0.2em] text-[#94a3b8] mb-4">No Achievements Found</h3>
+                                <p className="text-[#64748B] italic max-w-sm">No student achievements have been recorded yet. Recognize student excellence by adding one.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                                {achievements
+                                    .filter(a => achievementFilter === 'All' ? true : a.addedByRole === achievementFilter)
+                                    .map((achievement) => (
+                                        <Card key={achievement.id} className="bg-white/5 border-white/10 overflow-hidden">
+                                            <div className="h-40 bg-zinc-900 relative">
+                                                {achievement.image ? (
+                                                    <img src={achievement.image} alt={achievement.title} className="w-full h-full object-cover opacity-80" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center bg-cyan-500/10 text-cyan-500">
+                                                        <Trophy className="w-12 h-12" />
+                                                    </div>
+                                                )}
+                                                <div className="absolute top-2 right-2">
+                                                    <Badge className="bg-black/50 text-white border-white/10 backdrop-blur-md">{achievement.category}</Badge>
                                                 </div>
                                             </div>
-                                            <p className="text-sm text-gray-400 line-clamp-2">{achievement.description}</p>
-                                            <div className="mt-4 text-xs text-gray-500">{achievement.date}</div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                        </div>
+                                            <CardContent className="p-6">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <h3 className="font-bold text-lg">{achievement.title}</h3>
+                                                        <p className="text-cyan-500 text-sm">{achievement.student}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 -mt-2 -mr-2">
+                                                        <Button variant="ghost" size="sm" onClick={() => openAddModal('achievement', achievement)} className="text-gray-300 hover:text-white h-8 px-2">
+                                                            Edit
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => confirmDelete('achievement', achievement.id)} className="text-red-500 hover:bg-red-500/10 h-8 w-8">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                                <p className="text-sm text-gray-400 line-clamp-2">{achievement.description}</p>
+                                                <div className="mt-4 text-xs text-gray-500">{achievement.date}</div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                            </div>
+                        )}
                     </TabsContent>
 
                     {/* Complaints Content */}
-                    <TabsContent value="complaints" className="space-y-6">
-                        <div className="flex justify-between items-center">
-                            <h2 className="text-2xl font-bold">Student Complaints</h2>
-                            <div className="flex gap-2">
-                                <Badge variant="outline" className="border-cyan-500 text-cyan-500">
-                                    {tickets.filter(t => t.status === 'Pending').length} Pending
+                    <TabsContent value="complaints" className="space-y-8">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <h2 className="text-2xl font-mono uppercase tracking-widest text-white">Student Complaints</h2>
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <Badge variant="outline" className="border-cyan-500 text-cyan-500 text-sm py-1.5 px-4 font-mono">
+                                    {tickets.filter(t => t.status === 'Pending').length} PENDING
                                 </Badge>
-                                <Badge variant="outline" className="border-blue-500 text-blue-500">
-                                    {tickets.filter(t => t.status === 'In Progress').length} In Progress
+                                <Badge variant="outline" className="border-blue-500 text-blue-500 text-sm py-1.5 px-4 font-mono">
+                                    {tickets.filter(t => t.status === 'In Progress').length} IN PROGRESS
                                 </Badge>
                             </div>
                         </div>
-                        <div className="grid gap-4">
-                            {tickets.length === 0 ? (
-                                <p className="text-gray-500 italic">No complaints found.</p>
-                            ) : (
-                                tickets.map((ticket) => (
+                        {tickets.length === 0 ? (
+                            <div className="border-2 border-dashed border-white/5 rounded-[32px] p-20 flex flex-col items-center justify-center text-center bg-[#111625]/20 mt-8 min-h-[400px]">
+                                <AlertTriangle className="w-20 h-20 text-[#64748B] mb-8 opacity-20" />
+                                <h3 className="text-2xl font-mono uppercase tracking-[0.2em] text-[#94a3b8] mb-4">No Complaints Logged</h3>
+                                <p className="text-[#64748B] italic max-w-sm">No complaints or feedback have been submitted by the student body.</p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-4 mt-8">
+                                {tickets.map((ticket) => (
                                     <div key={ticket.id} onClick={() => setSelectedTicket(ticket)} className="cursor-pointer">
                                         <Card className="bg-white/5 border-white/10 hover:border-cyan-500/30 transition-all">
                                             <CardContent className="p-6">
@@ -802,13 +887,13 @@ function PresidentDashboardContent() {
                                             </CardContent>
                                         </Card>
                                     </div>
-                                ))
-                            )}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                     </TabsContent>
 
                     {/* Students Content */}
-                    <TabsContent value="students" className="space-y-6">
+                    <TabsContent value="students" className="space-y-8">
                         <div className="flex flex-col md:flex-row gap-4 mb-6">
                             <Card className="flex-1 bg-white/5 border-white/10">
                                 <CardContent className="p-6 flex items-center justify-between">
@@ -872,7 +957,7 @@ function PresidentDashboardContent() {
                     </TabsContent>
 
                     {/* Feedback & Polls Content */}
-                    <TabsContent value="polls" className="space-y-6">
+                    <TabsContent value="polls" className="space-y-8">
                         {/* Polls Section */}
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
@@ -930,51 +1015,59 @@ function PresidentDashboardContent() {
                     </TabsContent>
 
                     {/* Gallery Content */}
-                    <TabsContent value="gallery" className="space-y-6">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold">Manage Gallery</h2>
-                            <Button onClick={() => openAddModal('gallery')} className="bg-cyan-500 text-black hover:bg-cyan-400">
+                    <TabsContent value="gallery" className="space-y-8">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <h2 className="text-2xl font-mono uppercase tracking-widest text-white">Manage Gallery</h2>
+                            <Button onClick={() => openAddModal('gallery')} className="bg-[#0ea5e9] text-black hover:bg-[#38bdf8] font-bold tracking-wide rounded-lg px-6 py-2.5 h-auto transition-colors w-full sm:w-auto">
                                 <Plus className="w-4 h-4 mr-2" /> Add Image
                             </Button>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {galleryImages.map((image) => (
-                                <Card key={image.id} className="bg-white/5 border-white/10 overflow-hidden group">
-                                    <div className="relative h-64 overflow-hidden">
-                                        <img
-                                            src={image.src}
-                                            alt={image.alt}
-                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                            <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                                                <div>
-                                                    <h3 className="text-white font-bold">{image.alt}</h3>
-                                                    <p className="text-xs text-gray-300">Added: {image.dateAdded || 'N/A'}</p>
+                        {galleryImages.length === 0 ? (
+                            <div className="border-2 border-dashed border-white/5 rounded-[32px] p-20 flex flex-col items-center justify-center text-center bg-[#111625]/20 mt-8 min-h-[400px]">
+                                <Camera className="w-20 h-20 text-[#64748B] mb-8 opacity-20" />
+                                <h3 className="text-2xl font-mono uppercase tracking-[0.2em] text-[#94a3b8] mb-4">No Images Found</h3>
+                                <p className="text-[#64748B] italic max-w-sm">The gallery is currently empty. Upload photos to share moments with the student body.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {galleryImages.map((image) => (
+                                    <Card key={image.id} className="bg-white/5 border-white/10 overflow-hidden group">
+                                        <div className="relative h-64 overflow-hidden">
+                                            <img
+                                                src={image.src}
+                                                alt={image.alt}
+                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                                                    <div>
+                                                        <h3 className="text-white font-bold">{image.alt}</h3>
+                                                        <p className="text-xs text-gray-300">Added: {image.dateAdded || 'N/A'}</p>
+                                                    </div>
+                                                    <Button variant="ghost" size="icon" onClick={() => confirmDelete('gallery', image.id)} className="text-red-500 hover:bg-red-500/20 bg-black/50">
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </Button>
                                                 </div>
-                                                <Button variant="ghost" size="icon" onClick={() => confirmDelete('gallery', image.id)} className="text-red-500 hover:bg-red-500/20 bg-black/50">
-                                                    <Trash2 className="w-5 h-5" />
-                                                </Button>
                                             </div>
                                         </div>
+                                        <div className="p-3 bg-white/5 flex gap-2">
+                                            <Badge variant="outline" className="border-cyan-500/30 text-cyan-500 bg-cyan-500/10 text-xs">
+                                                Span: {image.span.split(' ')[0].replace('col-span-', '')}x{image.span.split(' ')[1].replace('row-span-', '')}
+                                            </Badge>
+                                            <Badge variant="outline" className="border-gray-500/30 text-gray-400 text-xs">
+                                                By: {image.addedByRole || 'System'}
+                                            </Badge>
+                                        </div>
+                                    </Card>
+                                ))}
+                                {galleryImages.length === 0 && (
+                                    <div className="col-span-full py-12 text-center text-gray-400">
+                                        <Camera className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                                        <p>No images in gallery</p>
                                     </div>
-                                    <div className="p-3 bg-white/5 flex gap-2">
-                                        <Badge variant="outline" className="border-cyan-500/30 text-cyan-500 bg-cyan-500/10 text-xs">
-                                            Span: {image.span.split(' ')[0].replace('col-span-', '')}x{image.span.split(' ')[1].replace('row-span-', '')}
-                                        </Badge>
-                                        <Badge variant="outline" className="border-gray-500/30 text-gray-400 text-xs">
-                                            By: {image.addedByRole || 'System'}
-                                        </Badge>
-                                    </div>
-                                </Card>
-                            ))}
-                            {galleryImages.length === 0 && (
-                                <div className="col-span-full py-12 text-center text-gray-400">
-                                    <Camera className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                                    <p>No images in gallery</p>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </div>
+                        )}
                     </TabsContent>
                 </Tabs>
 
@@ -1365,67 +1458,6 @@ function PresidentDashboardContent() {
                                     <label className="text-sm font-medium text-gray-300">Registration Link (Optional)</label>
                                     <Input type="url" placeholder="https://forms.gle/..." value={formData.registrationLink || ''} onChange={e => setFormData({ ...formData, registrationLink: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
                                 </div>
-
-                                {/* Photo Upload Section */}
-                                <div className="space-y-4 pt-2 border-t border-white/10">
-                                    <label className="text-sm font-medium text-gray-300">Event Photo (Optional)</label>
-
-                                    {!isCameraOpen && !formData.image && (
-                                        <div className="flex gap-4">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => document.getElementById('event-file-upload')?.click()}
-                                                className="border-white/10 hover:bg-white/5 bg-black/50"
-                                            >
-                                                <input
-                                                    id="event-file-upload"
-                                                    type="file"
-                                                    accept="image/*"
-                                                    className="hidden"
-                                                    onChange={handleFileUpload}
-                                                />
-                                                <Upload className="w-4 h-4 mr-2" /> Upload Photo
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={startCamera}
-                                                className="border-white/10 hover:bg-white/5 bg-black/50"
-                                            >
-                                                <Camera className="w-4 h-4 mr-2" /> Use Camera
-                                            </Button>
-                                        </div>
-                                    )}
-
-                                    {isCameraOpen && (
-                                        <div className="relative bg-black border border-white/10 rounded-lg overflow-hidden max-w-md mx-auto">
-                                            <video ref={videoRef} autoPlay playsInline className="w-full h-auto" />
-                                            <canvas ref={canvasRef} className="hidden" />
-                                            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
-                                                <Button type="button" onClick={() => capturePhoto(false)} className="bg-cyan-500 text-black hover:bg-cyan-400">
-                                                    <Camera className="w-4 h-4 mr-2" /> Capture
-                                                </Button>
-                                                <Button type="button" onClick={stopCamera} variant="destructive" className="bg-red-500 hover:bg-red-600">
-                                                    <X className="w-4 h-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {formData.image && (
-                                        <div className="relative inline-block w-full">
-                                            <img src={formData.image} alt="Event Preview" className="h-32 w-full rounded-lg border border-cyan-500/50 object-cover" />
-                                            <button
-                                                type="button"
-                                                onClick={() => removePhoto(false)}
-                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-lg"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
                             </>
                         )}
 
@@ -1742,10 +1774,10 @@ function PresidentDashboardContent() {
                     </div>
                 </GlassModal>
 
-            </div>
+            </div >
 
             {/* View Complaint Details Modal */}
-            <GlassModal
+            < GlassModal
                 isOpen={!!selectedTicket}
                 onClose={() => setSelectedTicket(null)}
                 title="Complaint Details"
@@ -1753,28 +1785,32 @@ function PresidentDashboardContent() {
                 footer={
                     <>
                         <Button variant="outline" onClick={() => setSelectedTicket(null)} className="border-white/20 hover:bg-white/10 hover:text-white">Close</Button>
-                        {selectedTicket?.status !== 'In Progress' && selectedTicket?.status !== 'Completed' && (
-                            <Button
-                                onClick={() => {
-                                    updateTicketStatus(selectedTicket.id, 'In Progress');
-                                    setSelectedTicket(null);
-                                }}
-                                className="bg-blue-600 text-white hover:bg-blue-700 font-bold border-none"
-                            >
-                                Start Progress
-                            </Button>
-                        )}
-                        {selectedTicket?.status !== 'Completed' && (
-                            <Button
-                                onClick={() => {
-                                    updateTicketStatus(selectedTicket.id, 'Completed');
-                                    setSelectedTicket(null);
-                                }}
-                                className="bg-green-600 text-white hover:bg-green-700 font-bold border-none"
-                            >
-                                Mark Resolved
-                            </Button>
-                        )}
+                        {
+                            selectedTicket?.status !== 'In Progress' && selectedTicket?.status !== 'Completed' && (
+                                <Button
+                                    onClick={() => {
+                                        updateTicketStatus(selectedTicket.id, 'In Progress');
+                                        setSelectedTicket(null);
+                                    }}
+                                    className="bg-blue-600 text-white hover:bg-blue-700 font-bold border-none"
+                                >
+                                    Start Progress
+                                </Button>
+                            )
+                        }
+                        {
+                            selectedTicket?.status !== 'Completed' && (
+                                <Button
+                                    onClick={() => {
+                                        updateTicketStatus(selectedTicket.id, 'Completed');
+                                        setSelectedTicket(null);
+                                    }}
+                                    className="bg-green-600 text-white hover:bg-green-700 font-bold border-none"
+                                >
+                                    Mark Resolved
+                                </Button>
+                            )
+                        }
                     </>
                 }
             >
@@ -1831,7 +1867,7 @@ function PresidentDashboardContent() {
                         )}
                     </div>
                 )}
-            </GlassModal>
+            </GlassModal >
 
             {
                 croppingImage && (

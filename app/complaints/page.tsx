@@ -8,7 +8,8 @@ import { Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, CheckCircle2, Clock, FileText, Send, Search, Lock, Camera, X, Image as ImageIcon, Upload, Users, ThumbsUp } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { AlertCircle, CheckCircle2, ChevronDown, CloudUpload, Clock, FileText, Send, Search, Lock, Camera, X, Image as ImageIcon, Upload, Users, Globe, PlusSquare, ThumbsUp } from 'lucide-react';
 import { useTickets, TicketProvider } from '@/lib/ticket-context';
 import { useRef } from 'react';
 
@@ -24,8 +25,8 @@ function ComplaintsContent() {
 
     // Form State
     const [formData, setFormData] = useState({
-        category: 'Academic',
-        department: '',
+        category: '',
+        department: 'General',
         subject: '',
         description: '',
         isAnonymous: false
@@ -205,8 +206,8 @@ function ComplaintsContent() {
                 // Reset edit state but keep modal open until user navigates
                 setEditId(null);
                 setFormData({
-                    category: 'Academic',
-                    department: '',
+                    category: '',
+                    department: 'General',
                     subject: '',
                     description: '',
                     isAnonymous: false
@@ -231,8 +232,8 @@ function ComplaintsContent() {
 
                 // Reset form
                 setFormData({
-                    category: 'Academic',
-                    department: '',
+                    category: '',
+                    department: 'General',
                     subject: '',
                     description: '',
                     isAnonymous: false
@@ -303,45 +304,45 @@ function ComplaintsContent() {
     }
 
     return (
-        <div className="min-h-screen bg-black text-white pt-24 md:pt-10 pb-20">
-            <div className="container mx-auto px-4 max-w-4xl">
+        <div className="min-h-screen bg-[#0B0F19] text-white pt-24 md:pt-16 pb-20 font-sans selection:bg-cyan-500/30">
+            <div className="container mx-auto px-4 max-w-5xl">
 
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4">Student Grievance Redressal</h1>
-                    <p className="text-gray-400">We are here to listen and resolve your concerns.</p>
+                <div className="text-center mb-10">
+                    <h1 className="text-4xl md:text-5xl font-extrabold mb-3 tracking-tight">Student Grievance Redressal</h1>
+                    <p className="text-[#64748B] text-lg">We are here to listen and resolve your concerns efficiently.</p>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex justify-center mb-12">
-                    <div className="bg-white/5 p-1 rounded-lg inline-flex overflow-x-auto max-w-full">
+                <div className="flex justify-center mb-16">
+                    <div className="bg-[#0d1321] border border-white/5 p-1.5 rounded-2xl inline-flex overflow-x-auto max-w-full shadow-2xl">
                         <button
                             onClick={() => setActiveTab('submit')}
-                            className={`px-4 sm:px-8 py-3 rounded-md text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'submit'
-                                ? 'bg-cyan-500 text-black shadow-lg'
-                                : 'text-gray-400 hover:text-white'
+                            className={`px-5 sm:px-8 py-2.5 rounded-xl text-[15px] font-bold tracking-wide transition-all duration-300 flex items-center gap-2.5 whitespace-nowrap ${activeTab === 'submit'
+                                ? 'bg-[#0e7490]/20 text-[#22d3ee] shadow-sm'
+                                : 'text-[#64748B] hover:text-white'
                                 }`}
                         >
-                            <FileText className="w-4 h-4" />
+                            <PlusSquare className="w-[18px] h-[18px]" strokeWidth={2.5} />
                             Submit Complaint
                         </button>
                         <button
                             onClick={() => setActiveTab('track')}
-                            className={`px-4 sm:px-8 py-3 rounded-md text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'track'
-                                ? 'bg-cyan-500 text-black shadow-lg'
-                                : 'text-gray-400 hover:text-white'
+                            className={`px-5 sm:px-8 py-2.5 rounded-xl text-[15px] font-bold tracking-wide transition-all duration-300 flex items-center gap-2.5 whitespace-nowrap ${activeTab === 'track'
+                                ? 'bg-[#0e7490]/20 text-[#22d3ee] shadow-sm'
+                                : 'text-[#64748B] hover:text-white'
                                 }`}
                         >
-                            <Search className="w-4 h-4" />
+                            <Search className="w-[18px] h-[18px]" strokeWidth={2.5} />
                             Track Status
                         </button>
                         <button
                             onClick={() => setActiveTab('community')}
-                            className={`px-4 sm:px-8 py-3 rounded-md text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'community'
-                                ? 'bg-cyan-500 text-black shadow-lg'
-                                : 'text-gray-400 hover:text-white'
+                            className={`px-5 sm:px-8 py-2.5 rounded-xl text-[15px] font-bold tracking-wide transition-all duration-300 flex items-center gap-2.5 whitespace-nowrap ${activeTab === 'community'
+                                ? 'bg-[#0e7490]/20 text-[#22d3ee] shadow-sm'
+                                : 'text-[#64748B] hover:text-white'
                                 }`}
                         >
-                            <Users className="w-4 h-4" />
+                            <Globe className="w-[18px] h-[18px]" strokeWidth={2.5} />
                             Community
                         </button>
                     </div>
@@ -400,16 +401,31 @@ function ComplaintsContent() {
                                         </div>
                                     </motion.div>
                                 ) : (
-                                    <form className="space-y-6" onSubmit={handleSubmit}>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <form className="space-y-8" onSubmit={handleSubmit}>
+                                        {/* Submit Anonymously Panel */}
+                                        <div className="flex items-center justify-between p-5 rounded-xl bg-[#0d1321] border border-white/5 shadow-xl">
+                                            <div className="space-y-1">
+                                                <h4 className="text-sm font-bold text-white tracking-wide">Submit Anonymously</h4>
+                                                <p className="text-sm text-gray-500">Your identity will be hidden from investigators.</p>
+                                            </div>
+                                            <Switch
+                                                id="anonymous"
+                                                checked={formData.isAnonymous}
+                                                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isAnonymous: checked }))}
+                                                className="data-[state=checked]:bg-cyan-500 scale-125"
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             <div className="space-y-2">
-                                                <label className="text-sm font-medium text-gray-300">Category</label>
+                                                <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Complaint Category</label>
                                                 <select
                                                     name="category"
                                                     value={formData.category}
                                                     onChange={handleChange}
-                                                    className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                                                    className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
                                                 >
+                                                    <option value="" disabled hidden>Select a category...</option>
                                                     <option value="Academic">Academic</option>
                                                     <option value="Hostel">Hostel</option>
                                                     <option value="Sanitation">Sanitation</option>
@@ -417,147 +433,127 @@ function ComplaintsContent() {
                                                     <option value="Other">Other</option>
                                                 </select>
                                             </div>
+
                                             <div className="space-y-2">
-                                                <label className="text-sm font-medium text-gray-300">Department</label>
+                                                <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Subject</label>
                                                 <input
                                                     type="text"
-                                                    name="department"
-                                                    value={formData.department}
+                                                    name="subject"
+                                                    value={formData.subject}
                                                     onChange={handleChange}
-                                                    className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
-                                                    placeholder="e.g. Computer Science"
+                                                    className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
+                                                    placeholder="Brief summary of the issue"
                                                     required
                                                 />
                                             </div>
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Subject</label>
-                                            <input
-                                                type="text"
-                                                name="subject"
-                                                value={formData.subject}
-                                                onChange={handleChange}
-                                                className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
-                                                placeholder="Brief summary of the issue"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Description</label>
+                                            <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Detailed Description</label>
                                             <textarea
                                                 name="description"
                                                 value={formData.description}
                                                 onChange={handleChange}
                                                 rows={5}
-                                                className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
-                                                placeholder="Detailed explanation..."
+                                                className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-4 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 resize-none transition-colors shadow-inner"
+                                                placeholder="Please provide as much detail as possible about the incident or issue..."
                                                 required
                                             />
                                         </div>
 
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="checkbox"
-                                                id="anonymous"
-                                                name="isAnonymous"
-                                                checked={formData.isAnonymous}
-                                                onChange={handleCheckboxChange}
-                                                className="rounded border-gray-600 text-cyan-500 focus:ring-cyan-500 bg-black/50"
-                                            />
-                                            <label htmlFor="anonymous" className="text-sm text-gray-300">Submit Anonymously</label>
-                                        </div>
-
                                         {/* Photo Upload Section */}
-                                        <div className="space-y-4">
-                                            <label className="text-sm font-medium text-gray-300">Attach Photo (Optional)</label>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Upload Evidence (Optional)</label>
 
                                             {!isCameraOpen && !image && (
-                                                <div className="flex gap-4">
+                                                <div
+                                                    className="border-[1.5px] border-dashed border-[#1f2937] hover:border-[#374151] rounded-xl p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 bg-transparent group"
+                                                    onClick={() => document.getElementById('file-upload')?.click()}
+                                                >
+                                                    <input
+                                                        id="file-upload"
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                        onChange={handleFileUpload}
+                                                    />
+                                                    <div className="flex items-center justify-center mb-4 transition-transform group-hover:-translate-y-1">
+                                                        <CloudUpload className="w-8 h-8 text-[#9ca3af]" strokeWidth={1.5} />
+                                                    </div>
+                                                    <h4 className="text-[15px] font-bold text-white mb-2 tracking-wide">Drag and drop files here</h4>
+                                                    <p className="text-[13px] text-[#6b7280] font-medium">JPG, PNG, PDF up to 10MB each</p>
+
+                                                    {/* Optional camera fallback button */}
                                                     <Button
                                                         type="button"
-                                                        variant="outline"
-                                                        onClick={() => document.getElementById('file-upload')?.click()}
-                                                        className="border-white/10 hover:bg-white/5 bg-black/50"
+                                                        variant="ghost"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            startCamera();
+                                                        }}
+                                                        className="mt-6 text-xs text-[#6b7280] hover:text-white hover:bg-transparent tracking-widest uppercase font-bold"
                                                     >
-                                                        <input
-                                                            id="file-upload"
-                                                            type="file"
-                                                            accept="image/*"
-                                                            className="hidden"
-                                                            onChange={handleFileUpload}
-                                                        />
-                                                        <Upload className="w-4 h-4 mr-2" /> Upload File
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        onClick={startCamera}
-                                                        className="border-white/10 hover:bg-white/5 bg-black/50"
-                                                    >
-                                                        <Camera className="w-4 h-4 mr-2" /> Use Camera
+                                                        <Camera className="w-3 h-3 mr-2 inline" /> OR USE CAMERA
                                                     </Button>
                                                 </div>
                                             )}
 
                                             {isCameraOpen && (
-                                                <div className="relative bg-black border border-white/10 rounded-lg overflow-hidden max-w-md">
-                                                    <video ref={videoRef} autoPlay playsInline className="w-full h-auto" />
+                                                <div className="relative bg-[#111827] border border-white/5 rounded-xl overflow-hidden max-w-md mx-auto aspect-video shadow-2xl">
+                                                    <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
                                                     <canvas ref={canvasRef} className="hidden" />
-                                                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
-                                                        <Button type="button" onClick={capturePhoto} className="bg-cyan-500 text-black hover:bg-cyan-400">
+                                                    <div className="absolute inset-x-0 bottom-4 flex justify-center gap-4">
+                                                        <Button type="button" onClick={capturePhoto} className="bg-white text-black hover:bg-gray-200 shadow-xl">
                                                             <Camera className="w-4 h-4 mr-2" /> Capture
                                                         </Button>
-                                                        <Button type="button" onClick={stopCamera} variant="destructive" className="bg-red-500 hover:bg-red-600">
-                                                            <X className="w-4 h-4" />
+                                                        <Button type="button" onClick={stopCamera} variant="destructive" className="bg-red-500/90 backdrop-blur hover:bg-red-600 shadow-xl">
+                                                            <X className="w-4 h-4 mr-1" /> Cancel
                                                         </Button>
                                                     </div>
                                                 </div>
                                             )}
 
                                             {image && (
-                                                <div className="relative inline-block">
-                                                    <img src={image} alt="Complaint Attachment" className="h-40 w-auto rounded-lg border border-white/10 object-cover" />
+                                                <div className="relative inline-block mt-4 p-2 bg-[#111827] rounded-xl border border-white/5 shadow-xl">
+                                                    <img src={image} alt="Complaint Attachment" className="h-48 w-auto rounded-lg object-cover" />
                                                     <button
                                                         type="button"
                                                         onClick={removePhoto}
-                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-lg"
+                                                        className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-xl transition-transform hover:scale-110"
                                                     >
-                                                        <X className="w-4 h-4" />
+                                                        <X className="w-4 h-4" strokeWidth={3} />
                                                     </button>
                                                 </div>
                                             )}
                                         </div>
 
-                                        <div className="flex gap-4">
+                                        <div className="flex flex-col sm:flex-row items-center justify-end gap-x-8 gap-y-4 pt-10 pb-4">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (editId) {
+                                                        setEditId(null);
+                                                        router.push('/complaints/history');
+                                                    }
+                                                    setFormData({
+                                                        category: '',
+                                                        department: 'General',
+                                                        subject: '',
+                                                        description: '',
+                                                        isAnonymous: false
+                                                    });
+                                                }}
+                                                className="text-[15px] font-bold text-[#6b7280] hover:text-white transition-colors"
+                                            >
+                                                Discard
+                                            </button>
                                             <Button
                                                 type="submit"
                                                 disabled={isSubmitting}
-                                                className="w-full bg-cyan-500 text-black hover:bg-cyan-400 font-bold py-6 text-lg"
+                                                className="w-full sm:w-auto bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold px-10 py-6 text-[15px] tracking-wide shadow-lg shadow-blue-500/20"
                                             >
-                                                {isSubmitting ? (editId ? 'Updating...' : 'Submitting...') : (editId ? 'Update Complaint' : 'Submit Complaint')} <Send className="ml-2 w-5 h-5" />
+                                                {isSubmitting ? (editId ? 'UPDATING...' : 'SUBMITTING...') : (editId ? 'UPDATE COMPLAINT' : 'SUBMIT COMPLAINT')}
                                             </Button>
-                                            {editId && (
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    onClick={() => {
-                                                        setEditId(null);
-                                                        setFormData({
-                                                            category: 'Academic',
-                                                            department: '',
-                                                            subject: '',
-                                                            description: '',
-                                                            isAnonymous: false
-                                                        });
-                                                        router.push('/complaints/history');
-                                                    }}
-                                                    className="w-1/3 border-white/20 hover:bg-white/10 py-6 text-lg"
-                                                >
-                                                    Cancel
-                                                </Button>
-                                            )}
                                         </div>
                                     </form>
                                 )}
@@ -611,10 +607,10 @@ function ComplaintsContent() {
                                 </div>
 
                                 {trackingResult.image && (
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-gray-300">Attached Photo</label>
-                                        <div>
-                                            <img src={trackingResult.image} alt="Attachment" className="max-w-full h-auto max-h-[300px] rounded-lg border border-white/10" />
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Attached Photo</label>
+                                        <div className="p-2 bg-[#0B0F19] rounded-xl border border-white/5 inline-block">
+                                            <img src={trackingResult.image} alt="Attachment" className="max-w-full h-auto max-h-[300px] rounded-lg object-contain" />
                                         </div>
                                     </div>
                                 )}
@@ -623,45 +619,74 @@ function ComplaintsContent() {
                     )}
 
                     {activeTab === 'track' && (
-                        <div className="space-y-8">
-                            <Card className="bg-white/5 border-white/10">
-                                <CardHeader>
-                                    <CardTitle>Track Complaint</CardTitle>
-                                    <CardDescription>Enter your Complaint ID to check the current status.</CardDescription>
+                        <div className="space-y-8 max-w-4xl mx-auto">
+                            <Card className="bg-[#0d1321] border-white/5 shadow-2xl rounded-[24px] overflow-hidden relative">
+                                {/* Decorative Icon */}
+                                <div className="absolute top-8 right-8 text-[#0ea5e9]/20 hidden sm:block">
+                                    <div className="relative">
+                                        <Globe className="w-12 h-12" />
+                                        <Search className="w-6 h-6 absolute -bottom-1 -right-1" strokeWidth={3} />
+                                    </div>
+                                </div>
+
+                                <CardHeader className="px-8 pt-8 pb-6">
+                                    <CardTitle className="text-[28px] font-extrabold tracking-tight text-white mb-1">Track Complaint</CardTitle>
+                                    <CardDescription className="text-[#94a3b8] text-[15px]">Enter your Complaint ID to check the current status.</CardDescription>
                                 </CardHeader>
-                                <CardContent>
-                                    <form onSubmit={handleTrack} className="flex flex-col sm:flex-row gap-4">
-                                        <input
-                                            type="text"
-                                            value={complaintId}
-                                            onChange={(e) => setComplaintId(e.target.value)}
-                                            className="flex-grow bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500 w-full"
-                                            placeholder="e.g. CMP-2025-001"
-                                        />
-                                        <Button type="submit" className="bg-cyan-500 text-black hover:bg-cyan-400 w-full sm:w-auto">
-                                            Track
-                                        </Button>
+
+                                <CardContent className="px-8 pb-8">
+                                    <form onSubmit={handleTrack}>
+                                        <div className="bg-[#0B0F19] border border-white/5 rounded-2xl p-2.5 flex flex-col sm:flex-row gap-3 mb-6 shadow-inner relative z-10">
+                                            <input
+                                                type="text"
+                                                value={complaintId}
+                                                onChange={(e) => setComplaintId(e.target.value)}
+                                                className="flex-grow bg-transparent border-none px-4 py-3 text-gray-300 font-mono tracking-widest text-[15px] focus:outline-none focus:ring-0 w-full placeholder-[#475569]"
+                                                placeholder="e.g. CMP-2025-001"
+                                            />
+                                            <Button type="submit" className="bg-[#06b6d4] hover:bg-[#0891b2] text-black font-extrabold tracking-widest text-sm rounded-xl px-8 py-6 sm:w-auto w-full shadow-lg shadow-cyan-500/20">
+                                                TRACK
+                                            </Button>
+                                        </div>
+
+                                        <div className="flex justify-between items-center text-[10px] sm:text-xs font-bold tracking-[0.2em] text-[#475569] uppercase px-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse"></div>
+                                                <span>SYSTEM READY</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span>SEARCH ENCRYPTED</span>
+                                                <Lock className="w-3 h-3" strokeWidth={2.5} />
+                                            </div>
+                                        </div>
                                     </form>
                                 </CardContent>
                             </Card>
+
+                            <div className="text-center">
+                                <p className="text-[#64748B] text-sm italic font-medium">Lost your tracking ID? Contact the student council admin desk.</p>
+                            </div>
 
                             {trackingResult && (
                                 <motion.div
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: 'auto' }}
                                 >
-                                    <Card className="bg-white/5 border-white/10 border-l-4 border-l-cyan-500">
-                                        <CardHeader>
+                                    <Card className="bg-[#0d1321] border-white/5 rounded-[24px] overflow-hidden shadow-2xl relative">
+                                        {/* Status Accent Line */}
+                                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-[#06b6d4] to-[#3b82f6]"></div>
+
+                                        <CardHeader className="px-8 pt-8 pb-4">
                                             <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                                                 <div>
-                                                    <Badge variant="outline" className="mb-2 border-cyan-500 text-cyan-500">
+                                                    <Badge variant="outline" className={`mb-3 border px-3 py-1 font-bold tracking-widest text-[10px] uppercase rounded-full ${trackingResult.status.includes('Resolved') ? 'border-[#22c55e]/30 text-[#22c55e] bg-[#22c55e]/10' : 'border-[#0ea5e9]/30 text-[#0ea5e9] bg-[#0ea5e9]/10'}`}>
                                                         {trackingResult.status}
                                                     </Badge>
-                                                    <CardTitle className="text-xl break-words">{trackingResult.subject || trackingResult.title}</CardTitle>
-                                                    <CardDescription>ID: {trackingResult.id} • Submitted on {trackingResult.date}</CardDescription>
+                                                    <CardTitle className="text-[22px] font-extrabold text-white break-words tracking-tight">{trackingResult.subject || trackingResult.title}</CardTitle>
+                                                    <CardDescription className="text-[#64748B] text-sm mt-1">ID: <span className="text-[#94a3b8] font-mono">{trackingResult.id}</span> • Submitted on {trackingResult.date}</CardDescription>
                                                 </div>
                                                 <Link href={`/complaints?view=${trackingResult.id}`} onClick={(e) => { e.preventDefault(); setActiveTab('details'); }} className="w-full sm:w-auto">
-                                                    <Button variant="ghost" className="w-full sm:w-auto text-cyan-500 hover:bg-white/10 justify-start sm:justify-center px-0 sm:px-4">
+                                                    <Button variant="ghost" className="w-full sm:w-auto text-[#0ea5e9] hover:bg-[#0ea5e9]/10 hover:text-[#38bdf8] justify-start sm:justify-center px-4 font-bold tracking-wide rounded-xl">
                                                         View Details
                                                     </Button>
                                                 </Link>
@@ -709,76 +734,89 @@ function ComplaintsContent() {
                     )}
 
                     {activeTab === 'community' && (
-                        <div className="space-y-6">
-                            <Card className="bg-white/5 border-white/10 mb-6">
-                                <CardHeader>
-                                    <CardTitle>Community Complaints</CardTitle>
-                                    <CardDescription>View, discuss, and support issues raised by other students. Upvote priority issues.</CardDescription>
-                                </CardHeader>
-                            </Card>
+                        <div className="space-y-8 max-w-4xl mx-auto">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+                                <div className="space-y-2">
+                                    <h2 className="text-3xl font-bold text-white tracking-tight">Community Complaints</h2>
+                                    <p className="text-[#64748B] text-[15px] max-w-md">View, discuss, and support issues raised by other students. Upvote priority issues.</p>
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                                    <div className="relative">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search complaints..."
+                                            className="w-full sm:w-[280px] bg-[#0d1321] border border-white/5 rounded-2xl py-3 pl-11 pr-4 text-sm text-gray-300 placeholder-[#64748B] focus:outline-none focus:border-[#3b82f6]/50 shadow-inner"
+                                        />
+                                    </div>
+                                    <div className="relative">
+                                        <select className="w-full sm:w-auto bg-[#0d1321] border border-white/5 rounded-2xl py-3 pl-4 pr-10 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 shadow-inner appearance-none disabled">
+                                            <option>Sort by: Newest</option>
+                                        </select>
+                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B] pointer-events-none" />
+                                    </div>
+                                </div>
+                            </div>
 
-                            {[...tickets]
-                                .sort((a, b) => (b.votes || 0) - (a.votes || 0)) // Sort by votes desc
-                                .map((ticket) => (
-                                    <Card key={ticket.id} className="bg-white/5 border-white/10 hover:border-cyan-500/30 transition-colors">
-                                        <CardContent className="pt-6">
-                                            <div className="flex gap-4">
-                                                {/* Vote Section */}
-                                                <div className="flex flex-col items-center gap-1 min-w-[3rem]">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            const email = localStorage.getItem('userEmail') || 'anonymous@example.com';
-                                                            // Since we don't have real auth user ID, using a mock 'current-user' or trying to use email if stored.
-                                                            // For now, let's assume 'currentUser' for demo purposes if no unique ID available.
-                                                            // Wait, we need a unique ID to limit 1 vote per user.
-                                                            // Let's use 'demo-user' if nothing else.
-                                                            upvoteTicket(ticket.id, 'demo-user');
-                                                        }}
-                                                        className={`h-auto p-2 flex flex-col gap-1 hover:bg-white/10 ${ticket.votedBy?.includes('demo-user') ? 'text-cyan-500' : 'text-gray-400'}`}
-                                                    >
-                                                        <ThumbsUp className={`w-5 h-5 ${ticket.votedBy?.includes('demo-user') ? 'fill-current' : ''}`} />
-                                                        <span className="font-bold text-sm">{ticket.votes || 0}</span>
-                                                    </Button>
-                                                </div>
+                            <div className="space-y-4">
+                                {[...tickets]
+                                    .sort((a, b) => (b.votes || 0) - (a.votes || 0)) // Sort by votes desc
+                                    .map((ticket) => (
+                                        <Card key={ticket.id} className="bg-[#0d1321] border border-white/5 hover:border-white/10 transition-colors rounded-[24px] overflow-hidden shadow-2xl">
+                                            <CardContent className="p-6">
+                                                <div className="flex gap-6">
+                                                    {/* Upvote Box */}
+                                                    <div className="flex flex-col items-center flex-shrink-0">
+                                                        <button
+                                                            onClick={() => {
+                                                                const email = localStorage.getItem('userEmail') || 'anonymous@example.com';
+                                                                upvoteTicket(ticket.id, 'demo-user');
+                                                            }}
+                                                            className={`flex flex-col items-center justify-center w-[52px] py-3 rounded-2xl border ${ticket.votedBy?.includes('demo-user') ? 'bg-[#0e7490]/20 border-[#0e7490]/40 text-[#22d3ee]' : 'bg-[#111827] border-white/5 text-[#94a3b8] hover:bg-[#1f2937] hover:border-white/10 hover:text-white'} transition-all`}
+                                                        >
+                                                            <ThumbsUp className={`w-[18px] h-[18px] mb-1.5 ${ticket.votedBy?.includes('demo-user') ? 'fill-current' : ''}`} strokeWidth={ticket.votedBy?.includes('demo-user') ? 2 : 1.5} />
+                                                            <span className="font-bold text-[13px]">{ticket.votes || 0}</span>
+                                                        </button>
+                                                    </div>
 
-                                                <div className="flex-1 space-y-2">
-                                                    <div className="flex justify-between items-start">
-                                                        <div>
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <Badge variant="outline" className={`
-                                                                    ${ticket.priority === 'High' ? 'border-red-500 text-red-500' :
-                                                                        ticket.priority === 'Medium' ? 'border-cyan-500 text-cyan-500' :
-                                                                            'border-blue-500 text-blue-500'}
+                                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                                        <div className="flex justify-between items-start mb-3 gap-4">
+                                                            <div className="flex items-center gap-3 flex-wrap">
+                                                                <Badge variant="outline" className={`rounded-full px-3 py-1 border text-[10px] font-bold tracking-widest uppercase
+                                                                    ${ticket.priority === 'High' ? 'border-[#ef4444]/30 text-[#ef4444] bg-[#ef4444]/10' :
+                                                                        ticket.priority === 'Medium' ? 'border-[#0ea5e9]/30 text-[#0ea5e9] bg-[#0ea5e9]/10' :
+                                                                            'border-[#3b82f6]/30 text-[#3b82f6] bg-[#3b82f6]/10'}
                                                                 `}>
                                                                     {ticket.priority} Priority
                                                                 </Badge>
-                                                                <Badge variant="secondary" className="bg-white/10 text-gray-300">
+                                                                <Badge variant="outline" className="rounded-full px-3 py-1 border-[#475569]/40 text-[#94a3b8] bg-[#1e293b]/30 text-[10px] font-bold tracking-widest uppercase">
                                                                     {ticket.status}
                                                                 </Badge>
-                                                                <span className="text-xs text-gray-500">{new Date(ticket.createdAt).toLocaleDateString()}</span>
                                                             </div>
-                                                            <h3 className="text-lg font-bold">{ticket.subject}</h3>
+                                                            <span className="text-[#64748B] text-[13px] font-medium whitespace-nowrap">{new Date(ticket.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                                                        </div>
+
+                                                        <h3 className="text-[22px] font-extrabold text-white mb-2 truncate leading-tight tracking-tight">{ticket.subject}</h3>
+                                                        <p className="text-[#64748B] text-[15px] line-clamp-2 leading-snug mb-4 font-medium">{ticket.description}</p>
+
+                                                        <div className="flex items-center gap-3 text-[13px] text-[#64748B] font-medium mt-auto">
+                                                            <span>{ticket.department}</span>
+                                                            <span className="w-1 h-1 rounded-full bg-[#334155]"></span>
+                                                            <span>{ticket.type}</span>
                                                         </div>
                                                     </div>
-                                                    <p className="text-gray-400 text-sm line-clamp-2">{ticket.description}</p>
-                                                    <div className="flex items-center gap-4 text-xs text-gray-500 pt-2">
-                                                        <span>{ticket.department}</span>
-                                                        <span>•</span>
-                                                        <span>{ticket.type}</span>
-                                                    </div>
                                                 </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
+                                            </CardContent>
+                                        </Card>
+                                    ))}
 
-                            {tickets.length === 0 && (
-                                <div className="text-center py-12 text-gray-500">
-                                    <p>No complaints found.</p>
-                                </div>
-                            )}
+                                {tickets.length === 0 && (
+                                    <div className="text-center py-16 text-[#64748B] bg-[#0d1321] rounded-[24px] border border-white/5">
+                                        <Globe className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                                        <p className="text-lg font-medium">No community complaints found.</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </motion.div>

@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
-    Megaphone, Calendar, Plus, Trash2, LogOut, Star, Flag, Users, Globe, Camera
+    Megaphone, Calendar, Plus, Trash2, LogOut, Star, Flag, Users, Globe, Camera, TrendingUp, AlertTriangle, LayoutGrid, List, X, Upload, Eye, FileText
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -75,6 +75,7 @@ export default function ClubsDashboard() {
     // Filter data to only show items created by THIS club
     const clubEvents = events.filter(e => e.organizer === currentClubName || !e.organizer); // Fallback: show all if none have organizer for demo
     const clubAnnouncements = announcements.filter(a => a.author === currentClubName || !a.author);
+    const clubGalleryImages = galleryImages.filter(img => img.addedByRole?.includes(currentClubName));
 
     // --- Helpers ---
     const openAddModal = (type: 'event' | 'announcement' | 'member' | 'gallery', data?: any) => {
@@ -176,9 +177,13 @@ export default function ClubsDashboard() {
                 });
                 break;
             case 'gallery':
+                if (!formData.src) {
+                    alert("Please upload an image before saving.");
+                    return;
+                }
                 setGalleryImages(prev => updateState(prev, {
                     ...newData,
-                    src: formData.src || '',
+                    src: formData.src,
                     span: formData.span || 'col-span-1 row-span-1',
                     addedByRole: `Club Manager (${currentClubName})`,
                     dateAdded: formData.dateAdded || new Date().toISOString().split('T')[0]
@@ -197,310 +202,405 @@ export default function ClubsDashboard() {
     const currentClubDetails = clubs.find(c => c.name === currentClubName);
 
     return (
-        <div className="min-h-screen bg-black text-white pt-24 md:pt-10 pb-20">
+        <div className="min-h-screen bg-[#0B1120] text-white pt-24 md:pt-10 pb-20 font-sans">
             <div className="container mx-auto px-4 max-w-6xl">
 
                 {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-12 relative">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 relative border-b border-white/5 pb-6">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-cyan-500">
-                                Club Manager
+                            <h1 className="text-3xl md:text-[40px] font-extrabold tracking-widest uppercase leading-none font-mono">
+                                <span className="text-white">Club</span> <span className="text-[#0ea5e9]">Manager</span>
                             </h1>
-                            <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/50">Lead Access</Badge>
                         </div>
-                        <p className="text-gray-400">Managing <strong className="text-white">{currentClubName}</strong> resources and updates.</p>
+                        <div className="flex items-center gap-4 mt-2">
+                            <p className="text-[#64748B] text-[10px] tracking-[0.2em] font-mono uppercase">System.Access.Level_03</p>
+                            <Badge variant="outline" className="border-[#10b981]/30 bg-[#10b981]/5 text-[#10b981] rounded-full px-3 py-0.5 text-[8px] font-bold tracking-[0.2em] uppercase flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" /> Encrypted Connection
+                            </Badge>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <Button
-                            variant="ghost"
-                            className="text-gray-400 hover:text-white"
-                            onClick={() => {
-                                // Simulate Logout
-                                router.push('/');
-                            }}
-                        >
-                            <LogOut className="w-4 h-4 mr-2" /> Exit Dashboard
+                </div>
+
+                {/* Incomplete Profile Alert */}
+                {!currentClubDetails && (
+                    <div className="mb-8 p-4 rounded-xl bg-[#00E5FF]/5 border border-[#00E5FF]/20 flex flex-col md:flex-row items-center justify-between gap-4 group hover:bg-[#00E5FF]/10 transition-all duration-300">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-lg bg-[#00E5FF]/10 flex items-center justify-center text-[#00E5FF]">
+                                <AlertTriangle className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-white group-hover:text-[#00E5FF] transition-colors">Club Profile Incomplete</h3>
+                                <p className="text-[11px] text-slate-400">Complete your club's profile verification to unlock all premium management features.</p>
+                            </div>
+                        </div>
+                        <Button className="bg-[#00E5FF]/10 hover:bg-[#00E5FF] text-[#00E5FF] hover:text-black border border-[#00E5FF]/30 font-bold text-xs h-9 px-6 rounded-md transition-all">
+                            Complete Now
                         </Button>
-                    </div>
-                </div>
-
-                {/* Dashboard Stats / Overview */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-                        <CardContent className="p-6 flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-500">
-                                <Users className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <p className="text-gray-400 text-sm">Club Members</p>
-                                <h3 className="text-2xl font-bold">{currentClubDetails?.members || 0}</h3>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-                        <CardContent className="p-6 flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-500">
-                                <Calendar className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <p className="text-gray-400 text-sm">Active Events</p>
-                                <h3 className="text-2xl font-bold">{clubEvents.length}</h3>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-                        <CardContent className="p-6 flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
-                                <Megaphone className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <p className="text-gray-400 text-sm">Announcements</p>
-                                <h3 className="text-2xl font-bold">{clubAnnouncements.length}</h3>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Sub Header for Profile */}
-                {currentClubDetails ? (
-                    <div className="bg-gradient-to-r from-teal-900/30 to-black border border-white/5 rounded-2xl p-6 mb-12 flex flex-col md:flex-row items-center md:items-start gap-6">
-                        <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center border border-white/10 shrink-0 text-teal-500">
-                            <Flag className="w-10 h-10" />
-                        </div>
-                        <div className="flex-1 text-center md:text-left">
-                            <h2 className="text-2xl font-bold mb-2">{currentClubDetails.name}</h2>
-                            <p className="text-gray-400 text-sm max-w-2xl mb-4">{currentClubDetails.description}</p>
-                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-gray-500">
-                                <div className="flex items-center gap-1">
-                                    <Users className="w-4 h-4" /> Lead: {currentClubDetails.lead}
-                                </div>
-                                {currentClubDetails.website && (
-                                    <div className="flex items-center gap-1">
-                                        <Globe className="w-4 h-4" />
-                                        <a href={currentClubDetails.website} target="_blank" rel="noreferrer" className="text-teal-400 hover:underline">Website</a>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="bg-black/50 border border-teal-500/20 rounded-2xl p-6 mb-12 flex flex-col md:flex-row items-center gap-6">
-                        <div className="w-16 h-16 rounded-full bg-teal-500/10 flex items-center justify-center border border-teal-500/20 shrink-0 text-teal-500">
-                            <Flag className="w-6 h-6" />
-                        </div>
-                        <div className="flex-1 text-center md:text-left">
-                            <h2 className="text-xl font-bold mb-1 text-teal-400">Club Profile Incomplete</h2>
-                            <p className="text-gray-400 text-sm mb-0">
-                                Your club does not have a comprehensive profile on record. Once your President or Council sets it up, it will appear here.
-                            </p>
-                        </div>
                     </div>
                 )}
 
+                {/* Dashboard Stats / Overview */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                    <Card className="bg-[#0F172A] border-white/5 relative overflow-hidden group hover:border-[#00E5FF]/30 transition-all duration-300">
+                        <CardContent className="p-8 flex justify-between items-center">
+                            <div>
+                                <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-slate-500 mb-2">Club Members</p>
+                                <h3 className="text-4xl font-bold tracking-tight text-white mb-1">
+                                    {currentClubDetails?.members || "1,240"}
+                                </h3>
+                                <p className="text-[10px] text-[#00E5FF] flex items-center gap-1 font-medium">
+                                    <TrendingUp className="w-3 h-3" /> +12% from last month
+                                </p>
+                            </div>
+                            <div className="w-14 h-14 rounded-2xl bg-[#00E5FF]/10 flex items-center justify-center text-[#00E5FF] group-hover:scale-110 transition-transform duration-500">
+                                <Users className="w-7 h-7" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-[#0F172A] border-white/5 relative overflow-hidden group hover:border-[#00E5FF]/30 transition-all duration-300">
+                        <CardContent className="p-8 flex justify-between items-center">
+                            <div>
+                                <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-slate-500 mb-2">Active Events</p>
+                                <h3 className="text-4xl font-bold tracking-tight text-white mb-1">
+                                    {clubEvents.length || "8"}
+                                </h3>
+                                <p className="text-[10px] text-slate-500 font-medium">Currently ongoing</p>
+                            </div>
+                            <div className="w-14 h-14 rounded-2xl bg-[#00E5FF]/10 flex items-center justify-center text-[#00E5FF] group-hover:scale-110 transition-transform duration-500">
+                                <Calendar className="w-7 h-7" />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-[#0F172A] border-white/5 relative overflow-hidden group hover:border-[#00E5FF]/30 transition-all duration-300">
+                        <CardContent className="p-8 flex justify-between items-center">
+                            <div>
+                                <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-slate-500 mb-2">Announcements</p>
+                                <h3 className="text-4xl font-bold tracking-tight text-white mb-1">
+                                    {clubAnnouncements.length || "12"}
+                                </h3>
+                                <p className="text-[10px] text-slate-500 font-medium">Active broadcasts</p>
+                            </div>
+                            <div className="w-14 h-14 rounded-2xl bg-[#00E5FF]/10 flex items-center justify-center text-[#00E5FF] group-hover:scale-110 transition-transform duration-500">
+                                <Megaphone className="w-7 h-7" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+
+
+
                 {/* Tabs */}
                 <Tabs defaultValue="events" value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-                    <div className="overflow-x-auto pb-2">
-                        <TabsList className="bg-white/5 border border-white/10 p-1 flex-wrap md:flex-nowrap min-w-max">
-                            <TabsTrigger value="events" className="data-[state=active]:bg-teal-500 data-[state=active]:text-black"><Calendar className="w-4 h-4 mr-2" /> Manage Events</TabsTrigger>
-                            <TabsTrigger value="announcements" className="data-[state=active]:bg-teal-500 data-[state=active]:text-black"><Megaphone className="w-4 h-4 mr-2" /> Broadcast Announcements</TabsTrigger>
-                            <TabsTrigger value="team" className="data-[state=active]:bg-teal-500 data-[state=active]:text-black"><Users className="w-4 h-4 mr-2" /> Manage Team</TabsTrigger>
-                            <TabsTrigger value="gallery" className="data-[state=active]:bg-teal-500 data-[state=active]:text-black"><Camera className="w-4 h-4 mr-2" /> Gallery</TabsTrigger>
+                    <div className="flex justify-between items-center border-b border-white/5 mb-8 overflow-x-auto">
+                        <TabsList className="bg-transparent h-12 p-0 flex space-x-8 rounded-none border-0 min-w-max">
+                            <TabsTrigger
+                                value="events"
+                                className="bg-transparent border-0 rounded-none h-12 px-0 text-[11px] font-bold uppercase tracking-[0.2em] text-[#64748B] data-[state=active]:text-[#00E5FF] data-[state=active]:border-b-2 data-[state=active]:border-[#00E5FF] transition-all"
+                            >
+                                Manage Events
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="announcements"
+                                className="bg-transparent border-0 rounded-none h-12 px-0 text-[11px] font-bold uppercase tracking-[0.2em] text-[#64748B] data-[state=active]:text-[#00E5FF] data-[state=active]:border-b-2 data-[state=active]:border-[#00E5FF] transition-all"
+                            >
+                                Broadcast
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="team"
+                                className="bg-transparent border-0 rounded-none h-12 px-0 text-[11px] font-bold uppercase tracking-[0.2em] text-[#64748B] data-[state=active]:text-[#00E5FF] data-[state=active]:border-b-2 data-[state=active]:border-[#00E5FF] transition-all"
+                            >
+                                Manage Team
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="gallery"
+                                className="bg-transparent border-0 rounded-none h-12 px-0 text-[11px] font-bold uppercase tracking-[0.2em] text-[#64748B] data-[state=active]:text-[#00E5FF] data-[state=active]:border-b-2 data-[state=active]:border-[#00E5FF] transition-all"
+                            >
+                                Gallery
+                            </TabsTrigger>
                         </TabsList>
+
+                        <div className="hidden md:flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-[#64748B]">
+                            <span>View:</span>
+                            <div className="flex gap-2">
+                                <LayoutGrid className="w-4 h-4 text-[#00E5FF] cursor-pointer" />
+                                <List className="w-4 h-4 cursor-pointer hover:text-white transition-colors" />
+                            </div>
+                        </div>
                     </div>
 
+
                     {/* Events Content */}
-                    <TabsContent value="events" className="space-y-6">
-                        <div className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
-                            <h2 className="text-xl font-bold">Your Events</h2>
-                            <Button onClick={() => openAddModal('event')} className="bg-teal-600 text-white hover:bg-teal-500 shadow-lg shadow-teal-500/20"><Plus className="w-4 h-4 mr-2" /> Post New Event</Button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {clubEvents.map((event) => (
-                                <Card key={event.id} className="bg-white/5 border-white/10 group relative overflow-hidden hover:border-teal-500/30 transition-all duration-300">
-                                    {event.image ? (
-                                        <div className="h-32 w-full relative">
-                                            <img src={event.image} alt={event.name} className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity" />
-                                            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80" />
-                                            <div className="absolute bottom-2 left-4">
-                                                <Badge variant="outline" className="border-white/20 bg-black/50 backdrop-blur-md">{event.type}</Badge>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="absolute top-0 left-0 w-1 h-full bg-teal-500" />
-                                    )}
-                                    <CardContent className={`p-6 ${event.image ? 'pt-4' : 'pl-8'}`}>
-                                        <div className="flex justify-between items-start mb-4">
-                                            {!event.image && <Badge variant="outline" className="border-white/20 bg-black/40">{event.type}</Badge>}
-                                            <div className="flex items-center gap-1 -mt-2 -mr-2 ml-auto z-10 relative bg-black/40 p-1 rounded-md border border-white/10 backdrop-blur-md">
-                                                <Button variant="ghost" size="sm" onClick={() => openAddModal('event', event)} className="text-gray-300 hover:text-white h-7 px-2 text-xs">
-                                                    Edit
-                                                </Button>
-                                                <div className="w-px h-4 bg-white/20 mx-1"></div>
-                                                <Button variant="ghost" size="icon" onClick={() => confirmDelete('event', event.id)} className="text-red-500 hover:bg-red-500/20 h-7 w-7 rounded">
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                        <h3 className="text-xl font-bold mb-2 text-white">{event.name}</h3>
-                                        <div className="flex items-center gap-3 text-sm text-gray-400 mb-1">
-                                            <div className="flex items-center gap-1.5 bg-white/5 py-1 px-2 rounded-md">
-                                                <Calendar className="w-3.5 h-3.5 text-teal-400" />
-                                                <span>{event.date}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 bg-white/5 py-1 px-2 rounded-md">
-                                                <Star className="w-3.5 h-3.5 text-yellow-500" />
-                                                <span>{event.location}</span>
-                                            </div>
-                                        </div>
-                                        {event.registrationLink && (
-                                            <div className="mt-4 pt-4 border-t border-white/5">
-                                                <a href={event.registrationLink.startsWith('http') ? event.registrationLink : `https://${event.registrationLink}`} target="_blank" rel="noopener noreferrer">
-                                                    <Button variant="outline" size="sm" className="w-full border-teal-500/30 text-teal-400 hover:bg-teal-500/10">Follow Registration Link</Button>
-                                                </a>
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            ))}
-                            {clubEvents.length === 0 && (
-                                <div className="col-span-full py-12 text-center border border-dashed border-white/10 rounded-xl bg-white/5">
-                                    <Calendar className="w-12 h-12 text-white/20 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-gray-300">No events found</h3>
-                                    <p className="text-sm text-gray-500 mt-1">Start organizing activities for your club members.</p>
+                    <TabsContent value="events" className="mt-0 outline-none">
+                        {clubEvents.length > 0 ? (
+                            <div className="space-y-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-bold text-white">Upcoming Events</h2>
+                                    <Button
+                                        onClick={() => openAddModal('event')}
+                                        className="bg-[#00E5FF] hover:bg-[#00E5FF]/90 text-black font-semibold rounded-md flex items-center gap-2 h-9 px-4"
+                                    >
+                                        <Plus className="w-4 h-4" /> CREATE EVENT
+                                    </Button>
                                 </div>
-                            )}
-                        </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {clubEvents.map((event) => (
+                                        <Card key={event.id} className="bg-[#0F172A] border-white/5 group relative overflow-hidden flex flex-col h-full">
+                                            {event.image && (
+                                                <div className="h-40 w-full relative">
+                                                    <img src={event.image} alt={event.name} className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity" />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A] to-transparent" />
+                                                </div>
+                                            )}
+                                            <CardContent className="p-6 flex-grow flex flex-col justify-between">
+                                                <div>
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <Badge className="bg-[#00E5FF]/10 text-[#00E5FF] border-none mb-2">{event.type}</Badge>
+                                                        <div className="flex items-center gap-2">
+                                                            <Button variant="ghost" size="icon" onClick={() => openAddModal('event', event)} className="h-8 w-8 text-slate-400 hover:text-white">
+                                                                <Eye className="w-4 h-4" />
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" onClick={() => confirmDelete('event', event.id)} className="h-8 w-8 text-red-400 hover:bg-red-400/10">
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                    <h3 className="text-xl font-bold text-white mb-2">{event.name}</h3>
+                                                    <div className="space-y-2 mb-4">
+                                                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                                                            <Calendar className="w-3.5 h-3.5 text-[#00E5FF]" />
+                                                            {event.date}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                                                            <Globe className="w-3.5 h-3.5 text-[#00E5FF]" />
+                                                            {event.location}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {event.registrationLink && (
+                                                    <a href={event.registrationLink} target="_blank" rel="noopener noreferrer" className="mt-4">
+                                                        <Button variant="outline" className="w-full border-[#00E5FF]/20 text-[#00E5FF] hover:bg-[#00E5FF]/10 h-9">
+                                                            Register Now
+                                                        </Button>
+                                                    </a>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-[#0F172A]/50 border border-white/5 rounded-3xl p-12 min-h-[500px] flex flex-col items-center justify-center text-center backdrop-blur-sm">
+                                <div className="w-24 h-24 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-white mb-8 shadow-2xl">
+                                    <Calendar className="w-10 h-10" />
+                                </div>
+                                <h2 className="text-3xl font-bold text-white mb-4">Your Events</h2>
+                                <p className="text-slate-400 max-w-md mx-auto mb-10 leading-relaxed">
+                                    You haven't scheduled any events yet. Start organizing your first community meetup or club session today.
+                                </p>
+                                <Button
+                                    onClick={() => openAddModal('event')}
+                                    className="bg-transparent hover:bg-[#00E5FF] text-[#00E5FF] hover:text-black border border-[#00E5FF]/30 font-bold h-12 px-8 rounded-xl transition-all flex items-center gap-2 group"
+                                >
+                                    <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+                                    Create First Event
+                                </Button>
+                            </div>
+                        )}
                     </TabsContent>
+
 
                     {/* Announcements Content */}
-                    <TabsContent value="announcements" className="space-y-6">
-                        <div className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
-                            <h2 className="text-xl font-bold">Your Announcements</h2>
-                            <Button onClick={() => openAddModal('announcement')} className="bg-teal-600 text-white hover:bg-teal-500 shadow-lg shadow-teal-500/20"><Plus className="w-4 h-4 mr-2" /> New Broadcast</Button>
-                        </div>
-                        <div className="grid gap-4">
-                            {clubAnnouncements.map((item) => (
-                                <Card key={item.id} className="bg-white/5 border-white/10 hover:border-teal-500/50 transition-colors">
-                                    <div className="p-6 flex flex-col md:flex-row justify-between gap-6">
-                                        <div className="flex-1">
-                                            <div className="flex flex-wrap items-center gap-2 mb-3">
-                                                <h3 className="text-xl font-bold">{item.title}</h3>
-                                                <Badge variant="outline" className={item.priority === 'High' ? 'text-red-400 border-red-500/50 bg-red-500/10' : item.priority === 'Medium' ? 'text-yellow-400 border-yellow-500/50 bg-yellow-500/10' : 'text-blue-400 border-blue-500/50 bg-blue-500/10'}>{item.priority}</Badge>
-                                                <Badge variant="secondary" className="bg-white/10 text-gray-300">{item.category}</Badge>
-                                            </div>
-                                            <p className="text-gray-300 mb-4 bg-black/30 p-4 rounded-lg border border-white/5 leading-relaxed">{item.content}</p>
-                                            <div className="flex items-center gap-4 text-xs text-gray-500">
-                                                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {item.date}</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col gap-2 min-w-[120px]">
-                                            <Button variant="outline" size="sm" onClick={() => openAddModal('announcement', item)} className="w-full border-white/20 text-gray-300 hover:text-white bg-black/40">
-                                                Edit Post
-                                            </Button>
-                                            <Button variant="outline" size="sm" onClick={() => confirmDelete('announcement', item.id)} className="w-full border-red-500/20 text-red-400 hover:bg-red-500/20 bg-black/40">
-                                                Delete
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))}
-                            {clubAnnouncements.length === 0 && (
-                                <div className="py-12 text-center border border-dashed border-white/10 rounded-xl bg-white/5">
-                                    <Megaphone className="w-12 h-12 text-white/20 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-gray-300">No announcements yet</h3>
-                                    <p className="text-sm text-gray-500 mt-1">Keep your club members informed with updates here.</p>
+                    <TabsContent value="announcements" className="mt-0 outline-none">
+                        {clubAnnouncements.length > 0 ? (
+                            <div className="space-y-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-bold text-white">Latest Announcements</h2>
+                                    <Button
+                                        onClick={() => openAddModal('announcement')}
+                                        className="bg-[#00E5FF] hover:bg-[#00E5FF]/90 text-black font-semibold rounded-md flex items-center gap-2 h-9 px-4"
+                                    >
+                                        <Plus className="w-4 h-4" /> NEW BROADCAST
+                                    </Button>
                                 </div>
-                            )}
-                        </div>
+                                <div className="grid gap-4">
+                                    {clubAnnouncements.map((item) => (
+                                        <Card key={item.id} className="bg-[#0F172A] border-white/5 hover:border-[#00E5FF]/30 transition-all duration-300">
+                                            <div className="p-6 flex flex-col md:flex-row justify-between gap-6">
+                                                <div className="flex-grow">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <h3 className="text-xl font-bold text-white">{item.title}</h3>
+                                                        <Badge variant="outline" className={`${item.priority === 'High' ? 'text-red-400 border-red-400' : 'text-[#00E5FF] border-[#00E5FF]/30'} bg-white/5`}>
+                                                            {item.priority || 'Low'}
+                                                        </Badge>
+                                                        <Badge className="bg-white/5 text-slate-400 border-white/10 font-mono text-[10px]">
+                                                            {item.category || 'General'}
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-slate-400 text-sm mb-4 leading-relaxed">{item.content}</p>
+                                                    <div className="flex items-center gap-4">
+                                                        <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">
+                                                            Posted: {item.date}
+                                                        </p>
+                                                        {item.link && (
+                                                            <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#00E5FF] hover:underline font-mono uppercase tracking-widest flex items-center gap-1">
+                                                                <Globe className="w-3 h-3" /> External Link
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex md:flex-col gap-2 shrink-0">
+                                                    <Button variant="outline" size="sm" onClick={() => openAddModal('announcement', item)} className="border-white/10 text-slate-400 hover:text-white hover:bg-white/5 h-9">
+                                                        Edit
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" onClick={() => confirmDelete('announcement', item.id)} className="text-red-500 hover:bg-red-500/10 h-9 w-9">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-[#0F172A]/50 border border-white/5 rounded-3xl p-12 min-h-[500px] flex flex-col items-center justify-center text-center backdrop-blur-sm">
+                                <div className="w-24 h-24 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-white mb-8 shadow-2xl">
+                                    <Megaphone className="w-10 h-10" />
+                                </div>
+                                <h2 className="text-3xl font-bold text-white mb-4">Broadcasting</h2>
+                                <p className="text-slate-400 max-w-md mx-auto mb-10 leading-relaxed">
+                                    Share important updates and reach your club members instantly through official broadcasts.
+                                </p>
+                                <Button
+                                    onClick={() => openAddModal('announcement')}
+                                    className="bg-transparent hover:bg-[#00E5FF] text-[#00E5FF] hover:text-black border border-[#00E5FF]/30 font-bold h-12 px-8 rounded-xl transition-all flex items-center gap-2 group"
+                                >
+                                    <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+                                    Create First Announcement
+                                </Button>
+                            </div>
+                        )}
                     </TabsContent>
+
 
                     {/* Team Members Content */}
-                    <TabsContent value="team" className="space-y-6">
-                        <div className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
-                            <h2 className="text-xl font-bold">Your Team Members</h2>
-                            <Button onClick={() => openAddModal('member')} className="bg-teal-600 text-white hover:bg-teal-500 shadow-lg shadow-teal-500/20"><Plus className="w-4 h-4 mr-2" /> Add Member</Button>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                            {(currentClubDetails?.teamMembers || []).map((member) => (
-                                <Card key={member.id} className="bg-white/5 border-white/10 hover:border-teal-500/50 transition-colors">
-                                    <div className="p-6 flex flex-col items-center text-center relative group">
-                                        <div className="absolute top-2 right-2 flex opacity-0 group-hover:opacity-100 transition-opacity gap-1">
-                                            <Button variant="ghost" size="icon" onClick={() => openAddModal('member', member)} className="h-7 w-7 bg-black/50 text-gray-300 hover:text-white rounded">
-                                                <Star className="w-3.5 h-3.5" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => confirmDelete('member', member.id)} className="h-7 w-7 bg-black/50 text-red-400 hover:bg-red-500/20 rounded">
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </Button>
-                                        </div>
-                                        <div className="w-20 h-20 rounded-full mb-4 bg-white/10 overflow-hidden flex items-center justify-center">
-                                            {member.image ? (
-                                                <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <Users className="w-8 h-8 text-teal-500/50" />
-                                            )}
-                                        </div>
-                                        <h3 className="text-lg font-bold mb-1">{member.name}</h3>
-                                        <Badge variant="outline" className="border-teal-500/30 text-teal-400 bg-teal-500/10 mb-3">{member.role}</Badge>
-                                    </div>
-                                </Card>
-                            ))}
-                            {(!currentClubDetails?.teamMembers || currentClubDetails.teamMembers.length === 0) && (
-                                <div className="col-span-full py-12 text-center border border-dashed border-white/10 rounded-xl bg-white/5">
-                                    <Users className="w-12 h-12 text-white/20 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-gray-300">No team members added</h3>
-                                    <p className="text-sm text-gray-500 mt-1">Add core team members and their roles here.</p>
+                    <TabsContent value="team" className="mt-0 outline-none">
+                        {currentClubDetails?.teamMembers && currentClubDetails.teamMembers.length > 0 ? (
+                            <div className="space-y-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-bold text-white">Core Team</h2>
+                                    <Button
+                                        onClick={() => openAddModal('member')}
+                                        className="bg-[#00E5FF] hover:bg-[#00E5FF]/90 text-black font-semibold rounded-md flex items-center gap-2 h-9 px-4"
+                                    >
+                                        <Plus className="w-4 h-4" /> ADD MEMBER
+                                    </Button>
                                 </div>
-                            )}
-                        </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {currentClubDetails.teamMembers.map((member) => (
+                                        <Card key={member.id} className="bg-[#0F172A] border-white/5 p-6 hover:border-[#00E5FF]/30 transition-all duration-300 group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-16 h-16 rounded-2xl bg-[#00E5FF]/10 flex items-center justify-center text-[#00E5FF] overflow-hidden border border-[#00E5FF]/20 group-hover:scale-105 transition-transform duration-500">
+                                                    {member.image ? (
+                                                        <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <Users className="w-8 h-8" />
+                                                    )}
+                                                </div>
+                                                <div className="flex-grow">
+                                                    <h3 className="font-bold text-white">{member.name}</h3>
+                                                    <p className="text-xs text-[#00E5FF] font-mono tracking-wider uppercase mb-2">{member.role}</p>
+                                                    <div className="flex gap-2">
+                                                        <Button variant="ghost" size="icon" onClick={() => openAddModal('member', member)} className="h-7 w-7 text-slate-400 hover:text-white">
+                                                            <Eye className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => confirmDelete('member', member.id)} className="h-7 w-7 text-red-500/60 hover:text-red-400 hover:bg-red-400/10">
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-[#0F172A]/50 border border-white/5 rounded-3xl p-12 min-h-[500px] flex flex-col items-center justify-center text-center backdrop-blur-sm">
+                                <div className="w-24 h-24 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-white mb-8 shadow-2xl">
+                                    <Users className="w-10 h-10" />
+                                </div>
+                                <h2 className="text-3xl font-bold text-white mb-4">Club Team</h2>
+                                <p className="text-slate-400 max-w-md mx-auto mb-10 leading-relaxed">
+                                    Manage your club leads and team members. Assign roles and coordinate your club operations.
+                                </p>
+                                <Button
+                                    onClick={() => openAddModal('member')}
+                                    className="bg-transparent hover:bg-[#00E5FF] text-[#00E5FF] hover:text-black border border-[#00E5FF]/30 font-bold h-12 px-8 rounded-xl transition-all flex items-center gap-2 group"
+                                >
+                                    <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+                                    Add Team Member
+                                </Button>
+                            </div>
+                        )}
                     </TabsContent>
 
+
                     {/* Gallery Content */}
-                    <TabsContent value="gallery" className="space-y-6">
-                        <div className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
-                            <h2 className="text-xl font-bold">Manage Gallery</h2>
-                            <Button onClick={() => openAddModal('gallery')} className="bg-teal-600 text-white hover:bg-teal-500 shadow-lg shadow-teal-500/20">
-                                <Plus className="w-4 h-4 mr-2" /> Add Image
-                            </Button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {galleryImages.filter(g => g.addedByRole === `Club Manager (${currentClubName})`).map((image) => (
-                                <Card key={image.id} className="bg-white/5 border-white/10 overflow-hidden group hover:border-teal-500/50 transition-colors">
-                                    <div className="relative h-64 overflow-hidden bg-black/50">
-                                        <img
-                                            src={image.src || ''}
-                                            alt={image.alt || ''}
-                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                            <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                                                <div>
-                                                    <h3 className="text-white font-bold">{image.alt}</h3>
-                                                    <p className="text-xs text-gray-300">Added: {image.dateAdded || 'N/A'}</p>
+                    <TabsContent value="gallery" className="mt-0 outline-none">
+                        {clubGalleryImages.length > 0 ? (
+                            <div className="space-y-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-bold text-white">Club Gallery</h2>
+                                    <Button
+                                        onClick={() => openAddModal('gallery')}
+                                        className="bg-[#00E5FF] hover:bg-[#00E5FF]/90 text-black font-semibold rounded-md flex items-center gap-2 h-9 px-4"
+                                    >
+                                        <Plus className="w-4 h-4" /> ADD IMAGE
+                                    </Button>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    {clubGalleryImages.map((img) => (
+                                        <div key={img.id} className="group relative aspect-square rounded-xl overflow-hidden border border-white/5 bg-[#0F172A]">
+                                            <img src={img.src} alt={img.alt} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-80 group-hover:opacity-100" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
+                                                <p className="text-xs font-bold text-white mb-2 line-clamp-1">{img.alt}</p>
+                                                <div className="flex gap-2">
+                                                    <Button variant="ghost" size="icon" onClick={() => openAddModal('gallery', img)} className="h-8 w-8 text-white hover:bg-white/20">
+                                                        <Eye className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" onClick={() => confirmDelete('gallery', img.id)} className="h-8 w-8 text-red-500 hover:bg-red-500/20">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
                                                 </div>
-                                                <Button variant="ghost" size="icon" onClick={() => confirmDelete('gallery', image.id)} className="text-red-500 hover:bg-red-500/20 bg-black/50">
-                                                    <Trash2 className="w-5 h-5" />
-                                                </Button>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="p-3 bg-white/5 border-t border-white/10 flex gap-2">
-                                        <Badge variant="outline" className="border-teal-500/30 text-teal-400 bg-teal-500/10 text-xs">
-                                            Span: {image.span.split(' ')[0].replace('col-span-', '')}x{image.span.split(' ')[1].replace('row-span-', '')}
-                                        </Badge>
-                                    </div>
-                                </Card>
-                            ))}
-                            {galleryImages.filter(g => g.addedByRole === `Club Manager (${currentClubName})`).length === 0 && (
-                                <div className="col-span-full py-12 text-center border border-dashed border-white/10 rounded-xl bg-white/5">
-                                    <Camera className="w-12 h-12 text-white/20 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-gray-300">No images in your gallery</h3>
-                                    <p className="text-sm text-gray-500 mt-1">Share visual updates and moments here.</p>
+                                    ))}
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        ) : (
+                            <div className="bg-[#0F172A]/50 border border-white/5 rounded-3xl p-12 min-h-[500px] flex flex-col items-center justify-center text-center backdrop-blur-sm">
+                                <div className="w-24 h-24 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-white mb-8 shadow-2xl">
+                                    <Camera className="w-10 h-10" />
+                                </div>
+                                <h2 className="text-3xl font-bold text-white mb-4">Gallery</h2>
+                                <p className="text-slate-400 max-w-md mx-auto mb-10 leading-relaxed">
+                                    Curate a collection of highlights and memories from your club's events and activities.
+                                </p>
+                                <Button
+                                    onClick={() => openAddModal('gallery')}
+                                    className="bg-transparent hover:bg-[#00E5FF] text-[#00E5FF] hover:text-black border border-[#00E5FF]/30 font-bold h-12 px-8 rounded-xl transition-all flex items-center gap-2 group"
+                                >
+                                    <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+                                    Add Image
+                                </Button>
+                            </div>
+                        )}
                     </TabsContent>
                 </Tabs>
+
 
 
                 {/* Combined Add/Edit Modal */}
@@ -542,12 +642,11 @@ export default function ClubsDashboard() {
                                                     <div className="space-y-2">
                                                         <label className="text-sm font-medium text-gray-300">Date & Time <span className="text-red-500">*</span></label>
                                                         <Input
-                                                            type="text"
+                                                            type="datetime-local"
                                                             value={formData.date || ''}
                                                             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                                                             required
                                                             className="bg-black/50 border-white/10"
-                                                            placeholder="e.g. Oct 24, 10:00 AM"
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
@@ -583,16 +682,7 @@ export default function ClubsDashboard() {
                                                     />
                                                 </div>
 
-                                                <div className="space-y-2 pt-2 border-t border-white/10">
-                                                    <label className="text-sm font-medium text-gray-300">Image URL (Optional)</label>
-                                                    <p className="text-xs text-gray-500 mb-2">Provide a descriptive image link to make your event stand out.</p>
-                                                    <Input
-                                                        value={formData.image || ''}
-                                                        onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                                                        className="bg-black/50 border-white/10"
-                                                        placeholder="https://example.com/poster.jpg"
-                                                    />
-                                                </div>
+
                                             </>
                                         )}
 

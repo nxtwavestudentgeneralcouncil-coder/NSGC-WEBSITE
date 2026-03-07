@@ -6,9 +6,8 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, ShoppingBag, BarChart2, Bell, Clock, Calendar, Flag, Users } from 'lucide-react';
+import { FileText, ShoppingBag, BarChart2, Bell, Clock, Flag, Users, BellOff, Edit2, ListX, ChevronRight, PieChart } from 'lucide-react';
 import Link from 'next/link';
-import SpotlightCard from '@/components/ui/spotlight-card';
 import { useTickets, TicketProvider } from '@/lib/ticket-context';
 import { useSharedData } from '@/hooks/useSharedData';
 import { useCouncil, CouncilProvider } from '@/lib/council-context';
@@ -56,236 +55,238 @@ function StudentDashboardContent() {
     }
 
     return (
-        <div className="min-h-screen bg-black text-white pt-24 md:pt-10 pb-20">
-            <div className="container mx-auto px-4">
+        <div className="min-h-screen bg-[#0B0B14] text-white pt-24 md:pt-16 pb-20 font-sans">
+            <div className="container mx-auto px-4 lg:px-8 max-w-[1400px]">
 
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-12">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 mt-4">
                     <div>
-                        <h1 className="text-3xl md:text-4xl font-bold mb-2">Welcome back, Student</h1>
-                        <p className="text-gray-400">Here's what's happening on campus.</p>
+                        <h1 className="text-4xl md:text-5xl font-extrabold mb-3 tracking-tight">Welcome back, Student</h1>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></div>
+                            <p className="text-[#94a3b8] text-sm">Live feed: Everything that's happening on campus today.</p>
+                        </div>
                     </div>
-                    <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 w-full md:w-auto">
+                    <Button variant="outline" className="border-white/20 text-white bg-transparent hover:bg-white/10 w-full md:w-auto rounded-full px-6 py-5 text-xs font-bold tracking-widest uppercase">
+                        <Edit2 className="w-4 h-4 mr-2" />
                         Edit Profile
                     </Button>
                 </div>
 
                 {/* Main Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    <SpotlightCard className="bg-white/5 border-white/10">
-                        <CardContent className="p-6 flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
-                                <FileText className="w-6 h-6" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                    <div className="bg-[#111625] rounded-[20px] p-6 flex flex-col justify-center">
+                        <div className="flex items-center gap-6">
+                            {/* Red Ring */}
+                            <div className="relative w-16 h-16 rounded-full border-[3px] border-[#ef4444]/20 flex items-center justify-center flex-shrink-0">
+                                <svg className="absolute inset-0 w-full h-full -rotate-90">
+                                    <circle cx="30" cy="30" r="28" fill="none" stroke="#ef4444" strokeWidth="3" strokeDasharray="175" strokeDashoffset="140" className="opacity-80" />
+                                </svg>
+                                <div className="bg-[#ef4444]/10 rounded-full p-2">
+                                    <svg className="w-4 h-4 text-[#ef4444]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                </div>
                             </div>
                             <div>
-                                <p className="text-gray-400 text-sm">Complaints Submitted</p>
-                                <h3 className="text-2xl font-bold">{tickets.length}</h3>
+                                <p className="text-[#64748B] text-xs font-bold uppercase tracking-widest mb-1">Complaints Submitted</p>
+                                <h3 className="text-[32px] font-bold leading-none">{tickets.length}</h3>
                             </div>
-                        </CardContent>
-                    </SpotlightCard>
-                    <SpotlightCard className="bg-white/5 border-white/10">
-                        <CardContent className="p-6 flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
-                                <BarChart2 className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <p className="text-gray-400 text-sm">Polls / Surveys</p>
-                                <h3 className="text-2xl font-bold">12</h3>
-                            </div>
-                        </CardContent>
-                    </SpotlightCard>
-                    <SpotlightCard className="bg-white/5 border-white/10">
-                        <CardContent className="p-6 flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-500">
-                                <ShoppingBag className="w-6 h-6" />
+                        </div>
+                    </div>
+
+                    <div className="bg-[#111625] rounded-[20px] p-6 flex flex-col justify-center">
+                        <div className="flex items-center gap-6">
+                            {/* Green Ring */}
+                            <div className="relative w-16 h-16 rounded-full border-[3px] border-[#10b981]/20 flex items-center justify-center flex-shrink-0">
+                                <svg className="absolute inset-0 w-full h-full -rotate-90">
+                                    <circle cx="30" cy="30" r="28" fill="none" stroke="#10b981" strokeWidth="3" strokeDasharray="175" strokeDashoffset="120" className="opacity-80" />
+                                </svg>
+                                <div className="bg-[#10b981]/10 rounded-full p-2">
+                                    <BarChart2 className="w-4 h-4 text-[#10b981]" />
+                                </div>
                             </div>
                             <div>
-                                <p className="text-gray-400 text-sm">Active Listings</p>
-                                <h3 className="text-2xl font-bold">1</h3>
+                                <p className="text-[#64748B] text-xs font-bold uppercase tracking-widest mb-1">Polls / Surveys</p>
+                                <h3 className="text-[32px] font-bold leading-none">12</h3>
                             </div>
-                        </CardContent>
-                    </SpotlightCard>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#111625] rounded-[20px] p-6 flex flex-col justify-center">
+                        <div className="flex items-center gap-6">
+                            {/* Blue Ring */}
+                            <div className="relative w-16 h-16 rounded-full border-[3px] border-[#0ea5e9]/20 flex items-center justify-center flex-shrink-0">
+                                <svg className="absolute inset-0 w-full h-full -rotate-90">
+                                    <circle cx="30" cy="30" r="28" fill="none" stroke="#0ea5e9" strokeWidth="3" strokeDasharray="175" strokeDashoffset="160" className="opacity-80" />
+                                </svg>
+                                <div className="bg-[#0ea5e9]/10 rounded-full p-2">
+                                    <ShoppingBag className="w-4 h-4 text-[#0ea5e9]" />
+                                </div>
+                            </div>
+                            <div>
+                                <p className="text-[#64748B] text-xs font-bold uppercase tracking-widest mb-1">Active Listings</p>
+                                <h3 className="text-[32px] font-bold leading-none">1</h3>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                    {/* Left Column: Activity & Campus Info */}
-                    <div className="lg:col-span-2 space-y-8">
+                    {/* Left Column: Feeds (takes 8 cols) */}
+                    <div className="lg:col-span-8 space-y-10">
 
-                        {/* 1. Announcements (Synced) */}
-                        <SpotlightCard className="bg-white/5 border-white/10">
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <Bell className="w-5 h-5 text-cyan-500" />
-                                    Campus Announcements
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {allAnnouncements.length > 0 ? (
-                                        allAnnouncements.map((item) => (
-                                            <div key={item.id} className="flex gap-4 items-start p-3 rounded-lg bg-black/20">
-                                                <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${item.priority === 'High' ? 'bg-red-500' : 'bg-blue-500'}`} />
-                                                <div className="flex-1">
-                                                    <div className="flex justify-between items-start">
-                                                        <h4 className="text-sm font-bold text-white mb-1">{item.title}</h4>
-                                                        <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded">{(item as any).date || new Date((item as any).createdAt).toLocaleDateString()}</span>
+                        {/* 1. Announcements */}
+                        <div>
+                            <div className="flex items-center gap-3 mb-4">
+                                <Bell className="w-6 h-6 text-[#0ea5e9] fill-current" />
+                                <h2 className="text-[22px] font-bold tracking-tight">Campus Announcements</h2>
+                            </div>
+
+                            <div className={`min-h-[220px] rounded-[24px] overflow-hidden ${allAnnouncements.length > 0 ? 'bg-[#111625]' : 'bg-[#111625]/50 border-2 border-dashed border-white/5 flex flex-col items-center justify-center p-8'}`}>
+                                {allAnnouncements.length > 0 ? (
+                                    <div className="p-6 space-y-4">
+                                        {allAnnouncements.slice(0, 3).map((item) => (
+                                            <div key={item.id} className="flex gap-4 items-start p-4 rounded-xl bg-[#1A2133] hover:bg-[#1f2937] transition-colors border border-white/5">
+                                                <div className={`mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-[0_0_10px_currentColor] ${item.priority === 'High' ? 'bg-[#ef4444] text-[#ef4444]' : 'bg-[#0ea5e9] text-[#0ea5e9]'}`} />
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex justify-between items-start gap-4 mb-2">
+                                                        <h4 className="text-[15px] font-bold text-white leading-tight truncate">{item.title}</h4>
+                                                        <span className="text-[11px] text-[#64748B] font-mono whitespace-nowrap">{(item as any).date || new Date((item as any).createdAt).toLocaleDateString()}</span>
                                                     </div>
-                                                    <p className="text-sm text-gray-400 leading-relaxed">{item.content}</p>
+                                                    <p className="text-sm text-[#94a3b8] line-clamp-2 leading-relaxed">{item.content}</p>
                                                 </div>
                                             </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-gray-500 italic text-center text-sm py-4">No active announcements.</p>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </SpotlightCard>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-[#64748B] space-y-3">
+                                        <BellOff className="w-8 h-8 mx-auto opacity-50" />
+                                        <p className="italic text-[15px]">No active announcements at this time.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
-                        {/* Recent Complaints */}
-                        <SpotlightCard className="bg-white/5 border-white/10">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-lg">Your Recent Complaints</CardTitle>
-                                <Link href="/complaints/history" className="text-sm text-cyan-500 hover:text-cyan-400">
-                                    View All
-                                </Link>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {myTickets.length > 0 ? (
-                                        myTickets.map((item) => (
-                                            <div key={item.id} className="flex items-center justify-between p-4 rounded-lg bg-black/20">
+                        {/* 2. Recent Complaints */}
+                        <div>
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-[#ef4444] text-[#ef4444] rounded-full flex-shrink-0 w-6 h-6 flex items-center justify-center shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                                        <div className="w-1 h-3 bg-white rounded-full"></div>
+                                    </div>
+                                    <h2 className="text-[22px] font-bold tracking-tight">Your Recent Complaints</h2>
+                                </div>
+                                {tickets.length > 0 && (
+                                    <Link href="/complaints/history" className="text-sm font-bold text-[#0ea5e9] hover:text-[#38bdf8] transition-colors">
+                                        View All
+                                    </Link>
+                                )}
+                            </div>
+
+                            <div className={`min-h-[220px] rounded-[24px] overflow-hidden ${myTickets.length > 0 ? 'bg-[#111625]' : 'bg-[#111625]/50 border-2 border-dashed border-white/5 flex flex-col items-center justify-center p-8'}`}>
+                                {myTickets.length > 0 ? (
+                                    <div className="p-6 space-y-4">
+                                        {myTickets.map((item) => (
+                                            <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-xl bg-[#1A2133] hover:bg-[#1f2937] transition-colors border border-white/5 gap-4">
                                                 <div>
-                                                    <h4 className="font-medium">{item.type}</h4>
-                                                    <p className="text-xs text-gray-400">{item.id} • {new Date(item.createdAt).toLocaleDateString()}</p>
+                                                    <h4 className="font-bold text-[15px] text-white leading-tight mb-1">{item.subject}</h4>
+                                                    <div className="flex items-center gap-2 text-xs text-[#64748B] font-mono">
+                                                        <span>{item.id}</span>
+                                                        <span>•</span>
+                                                        <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                                                        <span className="hidden sm:inline">•</span>
+                                                        <span className="hidden sm:inline font-sans">{item.type}</span>
+                                                    </div>
                                                 </div>
-                                                <Badge variant={item.status === 'Completed' ? 'default' : 'secondary'} className={item.status === 'Completed' ? 'bg-green-500' : 'bg-cyan-500 text-black'}>
+                                                <Badge variant="outline" className={`rounded-full px-3 py-1 font-bold tracking-widest text-[10px] uppercase border ${item.status === 'Completed' ? 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/30' : 'bg-[#0ea5e9]/10 text-[#0ea5e9] border-[#0ea5e9]/30'}`}>
                                                     {item.status}
                                                 </Badge>
                                             </div>
-                                        ))
-                                    ) : (
-                                        <p className="text-gray-400 text-center py-4">No recent complaints found.</p>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </SpotlightCard>
-
-                        {/* 2. Upcoming Events (Synced) */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {allEvents.slice(0, 4).map((event) => (
-                                <SpotlightCard key={event.id} className="bg-white/5 border-white/10 group">
-                                    <div className="p-5 flex flex-col gap-3">
-                                        <div className="flex justify-between items-start">
-                                            <Badge variant="outline" className="text-xs border-white/20">{event.type}</Badge>
-                                            <span className="text-xs text-cyan-500 font-mono">{event.date}</span>
-                                        </div>
-                                        <h4 className="font-bold text-lg group-hover:text-cyan-400 transition-colors">{event.name}</h4>
-                                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                                            <Clock className="w-3 h-3" /> {event.location}
-                                        </div>
+                                        ))}
                                     </div>
-                                </SpotlightCard>
-                            ))}
+                                ) : (
+                                    <div className="text-center text-[#64748B] space-y-3">
+                                        <ListX className="w-8 h-8 mx-auto opacity-50" />
+                                        <p className="italic text-[15px]">No recent complaints found.</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                     </div>
 
-                    {/* Right Column: Quick Actions & Lists */}
-                    <div className="space-y-8">
+                    {/* Right Column: Quick Actions & Links (takes 4 cols) */}
+                    <div className="lg:col-span-4 space-y-8">
 
-                        {/* Quick Actions */}
-                        <div>
-                            <h2 className="text-lg font-bold mb-4">Quick Actions</h2>
-                            <div className="grid gap-4">
-                                <Link href="/complaints">
-                                    <Button className="w-full justify-start h-auto py-4 bg-white/5 hover:bg-white/10 border border-white/10">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-2 rounded-lg bg-red-500/20 text-red-500">
-                                                <FileText className="w-5 h-5" />
-                                            </div>
-                                            <div className="text-left">
-                                                <div className="font-bold text-white">Submit Complaint</div>
-                                                <div className="text-xs text-white">Report an issue</div>
-                                            </div>
+                        {/* Quick Actions Card */}
+                        <div className="bg-[#111625] rounded-[24px] border border-white/5 overflow-hidden shadow-2xl">
+                            <div className="p-6 pb-2">
+                                <h3 className="text-xs font-bold text-[#64748B] tracking-[0.2em] uppercase">Quick Actions</h3>
+                            </div>
+
+                            <div className="p-4 space-y-3">
+                                {/* Action 1 */}
+                                <Link href="/complaints" className="block">
+                                    <div className="group bg-[#1A2133] hover:bg-[#1f2937] border border-white/5 rounded-[16px] p-4 transition-all duration-300 flex items-center gap-5 cursor-pointer">
+                                        <div className="w-12 h-12 rounded-xl bg-[#ef4444]/15 flex items-center justify-center flex-shrink-0 group-hover:bg-[#ef4444]/25 transition-colors">
+                                            <FileText className="w-5 h-5 text-[#ef4444]" />
                                         </div>
-                                    </Button>
+                                        <div>
+                                            <h4 className="text-white font-bold text-[15px] tracking-wide mb-1">SUBMIT COMPLAINT</h4>
+                                            <p className="text-[11px] text-[#64748B] font-bold tracking-wider uppercase">Report an issue</p>
+                                        </div>
+                                    </div>
                                 </Link>
 
-                                <Link href="/marketplace">
-                                    <Button className="w-full justify-start h-auto py-4 bg-white/5 hover:bg-white/10 border border-white/10">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-2 rounded-lg bg-cyan-500/20 text-cyan-500">
-                                                <ShoppingBag className="w-5 h-5" />
-                                            </div>
-                                            <div className="text-left">
-                                                <div className="font-bold text-white">Sell Item</div>
-                                                <div className="text-xs text-white">List a book or gadget</div>
-                                            </div>
+                                {/* Action 2 */}
+                                <Link href="/marketplace" className="block">
+                                    <div className="group bg-[#1A2133] hover:bg-[#1f2937] border border-white/5 rounded-[16px] p-4 transition-all duration-300 flex items-center gap-5 cursor-pointer">
+                                        <div className="w-12 h-12 rounded-xl bg-[#0ea5e9]/15 flex items-center justify-center flex-shrink-0 group-hover:bg-[#0ea5e9]/25 transition-colors">
+                                            <ShoppingBag className="w-5 h-5 text-[#0ea5e9]" />
                                         </div>
-                                    </Button>
+                                        <div>
+                                            <h4 className="text-white font-bold text-[15px] tracking-wide mb-1">SELL ITEM</h4>
+                                            <p className="text-[11px] text-[#64748B] font-bold tracking-wider uppercase">List a book or gadget</p>
+                                        </div>
+                                    </div>
                                 </Link>
 
-                                <Link href="/feedback">
-                                    <Button className="w-full justify-start h-auto py-4 bg-white/5 hover:bg-white/10 border border-white/10">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-2 rounded-lg bg-blue-500/20 text-blue-500">
-                                                <BarChart2 className="w-5 h-5" />
-                                            </div>
-                                            <div className="text-left">
-                                                <div className="font-bold text-white">Take Survey</div>
-                                                <div className="text-xs text-white">Share your opinion</div>
-                                            </div>
+                                {/* Action 3 */}
+                                <Link href="/feedback" className="block">
+                                    <div className="group bg-[#1A2133] hover:bg-[#1f2937] border border-white/5 rounded-[16px] p-4 transition-all duration-300 flex items-center gap-5 cursor-pointer">
+                                        <div className="w-12 h-12 rounded-xl bg-[#8b5cf6]/15 flex items-center justify-center flex-shrink-0 group-hover:bg-[#8b5cf6]/25 transition-colors">
+                                            <PieChart className="w-5 h-5 text-[#8b5cf6]" />
                                         </div>
-                                    </Button>
+                                        <div>
+                                            <h4 className="text-white font-bold text-[15px] tracking-wide mb-1">TAKE SURVEY</h4>
+                                            <p className="text-[11px] text-[#64748B] font-bold tracking-wider uppercase">Share your opinion</p>
+                                        </div>
+                                    </div>
                                 </Link>
                             </div>
                         </div>
 
-                        {/* 3. Student Clubs (Synced) */}
-                        <SpotlightCard className="bg-white/5 border-white/10">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <Flag className="w-4 h-4 text-cyan-500" /> Active Clubs
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {clubs.map((club) => (
-                                        <div key={club.id} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
-                                            <div>
-                                                <h5 className="font-bold text-sm">{club.name}</h5>
-                                                <p className="text-xs text-gray-500">{club.lead}</p>
-                                            </div>
-                                            <Badge variant="secondary" className="bg-cyan-500/10 text-cyan-400 text-[10px]">{club.members} members</Badge>
-                                        </div>
-                                    ))}
+                        {/* Collapsible Tabs */}
+                        <div className="space-y-3">
+                            <Link href="/clubs" className="block">
+                                <div className="bg-[#111625] hover:bg-[#1a2133] border border-white/5 rounded-[16px] p-5 flex items-center justify-between transition-colors shadow-lg cursor-pointer group">
+                                    <div className="flex items-center gap-4">
+                                        <Flag className="w-5 h-5 text-[#0ea5e9]" />
+                                        <h4 className="text-[15px] font-bold text-white tracking-wide">Active Clubs</h4>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-[#64748B] group-hover:text-white transition-colors" />
                                 </div>
-                            </CardContent>
-                        </SpotlightCard>
+                            </Link>
 
-                        {/* 4. Council Members (Synced) */}
-                        <SpotlightCard className="bg-white/5 border-white/10">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <Users className="w-4 h-4 text-cyan-500" /> Student Council
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-3">
-                                    {members.map((member) => (
-                                        <div key={member.id} className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center text-xs font-bold text-cyan-500">
-                                                {member.name.charAt(0)}
-                                            </div>
-                                            <div>
-                                                <h5 className="text-sm font-medium">{member.name}</h5>
-                                                <p className="text-xs text-gray-500">{member.role}</p>
-                                            </div>
-                                        </div>
-                                    ))}
+                            <Link href="/council" className="block">
+                                <div className="bg-[#111625] hover:bg-[#1a2133] border border-white/5 rounded-[16px] p-5 flex items-center justify-between transition-colors shadow-lg cursor-pointer group">
+                                    <div className="flex items-center gap-4">
+                                        <Users className="w-5 h-5 text-[#0ea5e9]" />
+                                        <h4 className="text-[15px] font-bold text-white tracking-wide">Student Council</h4>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-[#64748B] group-hover:text-white transition-colors" />
                                 </div>
-                            </CardContent>
-                        </SpotlightCard>
+                            </Link>
+                        </div>
 
                     </div>
                 </div>

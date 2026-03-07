@@ -52,6 +52,8 @@ export interface Event {
     registrationLink?: string; // Optional registration link
     organizer?: string; // Optional organizer/club name
     addedByRole?: string;
+    participants?: number;
+    time?: string;
 }
 
 export interface Candidate {
@@ -190,7 +192,26 @@ export function useSharedData() {
         load('nsgc_v3_totalUsers', 1250, setTotalUsers); // Might want to change this to actual count later
         load('nsgc_v3_polls', DEFAULT_POLLS, setPolls);
         load('nsgc_v3_surveys', DEFAULT_SURVEYS, setSurveys);
-        load('nsgc_v3_gallery', DEFAULT_GALLERY, setGalleryImages);
+        
+        // Filter out gallery images with empty src (safety net for corrupt dynamic data)
+        const loadGallery = (key: string, defaultData: GalleryImage[], setter: (data: GalleryImage[]) => void) => {
+            const stored = localStorage.getItem(key);
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    const filtered = Array.isArray(parsed) 
+                        ? parsed.filter((img: GalleryImage) => img.src && img.src.trim() !== '')
+                        : defaultData;
+                    setter(filtered);
+                } catch (e) {
+                    console.error(`Failed to parse ${key}`, e);
+                    setter(defaultData);
+                }
+            } else {
+                setter(defaultData);
+            }
+        };
+        loadGallery('nsgc_v3_gallery', DEFAULT_GALLERY, setGalleryImages);
 
         // Load Total Users count - Deprecated in favor of users.length but kept for backward compatibility if needed
         const storedUsersCount = localStorage.getItem('nsgc_users_count');
@@ -311,7 +332,9 @@ export function useSharedData() {
 
     const updateGalleryImages = (newData: GalleryImage[] | ((prev: GalleryImage[]) => GalleryImage[])) => {
         setGalleryImages(prev => {
-            const updated = typeof newData === 'function' ? newData(prev) : newData;
+            const updatedRaw = typeof newData === 'function' ? newData(prev) : newData;
+            // Filter out any images with empty src before saving
+            const updated = updatedRaw.filter(img => img.src && img.src.trim() !== '');
             localStorage.setItem('nsgc_v3_gallery', JSON.stringify(updated));
             window.dispatchEvent(new Event('nsgc-data-update'));
             return updated;

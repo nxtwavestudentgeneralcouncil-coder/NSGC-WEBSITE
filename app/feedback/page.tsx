@@ -1,17 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress'; // Need to create or mock Progress
-import { MessageSquare, BarChart2, CheckCircle } from 'lucide-react';
-
-// Mock Data
+import { Badge } from '@/components/ui/badge';
+import { BarChart3, MessageSquareText, Vote, ArrowRight, CheckCircle2, Circle, Clock, Info, FileText, Utensils, GraduationCap, Dumbbell } from 'lucide-react';
 import { useSharedData } from '@/hooks/useSharedData';
 
 export default function FeedbackPage() {
     const { polls, setPolls, surveys } = useSharedData();
+    const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
     const handleVote = (pollId: string, optionId: string) => {
         setPolls(currentPolls =>
@@ -28,149 +27,249 @@ export default function FeedbackPage() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-white pt-24 md:pt-10 pb-20">
-            <div className="container mx-auto px-4">
-
-                <div className="text-center mb-16">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4">Your Voice Matters</h1>
-                    <p className="text-gray-400">Participate in polls and surveys to shape the campus.</p>
+        <div className="min-h-screen bg-[#030616] text-white pt-24 pb-20 selection:bg-cyan-500/30">
+            <div className="max-w-7xl mx-auto px-6">
+                
+                {/* Header */}
+                <div className="text-center mb-16 space-y-4">
+                    <motion.h1 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-5xl md:text-6xl font-bold tracking-tight text-white"
+                    >
+                        Your Voice Matters
+                    </motion.h1>
+                    <motion.p 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="text-slate-400 text-lg max-w-2xl mx-auto"
+                    >
+                        Participate in polls and surveys to shape the campus experience.
+                    </motion.p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-
-                    {/* Polls Section */}
-                    <div>
-                        <div className="flex items-center gap-3 mb-8">
-                            <BarChart2 className="w-6 h-6 text-cyan-500" />
-                            <h2 className="text-2xl font-bold">Active Polls</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                    
+                    {/* Active Polls Section */}
+                    <div className="lg:col-span-7 space-y-10">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                                <BarChart3 className="w-5 h-5 text-cyan-400" />
+                            </div>
+                            <h2 className="text-xl font-bold tracking-widest text-slate-200 flex items-center gap-2">
+                                <span className="w-1 h-4 bg-cyan-500 rounded-full" />
+                                ACTIVE POLLS
+                            </h2>
                         </div>
 
-                        <div className="space-y-6">
-                            <div className="space-y-6">
-                                {polls.length > 0 ? (
-                                    polls.map((poll) => {
-                                        const isPastDue = poll.dueDate && new Date(poll.dueDate) < new Date();
-                                        const isActive = poll.status === 'Active' && !isPastDue;
+                        <div className="space-y-8">
+                            {/* Poll 1: Progress Style */}
+                            <motion.div
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.2 }}
+                            >
+                                <Card className="bg-[#0B1224] border-white/5 overflow-hidden group">
+                                    <CardContent className="p-8 space-y-6">
+                                        <div className="flex justify-between items-center">
+                                            <h3 className="text-xl font-bold text-white leading-snug max-w-[80%]">
+                                                New Campus Cafeteria Working Hours?
+                                            </h3>
+                                            <Badge className="bg-cyan-500/20 text-cyan-400 border-none px-2 py-0.5 text-[10px] font-bold tracking-wider rounded">LIVE</Badge>
+                                        </div>
 
-                                        if (!isActive) return null; // Only show active polls for now, or you could show closed ones differently
+                                        <div className="space-y-5">
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-sm font-medium">
+                                                    <span className="text-slate-300">24/7 Access</span>
+                                                    <span className="text-cyan-400 font-mono">68%</span>
+                                                </div>
+                                                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                                                    <motion.div 
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: '68%' }}
+                                                        className="h-full bg-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.5)]"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-sm font-medium">
+                                                    <span className="text-slate-300">Until Midnight</span>
+                                                    <span className="text-slate-500 font-mono">32%</span>
+                                                </div>
+                                                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                                                    <motion.div 
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: '32%' }}
+                                                        className="h-full bg-indigo-500/60"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                        return (
-                                            <motion.div
-                                                key={poll.id}
-                                                initial={{ opacity: 0, x: -20 }}
-                                                whileInView={{ opacity: 1, x: 0 }}
-                                                viewport={{ once: true }}
-                                            >
-                                                <Card className="bg-white/5 border-white/10">
-                                                    <CardHeader>
-                                                        <CardTitle className="text-xl">{poll.question}</CardTitle>
-                                                        <CardDescription>{poll.totalVotes} votes so far {poll.dueDate && `• Ends: ${new Date(poll.dueDate).toLocaleDateString()}`}</CardDescription>
-                                                    </CardHeader>
-                                                    <CardContent className="space-y-4">
-                                                        {poll.options.map((option) => {
-                                                            const percentage = Math.round((option.votes / poll.totalVotes) * 100) || 0;
-                                                            const isSelected = poll.userVoted && poll.userChoice === option.id;
+                                        <Button className="w-full bg-cyan-500 hover:bg-cyan-400 text-black font-bold h-12 shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all flex items-center justify-center gap-2 group/btn">
+                                            VOTE NOW <Vote className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
 
-                                                            return (
-                                                                <div key={option.id} className="space-y-2">
-                                                                    <div className="flex justify-between text-sm">
-                                                                        <span className={isSelected ? "text-cyan-500 font-bold" : "text-gray-300"}>
-                                                                            {option.text} {isSelected && "(You voted)"}
-                                                                        </span>
-                                                                        <span className="text-gray-400">{percentage}%</span>
-                                                                    </div>
-                                                                    {poll.userVoted ? (
-                                                                        <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                                                            <motion.div
-                                                                                className={`h-full ${isSelected ? 'bg-cyan-500' : 'bg-gray-600'}`}
-                                                                                initial={{ width: 0 }}
-                                                                                animate={{ width: `${percentage}%` }}
-                                                                                transition={{ duration: 1 }}
-                                                                            />
-                                                                        </div>
-                                                                    ) : (
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            className="w-full justify-start border-white/20 hover:bg-cyan-500 hover:text-black hover:border-cyan-500"
-                                                                            onClick={() => handleVote(poll.id, option.id)}
-                                                                        >
-                                                                            Vote
-                                                                        </Button>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </CardContent>
-                                                </Card>
-                                            </motion.div>
-                                        )
-                                    })
-                                ) : (
-                                    <p className="text-gray-500 text-center py-8">No polls at the moment.</p>
-                                )}
-                            </div>
+                            {/* Poll 2: Select Style */}
+                            <motion.div
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.3 }}
+                            >
+                                <Card className="bg-[#0B1224] border-white/5">
+                                    <CardContent className="p-8 space-y-8">
+                                        <h3 className="text-xl font-bold text-white">
+                                            Preferred Festival Theme for Annual Meet?
+                                        </h3>
+
+                                        <div className="space-y-3">
+                                            {['Cyberpunk Future', 'Cultural Heritage', 'Sustainable Nature'].map((option) => (
+                                                <button
+                                                    key={option}
+                                                    onClick={() => setSelectedOption(option)}
+                                                    className={`w-full p-4 rounded-xl border flex items-center justify-between transition-all group/opt ${
+                                                        selectedOption === option 
+                                                        ? 'bg-cyan-500/5 border-cyan-500/40' 
+                                                        : 'bg-black/20 border-white/5 hover:border-white/10'
+                                                    }`}
+                                                >
+                                                    <span className={`text-sm font-medium ${selectedOption === option ? 'text-cyan-400' : 'text-slate-300 group-hover/opt:text-white'}`}>
+                                                        {option}
+                                                    </span>
+                                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                                                        selectedOption === option ? 'border-cyan-500 bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.4)]' : 'border-white/10'
+                                                    }`}>
+                                                        {selectedOption === option && <div className="w-2 h-2 rounded-full bg-white shadow-sm" />}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        <div className="pt-4 border-t border-white/5 flex items-center gap-1.5 text-[10px] text-slate-500 font-mono tracking-tighter">
+                                            POLL ENDS IN 2 DAYS • 1,245 VOTES CAST
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
                         </div>
                     </div>
 
-                    {/* Surveys Section */}
-                    <div>
-                        <div className="flex items-center gap-3 mb-8">
-                            <MessageSquare className="w-6 h-6 text-cyan-500" />
-                            <h2 className="text-2xl font-bold">Feedback Forms</h2>
+                    {/* Feedback Forms Section */}
+                    <div className="lg:col-span-5 space-y-10">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                <MessageSquareText className="w-5 h-5 text-indigo-400" />
+                            </div>
+                            <h2 className="text-xl font-bold tracking-widest text-slate-200 flex items-center gap-2">
+                                <span className="w-1 h-4 bg-indigo-500 rounded-full" />
+                                FEEDBACK FORMS
+                            </h2>
                         </div>
 
-                        <div className="space-y-6">
-                            <div className="space-y-6">
-                                {surveys.length > 0 ? (
-                                    surveys.map((survey, index) => {
-                                        const isPastDue = survey.dueDate && new Date(survey.dueDate) < new Date();
-                                        const isActive = survey.status === 'Active' && !isPastDue;
+                        <div className="space-y-4">
+                            {/* Survey Item 1 */}
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.4 }}
+                            >
+                                <Card className="bg-[#0B1224] border-white/5 hover:border-cyan-500/20 transition-all group/card">
+                                    <CardContent className="p-6">
+                                        <div className="flex gap-6">
+                                            <div className="w-14 h-14 rounded-xl bg-cyan-950/40 border border-cyan-500/20 flex items-center justify-center shrink-0 group-hover/card:scale-110 transition-transform">
+                                                <GraduationCap className="w-6 h-6 text-cyan-400" />
+                                            </div>
+                                            <div className="flex-grow space-y-2">
+                                                <div className="flex justify-between items-start">
+                                                    <h3 className="text-base font-bold text-white group-hover/card:text-cyan-400 transition-colors">Academic Curriculum Review</h3>
+                                                    <span className="text-[10px] font-mono text-slate-500 tracking-tighter">5-7 MINS</span>
+                                                </div>
+                                                <p className="text-xs text-slate-400 leading-relaxed">
+                                                    Help us improve the learning experience for the upcoming semester.
+                                                </p>
+                                                <div className="flex items-center gap-4 pt-2">
+                                                    <Badge className="bg-red-500/10 text-red-500 border-none px-2 py-0 text-[10px] font-bold tracking-wider rounded h-5">MANDATORY</Badge>
+                                                    <button className="flex items-center gap-1.5 text-cyan-400 text-[10px] font-bold tracking-widest hover:text-cyan-300 transition-colors uppercase">
+                                                        Start Survey <ArrowRight className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
 
-                                        return (
-                                            <motion.div
-                                                key={survey.id}
-                                                initial={{ opacity: 0, x: 20 }}
-                                                whileInView={{ opacity: 1, x: 0 }}
-                                                viewport={{ once: true }}
-                                                transition={{ delay: index * 0.1 }}
-                                            >
-                                                <Card className={`bg-white/5 border-white/10 ${isActive ? 'hover:border-cyan-500/50' : 'opacity-60'} transition-colors`}>
-                                                    <CardHeader>
-                                                        <div className="flex justify-between items-start">
-                                                            <CardTitle className="text-xl">{survey.title}</CardTitle>
-                                                            {!isActive && <span className="text-xs text-red-500 font-bold border border-red-500 px-2 py-1 rounded">CLOSED</span>}
-                                                        </div>
-                                                        <CardDescription>{survey.description}</CardDescription>
-                                                        {survey.dueDate && <CardDescription className="text-cyan-500/80">Ends: {new Date(survey.dueDate).toLocaleDateString()}</CardDescription>}
-                                                    </CardHeader>
-                                                    <CardContent>
-                                                        <div className="flex gap-4 text-sm text-gray-400 mb-4">
-                                                            <span className="bg-white/10 px-2 py-1 rounded">{survey.questions} Questions</span>
-                                                            <span className="bg-white/10 px-2 py-1 rounded">{survey.time} to complete</span>
-                                                        </div>
-                                                    </CardContent>
-                                                    <CardFooter>
-                                                        <Button
-                                                            className={`w-full ${isActive ? 'bg-cyan-500 text-black hover:bg-cyan-400' : 'bg-white/10 text-gray-400 border border-white/10'}`}
-                                                            disabled={!isActive}
-                                                            onClick={() => survey.link && window.open(survey.link, '_blank')}
-                                                        >
-                                                            {isActive ? 'Start Survey' : 'Closed'}
-                                                        </Button>
-                                                    </CardFooter>
-                                                </Card>
-                                            </motion.div>
-                                        )
-                                    })
-                                ) : (
-                                    <p className="text-gray-500 text-center py-8">No feedback forms available.</p>
-                                )}
-                            </div>
+                            {/* Survey Item 2 */}
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.5 }}
+                            >
+                                <Card className="bg-[#0B1224] border-white/5 hover:border-indigo-500/20 transition-all group/card">
+                                    <CardContent className="p-6">
+                                        <div className="flex gap-6">
+                                            <div className="w-14 h-14 rounded-xl bg-indigo-950/40 border border-indigo-500/20 flex items-center justify-center shrink-0 group-hover/card:scale-110 transition-transform">
+                                                <Dumbbell className="w-6 h-6 text-indigo-400" />
+                                            </div>
+                                            <div className="flex-grow space-y-2">
+                                                <div className="flex justify-between items-start">
+                                                    <h3 className="text-base font-bold text-white group-hover/card:text-indigo-400 transition-colors">Sports Facilities Survey</h3>
+                                                    <span className="text-[10px] font-mono text-slate-500 tracking-tighter">3 MINS</span>
+                                                </div>
+                                                <p className="text-xs text-slate-400 leading-relaxed">
+                                                    Share your thoughts on the new gym equipment and court maintenance.
+                                                </p>
+                                                <div className="flex items-center gap-4 pt-2">
+                                                    <Badge className="bg-slate-800 text-slate-400 border-none px-2 py-0 text-[10px] font-bold tracking-wider rounded h-5">OPTIONAL</Badge>
+                                                    <button className="flex items-center gap-1.5 text-cyan-400 text-[10px] font-bold tracking-widest hover:text-cyan-300 transition-colors uppercase">
+                                                        Start Survey <ArrowRight className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+
+                            {/* Survey Item 3: Completed */}
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.6 }}
+                            >
+                                <Card className="bg-[#0B1224]/60 border-white/5 group/card opacity-80 backdrop-blur-sm">
+                                    <CardContent className="p-6">
+                                        <div className="flex gap-6">
+                                            <div className="w-14 h-14 rounded-xl bg-emerald-950/30 border border-emerald-500/10 flex items-center justify-center shrink-0">
+                                                <Utensils className="w-6 h-6 text-emerald-500/60" />
+                                            </div>
+                                            <div className="flex-grow space-y-2">
+                                                <div className="flex justify-between items-start">
+                                                    <h3 className="text-base font-bold text-slate-400">Hostel Mess Quality Check</h3>
+                                                    <span className="text-[10px] font-mono text-slate-600 tracking-tighter">2 MINS</span>
+                                                </div>
+                                                <p className="text-xs text-slate-500 leading-relaxed">
+                                                    Weekly feedback on food quality and hygiene standards.
+                                                </p>
+                                                <div className="pt-2">
+                                                    <Badge className="bg-emerald-500/10 text-emerald-500/80 border-none px-2 py-0 text-[10px] font-bold tracking-wider rounded h-5 flex w-fit items-center gap-1">
+                                                        COMPLETED <CheckCircle2 className="w-2.5 h-2.5" />
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
                         </div>
                     </div>
 
                 </div>
-
             </div>
         </div>
     );
