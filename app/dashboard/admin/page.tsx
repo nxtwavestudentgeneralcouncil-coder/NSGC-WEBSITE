@@ -7,6 +7,8 @@ import { Users, Settings, Database, Shield, X, Save, Download, AlertTriangle, Tr
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthenticationStatus, useUserData } from '@nhost/react';
+import { nhost } from '@/lib/nhost';
 
 // Types
 interface User {
@@ -43,6 +45,7 @@ export default function AdminDashboard() {
     const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
     const [showLockdownModal, setShowLockdownModal] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
 
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [formData, setFormData] = useState<Omit<User, 'id'>>({
@@ -52,59 +55,62 @@ export default function AdminDashboard() {
         status: 'Active'
     });
 
-    useEffect(() => {
-        const checkAuth = () => {
-            let roles: string[] = [];
-            const roleStr = localStorage.getItem('userRoles');
-            const legacyRole = localStorage.getItem('userRole');
-            
-            if (roleStr) {
-                try {
-                    roles = JSON.parse(roleStr);
-                } catch(e) {
-                    roles = [roleStr];
-                }
-            } else if (legacyRole) {
-                roles = [legacyRole];
-            }
+    const { isAuthenticated, isLoading } = useAuthenticationStatus();
+    const user = useUserData();
 
-            if (roles.includes('admin')) {
+    useEffect(() => {
+        if (!isLoading) {
+            if (!isAuthenticated || !user) {
+                router.push('/login');
+                return;
+            }
+            
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const roles = (user as any).roles || [];
+            const defaultRole = user.defaultRole || '';
+            
+            if (roles.includes('admin') || defaultRole === 'admin') {
                 setIsAuthorized(true);
             } else {
-                router.push(roles.includes('president') ? '/dashboard/president' 
-                    : roles.includes('council') ? '/dashboard/council'
-                    : roles.includes('clubs') ? '/dashboard/clubs'
-                    : '/dashboard/student');
-            }
-        };
-
-        checkAuth();
-
-        // Check for persisted lockdown state
-        const savedLockdown = localStorage.getItem('lockdownMode');
-        if (savedLockdown === 'true') {
-            setLockdownMode(true);
-        }
-
-        // Load users from localStorage
-        const storedUsers = localStorage.getItem('nsgc_users');
-        if (storedUsers) {
-            try {
-                setUsers(JSON.parse(storedUsers));
-            } catch (e) {
-                console.error('Failed to parse stored users', e);
+                router.push('/dashboard/student');
             }
         }
-    }, [router]);
 
-    // Save users to localStorage whenever they change
+    }, [isAuthenticated, isLoading, user, router]);
+
+    // Fetch real users from Nhost GraphQL
+    const fetchUsers = async () => {
+        setFetchError(null);
+        // Call the serverless function to fetch users safely bypassing Hasura permission layers
+        const { res, error } = await nhost.functions.call('/get-users');
+        
+        if (error) {
+            console.error("Error fetching users from Nhost functions:", error);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            setFetchError((error as any).message || JSON.stringify(error));
+        } else if (res && (res.data as any)?.users) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const usersList = (res.data as any).users || [];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const mappedUsers = usersList.map((u: any) => ({
+                id: u.id,
+                name: u.displayName || 'Unknown',
+                email: u.email,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                roles: u.roles.map((r: any) => r.role),
+                status: 'Active'
+            }));
+            setUsers(mappedUsers);
+        } else {
+            setFetchError("Received empty or malformed user list from server.");
+        }
+    };
+
     useEffect(() => {
-        if (isAuthorized) { // Only save if we fully loaded and are auth'd, to prevent overwriting with empty array on initial mount
-           if (users.length > 0 || localStorage.getItem('nsgc_users')) {
-               localStorage.setItem('nsgc_users', JSON.stringify(users));
-           }
+        if (isAuthorized) {
+            fetchUsers();
         }
-    }, [users, isAuthorized]);
+    }, [isAuthorized]);
 
     // Export Handler
     const handleExportData = () => {
@@ -135,7 +141,6 @@ export default function AdminDashboard() {
     const confirmLockdownToggle = () => {
         const newMode = !lockdownMode;
         setLockdownMode(newMode);
-        localStorage.setItem('lockdownMode', String(newMode));
         setShowLockdownModal(false);
     };
 
@@ -167,7 +172,7 @@ export default function AdminDashboard() {
         });
     };
 
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         
         // Ensure at least one role is selected
@@ -178,16 +183,44 @@ export default function AdminDashboard() {
 
         if (editingUser) {
             // Edit existing
+            
+            // Assuming default role is highest privilege selected
+            const newDefaultRole = formData.roles.includes('admin') ? 'admin' 
+                                 : formData.roles.includes('president') ? 'president' 
+                                 : formData.roles.includes('council') ? 'council_member'
+                                 : formData.roles.includes('clubs') ? 'club_head'
+                                 : 'student';
+
+            // We proxy this through a serverless function to bypass complex Hasura user-table rules
+            const { res, error: fnError } = await nhost.functions.call('/update-user-role', {
+                userId: editingUser.id,
+                defaultRole: newDefaultRole,
+                roles: formData.roles
+            });
+
+            if (fnError) {
+                console.error("Failed to update Nhost Database Roles:", fnError);
+                
+                let errorMsg = 'Failed to execute update function. Check Nhost logs.';
+                if ((fnError as any).message) {
+                    errorMsg = (fnError as any).message;
+                }
+
+                alert(`Error syncing roles to database: ${errorMsg}`);
+                return; // Stop the local UI update if the DB update fails
+            }
+            
+            if (res?.data && (res.data as any).message) {
+                 alert(`Error from Nhost server: ${(res.data as any).message}`);
+                 return;
+            }
+
             setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...formData } : u));
             setSuccessMessage(`User "${formData.name}" updated successfully.`);
         } else {
-            // Add new
-            const newUser: User = {
-                id: Math.random().toString(36).substr(2, 9),
-                ...formData
-            };
-            setUsers(prev => [...prev, newUser]);
-            setSuccessMessage(`User "${formData.name}" added successfully.`);
+            // Add new user from admin panel natively
+            alert("To add new users, please instruct them to use the Sign Up page or invite them via the Nhost Dashboard.");
+            return;
         }
         setIsModalOpen(false);
         setShowSuccessModal(true);
@@ -239,6 +272,16 @@ export default function AdminDashboard() {
                         {lockdownMode ? 'Deactivate Lockdown' : 'Emergency Lockdown'}
                     </Button>
                 </div>
+
+                {fetchError && (
+                    <div className="mb-8 p-4 bg-red-900/50 border border-red-500 rounded-lg text-white font-mono text-sm whitespace-pre-wrap">
+                        <strong className="block mb-2 text-red-400">GraphQL Error Loading Users:</strong>
+                        {fetchError}
+                        <p className="mt-4 text-gray-300 text-xs">
+                            Verify your `admin` role has &apos;Select&apos; permission on the `auth.users` table in Nhost.
+                        </p>
+                    </div>
+                )}
 
                 {/* System Health */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
