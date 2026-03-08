@@ -1,16 +1,11 @@
-import { Request, Response } from 'express';
+import { NextResponse } from 'next/server';
 import { NhostClient } from '@nhost/nhost-js';
 
-export default async (req: Request, res: Response) => {
-    // Only allow POST or GET
-    if (req.method !== 'GET' && req.method !== 'POST') {
-        return res.status(405).send({ message: 'Method not allowed.' });
-    }
-
-    // Initialize Nhost client using environment variables provided by the Nhost serverless environment
+export async function POST() {
+    // Initialize Nhost client using environment variables
     const nhost = new NhostClient({
-        subdomain: process.env.NHOST_SUBDOMAIN || '',
-        region: process.env.NHOST_REGION || '',
+        subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '',
+        region: process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '',
         adminSecret: process.env.NHOST_ADMIN_SECRET || ''
     });
 
@@ -38,12 +33,15 @@ export default async (req: Request, res: Response) => {
 
         if (error) {
             console.error(error);
-            return res.status(500).json(error);
+            // Nhost GraphQL errors are often arrays of objects
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const errorMessage = Array.isArray(error) ? error[0]?.message : (error as any).message || String(error);
+            return NextResponse.json({ error: errorMessage }, { status: 500 });
         }
 
-        return res.status(200).json(data);
+        return NextResponse.json(data, { status: 200 });
     } catch (error) {
         console.error(error);
-        return res.status(500).json(error);
+        return NextResponse.json({ error: String(error) }, { status: 500 });
     }
-};
+}

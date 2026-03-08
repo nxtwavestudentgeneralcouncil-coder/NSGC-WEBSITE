@@ -16,6 +16,7 @@ import {
     ChevronRight,
     Save
 } from 'lucide-react';
+import { useUserData, useSignOut } from '@nhost/react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,10 +32,14 @@ function SettingsContent() {
     const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
     const [isLoading, setIsLoading] = useState(false);
 
-    // Mock Data State
+    // Nhost Integration
+    const user = useUserData();
+    const { signOut } = useSignOut();
+
+    // UI State
     const [profile, setProfile] = useState({
-        name: 'Student Name',
-        email: 'student@university.edu',
+        name: user?.displayName || 'Loading...',
+        email: user?.email || 'Loading...',
         bio: 'Computer Science Major | Class of 2026',
         phone: '+91 98765 43210'
     });
@@ -49,10 +54,13 @@ function SettingsContent() {
 
 
     useEffect(() => {
-        // Load user name from local storage
-        const storedName = localStorage.getItem('userName');
-        if (storedName) {
-            setProfile(prev => ({ ...prev, name: storedName }));
+        // Sync profile state when user data loads
+        if (user) {
+            setProfile(prev => ({ 
+                ...prev, 
+                name: user.displayName || 'Student',
+                email: user.email || ''
+            }));
         }
 
         // Set active tab from URL query param if present
@@ -60,28 +68,19 @@ function SettingsContent() {
         if (tab && ['profile', 'security', 'notifications', 'appearance'].includes(tab)) {
             setActiveTab(tab as SettingsTab);
         }
-    }, [searchParams]);
+    }, [searchParams, user]);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         setIsLoading(true);
-        // Simulate logout process
-        setTimeout(() => {
-            localStorage.removeItem('userRole');
-            localStorage.removeItem('userName');
-
-            // Notify other components
-            window.dispatchEvent(new Event('auth-change'));
-
-            router.push('/login');
-        }, 1000);
+        await signOut();
+        router.push('/login');
     };
 
     const handleSaveProfile = () => {
         setIsLoading(true);
+        // Note: Actual Nhost profile updates require a GraphQL mutation, omitting for UI stub
         setTimeout(() => {
-            localStorage.setItem('userName', profile.name);
             setIsLoading(false);
-            // In a real app, toast notification here
         }, 1000);
     };
 

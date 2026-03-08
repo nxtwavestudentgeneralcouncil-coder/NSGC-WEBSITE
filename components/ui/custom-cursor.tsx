@@ -55,7 +55,7 @@ export function CustomCursor() {
 
   return (
     <motion.div
-      className="pointer-events-none fixed top-0 left-0 z-[100000] text-cyan-400 mix-blend-screen"
+      className="pointer-events-none fixed top-0 left-0 z-[999999] text-cyan-400"
       style={{
         x: mouseX,
         y: mouseY,

@@ -16,6 +16,7 @@ import { useTickets, TicketProvider } from '@/lib/ticket-context';
 import { useCouncil, CouncilProvider } from '@/lib/council-context';
 import Link from 'next/link';
 import { useSharedData, Announcement, Achievement, GalleryImage } from '@/hooks/useSharedData';
+import { useAuthenticationStatus, useUserData } from '@nhost/react';
 
 function CouncilDashboardContent() {
     const router = useRouter();
@@ -43,22 +44,27 @@ function CouncilDashboardContent() {
 
     const [formData, setFormData] = useState<Record<string, any>>({});
 
+    const { isAuthenticated, isLoading } = useAuthenticationStatus();
+    const user = useUserData();
+
     useEffect(() => {
-        const roles = JSON.parse(localStorage.getItem('userRoles') || '[]');
-        if (roles.includes('council')) {
-            setIsAuthorized(true);
-        } else if (roles.includes('president')) {
-            router.push('/dashboard/president');
-        } else if (roles.includes('admin')) {
-            router.push('/dashboard/admin');
-        } else if (roles.includes('clubs')) {
-            router.push('/dashboard/clubs');
-        } else if (roles.includes('student')) {
-            router.push('/dashboard/student');
-        } else {
-            router.push('/login');
+        if (!isLoading) {
+            if (!isAuthenticated || !user) {
+                router.push('/login');
+                return;
+            }
+            
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const roles = (user as any).roles || [];
+            const defaultRole = user.defaultRole || '';
+            
+            if (roles.includes('council_member') || defaultRole === 'council_member') {
+                setIsAuthorized(true);
+            } else {
+                router.push('/dashboard/student');
+            }
         }
-    }, [router]);
+    }, [isAuthenticated, isLoading, user, router]);
 
     if (!isAuthorized) {
         return <div className="min-h-screen bg-black" />;

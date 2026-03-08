@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, User, Sun, Moon, Settings, LayoutDashboard, Shield, Bell, Monitor, LogOut, Crown, Megaphone, Calendar, Vote, MessageCircleWarning, Users, Trophy, ShoppingBag, MessageSquare, TerminalSquare, Flag, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useAuthenticationStatus, useUserData, useSignOut } from '@nhost/react';
 
 const navItems = [
     { name: 'Home', href: '/' },
@@ -38,43 +39,9 @@ const navIcons: Record<string, any> = {
 
 export function Navbar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [userName, setUserName] = useState('');
-    const [userRole, setUserRole] = useState('');
+    const { isAuthenticated } = useAuthenticationStatus();
+    const { signOut } = useSignOut();
     const pathname = usePathname();
-
-    useEffect(() => {
-        const checkAuth = () => {
-            const roleStr = localStorage.getItem('userRoles');
-            const legacyRole = localStorage.getItem('userRole');
-            const name = localStorage.getItem('userName');
-            
-            let roles: string[] = [];
-            if (roleStr) {
-                try {
-                    roles = JSON.parse(roleStr);
-                } catch(e) {
-                    roles = [roleStr];
-                }
-            } else if (legacyRole) {
-                roles = [legacyRole];
-            }
-
-            if (roles.length > 0 && name) {
-                setIsLoggedIn(true);
-                setUserName(name);
-                setUserRole(roles[0]);
-            } else {
-                setIsLoggedIn(false);
-                setUserName('');
-                setUserRole('');
-            }
-        };
-
-        checkAuth();
-        window.addEventListener('auth-change', checkAuth);
-        return () => window.removeEventListener('auth-change', checkAuth);
-    }, [pathname]);
 
     return (
         <>
@@ -141,7 +108,7 @@ export function Navbar() {
 
                 {/* BOTTOM ACTIONS */}
                 <div className="p-4 lg:p-6 border-t border-blue-500/20 relative z-10 w-full md:pr-6 lg:pr-8 flex flex-col gap-4">
-                    {isLoggedIn ? (
+                    {isAuthenticated ? (
                         <div className="flex flex-col gap-3">
                             {/* Dashboard link depending on role */}
 
@@ -156,13 +123,7 @@ export function Navbar() {
                                     variant="ghost"
                                     size="icon"
                                     className="text-red-500/70 hover:text-red-400 hover:bg-red-500/10 rounded-sm w-full lg:w-10"
-                                    onClick={() => {
-                                        localStorage.removeItem('userRole');
-                                        localStorage.removeItem('userRoles');
-                                        localStorage.removeItem('userName');
-                                        window.dispatchEvent(new Event('auth-change'));
-                                        window.location.href = '/login';
-                                    }}
+                                    onClick={() => signOut()}
                                 >
                                     <LogOut className="w-4 h-4" />
                                 </Button>

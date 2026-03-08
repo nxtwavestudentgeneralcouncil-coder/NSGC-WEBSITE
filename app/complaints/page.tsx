@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertCircle, CheckCircle2, ChevronDown, CloudUpload, Clock, FileText, Send, Search, Lock, Camera, X, Image as ImageIcon, Upload, Users, Globe, PlusSquare, ThumbsUp } from 'lucide-react';
 import { useTickets, TicketProvider } from '@/lib/ticket-context';
+import { useAuthenticationStatus, useUserData } from '@nhost/react';
 import { useRef } from 'react';
 
 function ComplaintsContent() {
@@ -43,16 +44,14 @@ function ComplaintsContent() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
 
+    const { isAuthenticated, isLoading: authLoading } = useAuthenticationStatus();
+    const user = useUserData();
+
     useEffect(() => {
-        // Check for authentication
-        const roles = JSON.parse(localStorage.getItem('userRoles') || '[]');
-        if (roles.length > 0) {
-            setIsLoggedIn(true);
-        } else {
-            setIsLoggedIn(false);
-        }
-        setLoading(false);
-    }, []);
+        // Hydrate the login state using Nhost auth status
+        setIsLoggedIn(isAuthenticated);
+        setLoading(authLoading);
+    }, [isAuthenticated, authLoading]);
 
     // Check for track, view or edit param
     useEffect(() => {
@@ -192,8 +191,8 @@ function ComplaintsContent() {
             if (editId) {
                 // Update existing ticket
                 updateTicketContent(editId, {
-                    studentName: formData.isAnonymous ? 'Anonymous' : (localStorage.getItem('userName') || 'Student'),
-                    email: formData.isAnonymous ? 'anonymous@example.com' : 'student@example.com',
+                    studentName: formData.isAnonymous ? 'Anonymous' : (user?.displayName || 'Student'),
+                    email: formData.isAnonymous ? 'anonymous@example.com' : (user?.email || 'student@example.com'),
                     department: formData.department,
                     type: formData.category,
                     subject: formData.subject,
@@ -214,10 +213,9 @@ function ComplaintsContent() {
                 });
 
             } else {
-                // Create ticket via context
                 const newId = createTicket({
-                    studentName: formData.isAnonymous ? 'Anonymous' : (localStorage.getItem('userName') || 'Student'),
-                    email: formData.isAnonymous ? 'anonymous@example.com' : 'student@example.com',
+                    studentName: formData.isAnonymous ? 'Anonymous' : (user?.displayName || 'Student'),
+                    email: formData.isAnonymous ? 'anonymous@example.com' : (user?.email || 'student@example.com'),
                     department: formData.department, // In real app, map to specific enum if needed
                     type: formData.category,
                     subject: formData.subject,
@@ -769,12 +767,12 @@ function ComplaintsContent() {
                                                     <div className="flex flex-col items-center flex-shrink-0">
                                                         <button
                                                             onClick={() => {
-                                                                const email = localStorage.getItem('userEmail') || 'anonymous@example.com';
-                                                                upvoteTicket(ticket.id, 'demo-user');
+                                                                const email = user?.email || 'demo-user';
+                                                                upvoteTicket(ticket.id, email);
                                                             }}
-                                                            className={`flex flex-col items-center justify-center w-[52px] py-3 rounded-2xl border ${ticket.votedBy?.includes('demo-user') ? 'bg-[#0e7490]/20 border-[#0e7490]/40 text-[#22d3ee]' : 'bg-[#111827] border-white/5 text-[#94a3b8] hover:bg-[#1f2937] hover:border-white/10 hover:text-white'} transition-all`}
+                                                            className={`flex flex-col items-center justify-center w-[52px] py-3 rounded-2xl border ${ticket.votedBy?.includes(user?.email || 'demo-user') ? 'bg-[#0e7490]/20 border-[#0e7490]/40 text-[#22d3ee]' : 'bg-[#111827] border-white/5 text-[#94a3b8] hover:bg-[#1f2937] hover:border-white/10 hover:text-white'} transition-all`}
                                                         >
-                                                            <ThumbsUp className={`w-[18px] h-[18px] mb-1.5 ${ticket.votedBy?.includes('demo-user') ? 'fill-current' : ''}`} strokeWidth={ticket.votedBy?.includes('demo-user') ? 2 : 1.5} />
+                                                            <ThumbsUp className={`w-[18px] h-[18px] mb-1.5 ${ticket.votedBy?.includes(user?.email || 'demo-user') ? 'fill-current' : ''}`} strokeWidth={ticket.votedBy?.includes(user?.email || 'demo-user') ? 2 : 1.5} />
                                                             <span className="font-bold text-[13px]">{ticket.votes || 0}</span>
                                                         </button>
                                                     </div>

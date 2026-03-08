@@ -5,44 +5,20 @@ import { useState, useEffect } from 'react';
 import { Crown, Users, Flag, LayoutDashboard, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+import { useAuthenticationStatus, useUserData } from '@nhost/react';
+
 export function GlobalDashboards() {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [userRoles, setUserRoles] = useState<string[]>([]);
+    const { isAuthenticated, isLoading } = useAuthenticationStatus();
+    const user = useUserData();
 
-    useEffect(() => {
-        const checkAuth = () => {
-            let roles: string[] = [];
-            const roleStr = localStorage.getItem('userRoles');
-            const legacyRole = localStorage.getItem('userRole'); // Keep support just in case
-            const name = localStorage.getItem('userName');
-            
-            if (roleStr) {
-                try {
-                    roles = JSON.parse(roleStr);
-                } catch(e) {
-                    roles = [roleStr];
-                }
-            } else if (legacyRole) {
-                roles = [legacyRole];
-            }
+    if (isLoading || !isAuthenticated || !user) return null;
 
-            if (roles.length > 0 && name) {
-                setIsLoggedIn(true);
-                setUserRoles(roles);
-            } else {
-                setIsLoggedIn(false);
-                setUserRoles([]);
-            }
-        };
-
-        checkAuth();
-        window.addEventListener('auth-change', checkAuth);
-        return () => window.removeEventListener('auth-change', checkAuth);
-    }, []);
-
-    if (!isLoggedIn) return null;
-
-    const hasRole = (role: string) => userRoles.includes(role);
+    // Default to mapping nhost roles if they exist, or fallback to an empty array
+    const userRoles = user?.roles ? user.roles : [];
+    
+    // Nhost typical roles come back like "me_user", "public_user", and custom ones like "admin" etc. 
+    // We can just check normally. You may need to refine the exact role string mapping depending on Hasura configuration.
+    const hasRole = (role: string) => userRoles.some(r => r.toLowerCase() === role.toLowerCase());
 
     return (
         <div className="fixed top-4 right-4 md:top-6 md:right-6 z-[9999] flex items-center gap-2 pointer-events-auto">
@@ -66,7 +42,7 @@ export function GlobalDashboards() {
                 </>
             )}
             
-            {hasRole('council') && (
+            {hasRole('council_member') && (
                 <>
                     <Button 
                         variant="ghost" 
@@ -86,7 +62,7 @@ export function GlobalDashboards() {
                 </>
             )}
             
-            {(hasRole('clubs') || hasRole('club manager')) && (
+            {hasRole('club_head') && (
                 <>
                     <Button 
                         variant="ghost" 

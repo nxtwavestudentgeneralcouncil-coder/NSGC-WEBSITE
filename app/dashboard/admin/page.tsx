@@ -23,8 +23,8 @@ const AVAILABLE_ROLES = [
     { id: 'student', label: 'Student' },
     { id: 'admin', label: 'Admin' },
     { id: 'president', label: 'President' },
-    { id: 'council', label: 'Council' },
-    { id: 'clubs', label: 'Club Manager' }
+    { id: 'council_member', label: 'Council' },
+    { id: 'club_head', label: 'Club Manager' }
 ];
 
 export default function AdminDashboard() {
@@ -78,31 +78,48 @@ export default function AdminDashboard() {
 
     }, [isAuthenticated, isLoading, user, router]);
 
-    // Fetch real users from Nhost GraphQL
+    // Fetch real users from internal API wrapper over Nhost GraphQL
     const fetchUsers = async () => {
         setFetchError(null);
-        // Call the serverless function to fetch users safely bypassing Hasura permission layers
-        const { res, error } = await nhost.functions.call('/get-users');
         
-        if (error) {
-            console.error("Error fetching users from Nhost functions:", error);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            setFetchError((error as any).message || JSON.stringify(error));
-        } else if (res && (res.data as any)?.users) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const usersList = (res.data as any).users || [];
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const mappedUsers = usersList.map((u: any) => ({
-                id: u.id,
-                name: u.displayName || 'Unknown',
-                email: u.email,
+        try {
+            const response = await fetch('/api/nhost/get-users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                
+                let errorMsg = 'Failed to fetch users';
+                if (typeof errorData.error === 'string') errorMsg = errorData.error;
+                else if (typeof errorData.message === 'string') errorMsg = errorData.message;
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                roles: u.roles.map((r: any) => r.role),
-                status: 'Active'
-            }));
-            setUsers(mappedUsers);
-        } else {
-            setFetchError("Received empty or malformed user list from server.");
+                else if (errorData.error && (errorData.error as any).message) errorMsg = (errorData.error as any).message;
+                
+                throw new Error(errorMsg);
+            }
+
+            const data = await response.json();
+
+            if (data?.users) {
+                const usersList = data.users || [];
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const mappedUsers = usersList.map((u: any) => ({
+                    id: u.id,
+                    name: u.displayName || 'Unknown',
+                    email: u.email,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    roles: u.roles.map((r: any) => r.role),
+                    status: 'Active'
+                }));
+                setUsers(mappedUsers);
+            } else {
+                setFetchError("Received empty or malformed user list from server.");
+            }
+        } catch (err: any) {
+            console.error("Error fetching users:", err);
+            setFetchError(err.message || 'An unexpected error occurred while fetching users.');
         }
     };
 
@@ -187,36 +204,39 @@ export default function AdminDashboard() {
             // Assuming default role is highest privilege selected
             const newDefaultRole = formData.roles.includes('admin') ? 'admin' 
                                  : formData.roles.includes('president') ? 'president' 
-                                 : formData.roles.includes('council') ? 'council_member'
-                                 : formData.roles.includes('clubs') ? 'club_head'
+                                 : formData.roles.includes('council_member') ? 'council_member'
+                                 : formData.roles.includes('club_head') ? 'club_head'
                                  : 'student';
 
-            // We proxy this through a serverless function to bypass complex Hasura user-table rules
-            const { res, error: fnError } = await nhost.functions.call('/update-user-role', {
-                userId: editingUser.id,
-                defaultRole: newDefaultRole,
-                roles: formData.roles
-            });
+            // We proxy this through our internal Next.js API to bypass complex Hasura user-table rules securely
+            try {
+                const response = await fetch('/api/nhost/update-user-role', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: editingUser.id,
+                        defaultRole: newDefaultRole,
+                        roles: formData.roles
+                    })
+                });
 
-            if (fnError) {
-                console.error("Failed to update Nhost Database Roles:", fnError);
-                
-                let errorMsg = 'Failed to execute update function. Check Nhost logs.';
-                if ((fnError as any).message) {
-                    errorMsg = (fnError as any).message;
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to update user roles');
                 }
 
-                alert(`Error syncing roles to database: ${errorMsg}`);
+                // If successful, update local state
+                setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...formData } : u));
+                setSuccessMessage(`User "${formData.name}" updated successfully.`);
+                
+                // Re-fetch users from the database to ensure synchronization
+                await fetchUsers();
+            } catch (err: any) {
+                console.error("Failed to update Nhost Database Roles:", err);
+                alert(`Error syncing roles to database: ${err.message || 'Check logs for details.'}`);
                 return; // Stop the local UI update if the DB update fails
             }
-            
-            if (res?.data && (res.data as any).message) {
-                 alert(`Error from Nhost server: ${(res.data as any).message}`);
-                 return;
-            }
 
-            setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...formData } : u));
-            setSuccessMessage(`User "${formData.name}" updated successfully.`);
         } else {
             // Add new user from admin panel natively
             alert("To add new users, please instruct them to use the Sign Up page or invite them via the Nhost Dashboard.");

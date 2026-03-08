@@ -19,6 +19,7 @@ import Link from 'next/link';
 // --- Types ---
 import { useSharedData, Announcement, CouncilMember, Club, Event, Election, Achievement, User, GalleryImage } from '@/hooks/useSharedData';
 import { ImageCropper } from '@/components/ui/image-cropper';
+import { useAuthenticationStatus, useUserData, useSignOut } from '@nhost/react';
 
 function PresidentDashboardContent() {
     const router = useRouter();
@@ -75,20 +76,28 @@ function PresidentDashboardContent() {
     // Form States
     const [formData, setFormData] = useState<Record<string, any>>({});
 
+    const { isAuthenticated, isLoading } = useAuthenticationStatus();
+    const user = useUserData();
+    const { signOut } = useSignOut();
+
     useEffect(() => {
-        const roles = JSON.parse(localStorage.getItem('userRoles') || '[]');
-        if (roles.includes('president')) {
-            setIsAuthorized(true);
-        } else if (roles.includes('student')) {
-            router.push('/dashboard/student');
-        } else if (roles.includes('admin')) {
-            router.push('/dashboard/admin');
-        } else if (roles.includes('clubs')) {
-            router.push('/dashboard/clubs');
-        } else {
-            router.push('/login');
+        if (!isLoading) {
+            if (!isAuthenticated || !user) {
+                router.push('/login');
+                return;
+            }
+            
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const roles = (user as any).roles || [];
+            const defaultRole = user.defaultRole || '';
+            
+            if (roles.includes('president') || defaultRole === 'president') {
+                setIsAuthorized(true);
+            } else {
+                router.push('/dashboard/student');
+            }
         }
-    }, [router]);
+    }, [isAuthenticated, isLoading, user, router]);
 
     // --- Helpers ---
     const openAddModal = (type: 'announcement' | 'member' | 'club' | 'event' | 'election' | 'achievement' | 'user' | 'poll' | 'survey' | 'gallery', data?: any) => {
@@ -328,8 +337,8 @@ function PresidentDashboardContent() {
                         <Button
                             variant="ghost"
                             className="text-[#64748B] hover:text-white hover:bg-white/5 text-xs font-bold tracking-widest uppercase h-10 px-3"
-                            onClick={() => {
-                                localStorage.removeItem('userRole');
+                            onClick={async () => {
+                                await signOut();
                                 router.push('/login');
                             }}
                         >

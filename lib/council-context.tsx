@@ -50,27 +50,12 @@ export const CouncilProvider = ({ children }: { children: ReactNode }) => {
     const [events, setEvents] = useState<CouncilEvent[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    // Load from local storage on mount
+    // Removed localStorage mock persistence logic
     useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                setAnnouncements(parsed.announcements || []);
-                setEvents(parsed.events || []);
-            } catch (e) {
-                console.error('Failed to parse council data', e);
-            }
-        }
+        setAnnouncements([]);
+        setEvents([]);
         setIsLoaded(true);
     }, []);
-
-    // Save to local storage whenever data changes
-    useEffect(() => {
-        if (isLoaded) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ announcements, events }));
-        }
-    }, [announcements, events, isLoaded]);
 
     const addAnnouncement = (title: string, content: string, author: string, link?: string, category?: string, priority?: string) => {
         const newAnnouncement: Announcement = {
@@ -85,27 +70,7 @@ export const CouncilProvider = ({ children }: { children: ReactNode }) => {
         };
         setAnnouncements(prev => [newAnnouncement, ...prev]);
 
-        // Also add to global shared announcements so President and others can see them
-        try {
-            const savedShared = localStorage.getItem('nsgc_v3_announcements');
-            const sharedAnnouncements = savedShared ? JSON.parse(savedShared) : [];
-            const newSharedAnnouncement = {
-                id: newAnnouncement.id,
-                title,
-                content,
-                author,
-                link,
-                category: category || 'General',
-                priority: priority || 'Low',
-                date: new Date().toISOString().split('T')[0], // Shared data uses 'date' instead of 'createdAt'
-                addedByRole: 'Council'
-            };
-            sharedAnnouncements.unshift(newSharedAnnouncement); // Add to beginning
-            localStorage.setItem('nsgc_v3_announcements', JSON.stringify(sharedAnnouncements));
-            window.dispatchEvent(new Event('nsgc-data-update'));
-        } catch (e) {
-            console.error('Failed to update shared announcements', e);
-        }
+        // Cross-context mock logic removed for Nhost Integration
     };
 
     const deleteAnnouncement = (id: string) => {
@@ -124,26 +89,7 @@ export const CouncilProvider = ({ children }: { children: ReactNode }) => {
         };
         setEvents(prev => [...prev, newEvent]);
 
-        // Also add to global shared events so President can see them
-        try {
-            const savedShared = localStorage.getItem('nsgc_v3_events');
-            const sharedEvents = savedShared ? JSON.parse(savedShared) : [];
-            const newSharedEvent = {
-                id: newEvent.id, // Keep the same ID
-                name,
-                date,
-                location,
-                type: type || 'Social',
-                registrationLink,
-                image,
-                addedByRole: 'Council'
-            };
-            sharedEvents.push(newSharedEvent);
-            localStorage.setItem('nsgc_v3_events', JSON.stringify(sharedEvents));
-            window.dispatchEvent(new Event('nsgc-data-update'));
-        } catch (e) {
-            console.error('Failed to update shared events', e);
-        }
+        // Cross-context mock logic removed for Nhost Integration
     };
 
     const deleteEvent = (id: string) => {

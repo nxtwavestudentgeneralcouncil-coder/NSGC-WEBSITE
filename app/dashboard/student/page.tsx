@@ -11,25 +11,40 @@ import Link from 'next/link';
 import { useTickets, TicketProvider } from '@/lib/ticket-context';
 import { useSharedData } from '@/hooks/useSharedData';
 import { useCouncil, CouncilProvider } from '@/lib/council-context';
+import { useAuthenticationStatus, useUserData } from '@nhost/react';
 
 function StudentDashboardContent() {
     const router = useRouter();
     const [isAuthorized, setIsAuthorized] = useState(false);
+    
+    // Nhost Integration
+    const { isAuthenticated, isLoading } = useAuthenticationStatus();
+    const user = useUserData();
 
     useEffect(() => {
-        const roles = JSON.parse(localStorage.getItem('userRoles') || '[]');
-        if (roles.includes('student')) {
-            setIsAuthorized(true);
-        } else if (roles.includes('president')) {
-            router.push('/dashboard/president');
-        } else if (roles.includes('admin')) {
-            router.push('/dashboard/admin');
-        } else if (roles.includes('clubs')) {
-            router.push('/dashboard/clubs');
-        } else {
-            router.push('/login');
+        if (!isLoading) {
+            if (!isAuthenticated || !user) {
+                router.push('/login');
+                return;
+            }
+            
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const roles = (user as any).roles || [];
+            const defaultRole = user.defaultRole || '';
+            
+            if (roles.includes('student') || defaultRole === 'student' || (!roles.includes('president') && !roles.includes('admin') && !roles.includes('council_member') && !roles.includes('club_head'))) {
+                setIsAuthorized(true);
+            } else if (roles.includes('president') || defaultRole === 'president') {
+                router.push('/dashboard/president');
+            } else if (roles.includes('admin') || defaultRole === 'admin') {
+                router.push('/dashboard/admin');
+            } else if (roles.includes('club_head') || defaultRole === 'club_head') {
+                router.push('/dashboard/clubs');
+            } else if (roles.includes('council_member') || defaultRole === 'council_member') {
+                router.push('/dashboard/council');
+            }
         }
-    }, [router]);
+    }, [isAuthenticated, isLoading, user, router]);
     const { tickets } = useTickets();
     const { announcements: sharedAnnouncements, events: sharedEvents, clubs, members, isLoaded } = useSharedData();
     const { announcements: councilAnnouncements, events: councilEvents } = useCouncil();
@@ -60,7 +75,7 @@ function StudentDashboardContent() {
 
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 mt-4">
                     <div>
-                        <h1 className="text-4xl md:text-5xl font-extrabold mb-3 tracking-tight">Welcome back, Student</h1>
+                        <h1 className="text-4xl md:text-5xl font-extrabold mb-3 tracking-tight">Welcome back, {user?.displayName || 'Student'}</h1>
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></div>
                             <p className="text-[#94a3b8] text-sm">Live feed: Everything that's happening on campus today.</p>
@@ -105,7 +120,7 @@ function StudentDashboardContent() {
                             </div>
                             <div>
                                 <p className="text-[#64748B] text-xs font-bold uppercase tracking-widest mb-1">Polls / Surveys</p>
-                                <h3 className="text-[32px] font-bold leading-none">12</h3>
+                                <h3 className="text-[32px] font-bold leading-none">0</h3>
                             </div>
                         </div>
                     </div>
@@ -123,7 +138,7 @@ function StudentDashboardContent() {
                             </div>
                             <div>
                                 <p className="text-[#64748B] text-xs font-bold uppercase tracking-widest mb-1">Active Listings</p>
-                                <h3 className="text-[32px] font-bold leading-none">1</h3>
+                                <h3 className="text-[32px] font-bold leading-none">0</h3>
                             </div>
                         </div>
                     </div>

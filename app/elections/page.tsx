@@ -16,10 +16,7 @@ export default function ElectionsPage() {
     const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null);
 
     useEffect(() => {
-        const votes = localStorage.getItem('nsgc_user_votes');
-        if (votes) {
-            setUserVotes(JSON.parse(votes));
-        }
+        // Nhost voting integration pending
     }, []);
 
     const handleVote = () => {
@@ -38,10 +35,9 @@ export default function ElectionsPage() {
             return e;
         }));
 
-        // save user vote
+        // save user vote locally in state until Nhost Mutation is built
         const newVotes = [...userVotes, selectedElection.id];
         setUserVotes(newVotes);
-        localStorage.setItem('nsgc_user_votes', JSON.stringify(newVotes));
 
         setSelectedElection(null);
         setSelectedCandidate(null);

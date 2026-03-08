@@ -139,15 +139,7 @@ const DEFAULT_ACHIEVEMENTS: Achievement[] = [];
 const DEFAULT_USERS: User[] = [];
 const DEFAULT_POLLS: Poll[] = [];
 const DEFAULT_SURVEYS: Survey[] = [];
-const DEFAULT_GALLERY: GalleryImage[] = [
-    { id: "g1", src: "https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=800&h=600&fit=crop", alt: "Convocation 2024", span: "col-span-2 row-span-2" },
-    { id: "g2", src: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=400&h=400&fit=crop", alt: "Tech Fest", span: "col-span-1 row-span-1" },
-    { id: "g3", src: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=400&fit=crop", alt: "Hackathon", span: "col-span-1 row-span-1" },
-    { id: "g4", src: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=400&fit=crop", alt: "Cultural Night", span: "col-span-2 row-span-1" },
-    { id: "g5", src: "https://images.unsplash.com/photo-1475721027767-p42f563d6ce9?w=400&h=800&fit=crop", alt: "Sports Meet", span: "col-span-1 row-span-2" },
-    { id: "g6", src: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=400&h=400&fit=crop", alt: "Workshop", span: "col-span-1 row-span-1" },
-    { id: "g7", src: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400&h=400&fit=crop", alt: "Seminar", span: "col-span-1 row-span-1" },
-];
+const DEFAULT_GALLERY: GalleryImage[] = [];
 
 export function useSharedData() {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -165,180 +157,67 @@ export function useSharedData() {
 
     // Helper to read current data
     const loadAllData = () => {
-        // console.log('useSharedData: Loading all data...');
-        const load = (key: string, defaultData: any, setter: (data: any) => void) => {
-            const stored = localStorage.getItem(key);
-            if (stored) {
-                try {
-                    // console.log(`useSharedData: Loaded ${key}`, JSON.parse(stored));
-                    setter(JSON.parse(stored));
-                } catch (e) {
-                    console.error(`Failed to parse ${key}`, e);
-                    setter(defaultData);
-                }
-            } else {
-                // console.log(`useSharedData: No data for ${key}, using default`);
-                setter(defaultData);
-            }
-        };
-
-        load('nsgc_v3_announcements', DEFAULT_ANNOUNCEMENTS, setAnnouncements);
-        load('nsgc_v3_members', DEFAULT_MEMBERS, setMembers);
-        load('nsgc_v3_clubs', DEFAULT_CLUBS, setClubs);
-        load('nsgc_v3_events', DEFAULT_EVENTS, setEvents);
-        load('nsgc_v3_elections', DEFAULT_ELECTIONS, setElections);
-        load('nsgc_v3_achievements', DEFAULT_ACHIEVEMENTS, setAchievements);
-        load('nsgc_v3_users', DEFAULT_USERS, setUsers);
-        load('nsgc_v3_totalUsers', 1250, setTotalUsers); // Might want to change this to actual count later
-        load('nsgc_v3_polls', DEFAULT_POLLS, setPolls);
-        load('nsgc_v3_surveys', DEFAULT_SURVEYS, setSurveys);
-        
-        // Filter out gallery images with empty src (safety net for corrupt dynamic data)
-        const loadGallery = (key: string, defaultData: GalleryImage[], setter: (data: GalleryImage[]) => void) => {
-            const stored = localStorage.getItem(key);
-            if (stored) {
-                try {
-                    const parsed = JSON.parse(stored);
-                    const filtered = Array.isArray(parsed) 
-                        ? parsed.filter((img: GalleryImage) => img.src && img.src.trim() !== '')
-                        : defaultData;
-                    setter(filtered);
-                } catch (e) {
-                    console.error(`Failed to parse ${key}`, e);
-                    setter(defaultData);
-                }
-            } else {
-                setter(defaultData);
-            }
-        };
-        loadGallery('nsgc_v3_gallery', DEFAULT_GALLERY, setGalleryImages);
-
-        // Load Total Users count - Deprecated in favor of users.length but kept for backward compatibility if needed
-        const storedUsersCount = localStorage.getItem('nsgc_users_count');
-        setTotalUsers(storedUsersCount ? JSON.parse(storedUsersCount) : 50); // Default to a baseline if empty for demo
+        // Mock data initialization stripped for Nhost backend integration.
+        setAnnouncements([]);
+        setMembers([]);
+        setClubs([]);
+        setEvents([]);
+        setElections([]);
+        setAchievements([]);
+        setUsers([]);
+        setTotalUsers(0);
+        setPolls([]);
+        setSurveys([]);
+        setGalleryImages([]);
     };
 
-    // Initial Load & Event Listeners
+    // Initial Load
     useEffect(() => {
         if (typeof window !== 'undefined') {
             loadAllData();
             setIsLoaded(true);
-
-            // Listen for cross-tab changes
-            const handleStorageChange = (e: StorageEvent) => {
-                // console.log('useSharedData: Storage event received', e.key);
-                if (e.key?.startsWith('nsgc_')) {
-                    loadAllData();
-                }
-            };
-
-            // Listen for same-tab changes (custom event)
-            const handleCustomUpdate = () => {
-                // console.log('useSharedData: Custom update event received');
-                loadAllData();
-            };
-
-            window.addEventListener('storage', handleStorageChange);
-            window.addEventListener('nsgc-data-update', handleCustomUpdate);
-
-            return () => {
-                window.removeEventListener('storage', handleStorageChange);
-                window.removeEventListener('nsgc-data-update', handleCustomUpdate);
-            };
         }
     }, []);
 
-    // Save helpers that also dispatch events
+    // Save helpers
     const updateAnnouncements = (newData: Announcement[] | ((prev: Announcement[]) => Announcement[])) => {
-        setAnnouncements(prev => {
-            const updated = typeof newData === 'function' ? newData(prev) : newData;
-            localStorage.setItem('nsgc_v3_announcements', JSON.stringify(updated));
-            window.dispatchEvent(new Event('nsgc-data-update'));
-            return updated;
-        });
+        setAnnouncements(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
     const updateMembers = (newData: CouncilMember[] | ((prev: CouncilMember[]) => CouncilMember[])) => {
-        setMembers(prev => {
-            const updated = typeof newData === 'function' ? newData(prev) : newData;
-            localStorage.setItem('nsgc_v3_members', JSON.stringify(updated));
-            window.dispatchEvent(new Event('nsgc-data-update'));
-            return updated;
-        });
+        setMembers(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
     const updateClubs = (newData: Club[] | ((prev: Club[]) => Club[])) => {
-        setClubs(prev => {
-            const updated = typeof newData === 'function' ? newData(prev) : newData;
-            localStorage.setItem('nsgc_v3_clubs', JSON.stringify(updated));
-            window.dispatchEvent(new Event('nsgc-data-update'));
-            return updated;
-        });
+        setClubs(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
     const updateEvents = (newData: Event[] | ((prev: Event[]) => Event[])) => {
-        setEvents(prev => {
-            const updated = typeof newData === 'function' ? newData(prev) : newData;
-            localStorage.setItem('nsgc_v3_events', JSON.stringify(updated));
-            window.dispatchEvent(new Event('nsgc-data-update'));
-            return updated;
-        });
+        setEvents(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
     const updateElections = (newData: Election[] | ((prev: Election[]) => Election[])) => {
-        setElections(prev => {
-            const updated = typeof newData === 'function' ? newData(prev) : newData;
-            localStorage.setItem('nsgc_v3_elections', JSON.stringify(updated));
-            window.dispatchEvent(new Event('nsgc-data-update'));
-            return updated;
-        });
+        setElections(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
     const updateAchievements = (newData: Achievement[] | ((prev: Achievement[]) => Achievement[])) => {
-        setAchievements(prev => {
-            const updated = typeof newData === 'function' ? newData(prev) : newData;
-            localStorage.setItem('nsgc_v3_achievements', JSON.stringify(updated));
-            window.dispatchEvent(new Event('nsgc-data-update'));
-            return updated;
-        });
+        setAchievements(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
     const updateUsers = (newData: User[] | ((prev: User[]) => User[])) => {
-        setUsers(prev => {
-            const updated = typeof newData === 'function' ? newData(prev) : newData;
-            localStorage.setItem('nsgc_v3_users', JSON.stringify(updated));
-            window.dispatchEvent(new Event('nsgc-data-update'));
-            return updated;
-        });
+        setUsers(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
     const updatePolls = (newData: Poll[] | ((prev: Poll[]) => Poll[])) => {
-        setPolls(prev => {
-            const updated = typeof newData === 'function' ? newData(prev) : newData;
-            localStorage.setItem('nsgc_v3_polls', JSON.stringify(updated));
-            window.dispatchEvent(new Event('nsgc-data-update'));
-            return updated;
-        });
+        setPolls(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
     const updateSurveys = (newData: Survey[] | ((prev: Survey[]) => Survey[])) => {
-        setSurveys(prev => {
-            const updated = typeof newData === 'function' ? newData(prev) : newData;
-            localStorage.setItem('nsgc_v3_surveys', JSON.stringify(updated));
-            window.dispatchEvent(new Event('nsgc-data-update'));
-            return updated;
-        });
+        setSurveys(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
     const updateGalleryImages = (newData: GalleryImage[] | ((prev: GalleryImage[]) => GalleryImage[])) => {
-        setGalleryImages(prev => {
-            const updatedRaw = typeof newData === 'function' ? newData(prev) : newData;
-            // Filter out any images with empty src before saving
-            const updated = updatedRaw.filter(img => img.src && img.src.trim() !== '');
-            localStorage.setItem('nsgc_v3_gallery', JSON.stringify(updated));
-            window.dispatchEvent(new Event('nsgc-data-update'));
-            return updated;
-        });
+        setGalleryImages(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
     return {

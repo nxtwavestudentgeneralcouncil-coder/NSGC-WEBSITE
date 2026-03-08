@@ -62,28 +62,11 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    // Load from local storage on mount
+    // Removed localStorage mock persistence logic
     useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            try {
-                setTickets(JSON.parse(saved));
-            } catch (e) {
-                console.error('Failed to parse tickets', e);
-            }
-        } else {
-            // Start with empty/default state instead of dummy data
-            setTickets([]);
-        }
+        setTickets([]);
         setIsLoaded(true);
     }, []);
-
-    // Save to local storage whenever tickets change
-    useEffect(() => {
-        if (isLoaded) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
-        }
-    }, [tickets, isLoaded]);
 
     const createTicket = (data: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'status' | 'assignedTo' | 'votes' | 'votedBy'>) => {
         const newTicket: Ticket = {

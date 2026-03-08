@@ -6,68 +6,52 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-import { Lock, User, ArrowRight, Shield, Crown } from 'lucide-react';
+import { Lock, User, ArrowRight } from 'lucide-react';
+import { useSignInEmailPassword } from '@nhost/react';
 
 export default function LoginPage() {
     const router = useRouter();
-    const [role] = useState('student');
-    const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    
+    // Nhost Auth Hook
+    const { signInEmailPassword, isLoading } = useSignInEmailPassword();
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
+        setError(null);
 
-        const storedUsersStr = localStorage.getItem('nsgc_users');
-        if (storedUsersStr) {
-            try {
-                const storedUsers = JSON.parse(storedUsersStr);
-                const matchedUser = storedUsers.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
-                if (matchedUser) {
-                    // We don't check password for mock users yet in this prototype
-                    localStorage.setItem('userRoles', JSON.stringify(matchedUser.roles));
-                    localStorage.setItem('userName', matchedUser.name);
-                    localStorage.removeItem('userRole'); // clear legacy
-                    window.dispatchEvent(new Event('auth-change'));
-                    
-                    // Route to highest privilege dashboard or just student
-                    if (matchedUser.roles.includes('admin')) router.push('/dashboard/admin');
-                    else if (matchedUser.roles.includes('president')) router.push('/dashboard/president');
-                    else if (matchedUser.roles.includes('council')) router.push('/dashboard/council');
-                    else if (matchedUser.roles.includes('clubs')) router.push('/dashboard/clubs');
-                    else router.push('/dashboard/student');
-                    
-                    return;
-                }
-            } catch (error) {
-                console.error('Failed to parse stored users during login', error);
+        // Debug log to ensure the environment variables have been correctly reloaded
+        console.log("Attempting Nhost login with subdomain:", process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN);
+
+        // Use Nhost to authenticate
+        const result = await signInEmailPassword(email, password);
+        
+        if (result.isError) {
+            console.error("Login failed via Nhost. Error Object:", JSON.stringify(result.error, null, 2));
+            
+            // Map common Nhost errors or fallback to message
+            if (result.error?.status === 0) {
+                setError("Network Error: Could not reach Nhost. Nhost might be rate-limiting you (Too Many Requests). Please wait a few minutes.");
+            } else {
+                setError(result.error?.message || "Invalid email or password.");
             }
+            return;
         }
 
-        // Server-Side Universal Login Check (Fallback)
-        import('@/app/actions/auth').then(async ({ universalLogin }) => {
-            const result = await universalLogin(email, password); 
-
-            if (result.success && result.role) {
-                // It's a special role (Admin/President/Council)
-                localStorage.setItem('userRoles', JSON.stringify([result.role]));
-                localStorage.setItem('userName', result.userName || 'User');
-                localStorage.removeItem('userRole'); // clear legacy
-                window.dispatchEvent(new Event('auth-change'));
-                router.push(`/dashboard/${result.role}`);
-            } else {
-                // Fallback to Student Login (Mock)
-                setTimeout(() => {
-                    localStorage.setItem('userRoles', JSON.stringify(['student']));
-                    localStorage.setItem('userName', 'Student Name');
-                    localStorage.removeItem('userRole'); // clear legacy
-                    window.dispatchEvent(new Event('auth-change'));
-                    router.push('/dashboard/student');
-                    setLoading(false);
-                }, 1000);
-            }
-        });
+        if (result.isSuccess && result.user) {
+            // Nhost user roles are available in user object
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const roles = (result.user as any).roles || [];
+            const defaultRole = result.user.defaultRole || '';
+            
+            if (roles.includes('admin') || defaultRole === 'admin') router.push('/dashboard/admin');
+            else if (roles.includes('president') || defaultRole === 'president') router.push('/dashboard/president');
+            else if (roles.includes('council_member') || defaultRole === 'council_member') router.push('/dashboard/council');
+            else if (roles.includes('club_head') || defaultRole === 'club_head') router.push('/dashboard/clubs');
+            else router.push('/dashboard/student');
+        }
     };
 
     return (
@@ -84,6 +68,11 @@ export default function LoginPage() {
                     <CardDescription>Sign in to access the NSGC Portal</CardDescription>
                 </CardHeader>
                 <CardContent>
+                    {error && (
+                        <div className="mb-4 p-3 rounded-md bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-medium">
+                            {error}
+                        </div>
+                    )}
                     <form onSubmit={handleLogin} className="space-y-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-300">Email</label>
@@ -121,16 +110,16 @@ export default function LoginPage() {
                         <Button
                             type="submit"
                             className="w-full bg-cyan-500 text-black hover:bg-cyan-400 font-bold"
-                            disabled={loading}
+                            disabled={isLoading}
                         >
-                            {loading ? 'Signing in...' : 'Sign In'}
-                            {!loading && <ArrowRight className="ml-2 w-4 h-4" />}
+                            {isLoading ? 'Signing in...' : 'Sign In'}
+                            {!isLoading && <ArrowRight className="ml-2 w-4 h-4" />}
                         </Button>
                     </form>
                 </CardContent>
                 <CardFooter className="justify-center">
                     <p className="text-sm text-gray-400">
-                        Don't have an account? <Link href="/signup" className="text-cyan-500 hover:underline">Sign up</Link>
+                        Don&apos;t have an account? <Link href="/signup" className="text-cyan-500 hover:underline">Sign up</Link>
                     </p>
 
                 </CardFooter>

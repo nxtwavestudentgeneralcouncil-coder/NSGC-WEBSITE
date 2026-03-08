@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-
+import { useAuthenticationStatus, useUserData } from '@nhost/react';
 import { useSharedData, Announcement, Event, ClubTeamMember, GalleryImage } from '@/hooks/useSharedData';
 
 export default function ClubsDashboard() {
@@ -48,21 +48,28 @@ export default function ClubsDashboard() {
     // Form States
     const [formData, setFormData] = useState<Record<string, any>>({});
 
+    const { isAuthenticated, isLoading } = useAuthenticationStatus();
+    const user = useUserData();
+
     // Login Access Check
     useEffect(() => {
-        const roles = JSON.parse(localStorage.getItem('userRoles') || '[]');
-        if (roles.includes('clubs')) {
-            setIsAuthorized(true);
-        } else if (roles.includes('president')) {
-            router.push('/dashboard/president');
-        } else if (roles.includes('admin')) {
-            router.push('/dashboard/admin');
-        } else if (roles.includes('student')) {
-            router.push('/dashboard/student');
-        } else {
-            router.push('/login');
+        if (!isLoading) {
+            if (!isAuthenticated || !user) {
+                router.push('/login');
+                return;
+            }
+            
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const roles = (user as any).roles || [];
+            const defaultRole = user.defaultRole || '';
+            
+            if (roles.includes('club_head') || defaultRole === 'club_head') {
+                setIsAuthorized(true);
+            } else {
+                router.push('/dashboard/student');
+            }
         }
-    }, [router]);
+    }, [isAuthenticated, isLoading, user, router]);
 
     useEffect(() => {
         if (isLoaded && clubs.length > 0) {
@@ -247,7 +254,7 @@ export default function ClubsDashboard() {
                             <div>
                                 <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-slate-500 mb-2">Club Members</p>
                                 <h3 className="text-4xl font-bold tracking-tight text-white mb-1">
-                                    {currentClubDetails?.members || "1,240"}
+                                    {currentClubDetails?.members || "0"}
                                 </h3>
                                 <p className="text-[10px] text-[#00E5FF] flex items-center gap-1 font-medium">
                                     <TrendingUp className="w-3 h-3" /> +12% from last month
@@ -264,7 +271,7 @@ export default function ClubsDashboard() {
                             <div>
                                 <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-slate-500 mb-2">Active Events</p>
                                 <h3 className="text-4xl font-bold tracking-tight text-white mb-1">
-                                    {clubEvents.length || "8"}
+                                    {clubEvents.length || "0"}
                                 </h3>
                                 <p className="text-[10px] text-slate-500 font-medium">Currently ongoing</p>
                             </div>
@@ -279,7 +286,7 @@ export default function ClubsDashboard() {
                             <div>
                                 <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-slate-500 mb-2">Announcements</p>
                                 <h3 className="text-4xl font-bold tracking-tight text-white mb-1">
-                                    {clubAnnouncements.length || "12"}
+                                    {clubAnnouncements.length || "0"}
                                 </h3>
                                 <p className="text-[10px] text-slate-500 font-medium">Active broadcasts</p>
                             </div>
