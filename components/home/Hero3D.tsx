@@ -15,13 +15,7 @@ export function Hero3D() {
 
             {/* Background floating grid / lines already set in layout */}
 
-            {/* Ambient Corner Data */}
-            <div className="absolute top-32 left-8 md:left-24 text-blue-500/60 font-mono text-[10px] uppercase tracking-widest pointer-events-none hidden md:flex flex-col gap-1 z-10 animate-pulse-slow">
-                <motion.div initial={{ opacity: 0, y: 20, rotateX: 45 }} animate={{ opacity: 1, y: 0, rotateX: 0 }} transition={{ delay: 0.8, duration: 1 }}>STATUS: AWAKE</motion.div>
-                <motion.div initial={{ opacity: 0, y: 20, rotateX: 45 }} animate={{ opacity: 1, y: 0, rotateX: 0 }} transition={{ delay: 0.88, duration: 1 }}>SYSTEM: NEXUS_UI v.ZERO-G</motion.div>
-                <motion.div initial={{ opacity: 0, y: 20, rotateX: 45 }} animate={{ opacity: 1, y: 0, rotateX: 0 }} transition={{ delay: 0.96, duration: 1 }}>GRAVITY: 0.00G</motion.div>
-                <motion.div initial={{ opacity: 0, y: 20, rotateX: 45 }} animate={{ opacity: 1, y: 0, rotateX: 0 }} transition={{ delay: 1.04, duration: 1 }}>ORBIT: STABLE</motion.div>
-            </div>
+
 
             {/* Launch Console - Center Low */}
             <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 w-full max-w-2xl px-4 flex flex-col items-center">

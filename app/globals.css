@@ -99,6 +99,12 @@ body {
   scroll-behavior: smooth;
 }
 
+@media (pointer: fine) {
+  * {
+    cursor: none !important;
+  }
+}
+
 /* Atmospheric Background Elements */
 .bg-atmosphere {
   position: fixed;

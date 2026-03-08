@@ -76,14 +76,14 @@ function PresidentDashboardContent() {
     const [formData, setFormData] = useState<Record<string, any>>({});
 
     useEffect(() => {
-        const role = localStorage.getItem('userRole');
-        if (role === 'president') {
+        const roles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+        if (roles.includes('president')) {
             setIsAuthorized(true);
-        } else if (role === 'student') {
+        } else if (roles.includes('student')) {
             router.push('/dashboard/student');
-        } else if (role === 'admin') {
+        } else if (roles.includes('admin')) {
             router.push('/dashboard/admin');
-        } else if (role === 'clubs') {
+        } else if (roles.includes('clubs')) {
             router.push('/dashboard/clubs');
         } else {
             router.push('/login');

@@ -3,6 +3,8 @@ import { Orbitron, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { GlobalDashboards } from "@/components/layout/GlobalDashboards";
+import { CustomCursor } from "@/components/ui/custom-cursor";
 
 // Use Orbitron for Display / Headers
 const orbitron = Orbitron({
@@ -41,6 +43,8 @@ export default function RootLayout({
         <div className="bg-scanlines pointer-events-none fixed inset-0 z-[100]" />
 
         <Navbar />
+        <GlobalDashboards />
+        <CustomCursor />
 
         {/* The main content area now sits next to the vertical Navbar */}
         <main className="flex-1 flex flex-col relative ml-0 md:ml-20 lg:ml-64 transition-all duration-300">

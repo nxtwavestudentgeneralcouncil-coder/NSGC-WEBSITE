@@ -50,14 +50,14 @@ export default function ClubsDashboard() {
 
     // Login Access Check
     useEffect(() => {
-        const role = localStorage.getItem('userRole');
-        if (role === 'clubs') {
+        const roles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+        if (roles.includes('clubs')) {
             setIsAuthorized(true);
-        } else if (role === 'president') {
+        } else if (roles.includes('president')) {
             router.push('/dashboard/president');
-        } else if (role === 'admin') {
+        } else if (roles.includes('admin')) {
             router.push('/dashboard/admin');
-        } else if (role === 'student') {
+        } else if (roles.includes('student')) {
             router.push('/dashboard/student');
         } else {
             router.push('/login');

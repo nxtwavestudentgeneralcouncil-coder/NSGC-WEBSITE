@@ -17,14 +17,14 @@ function StudentDashboardContent() {
     const [isAuthorized, setIsAuthorized] = useState(false);
 
     useEffect(() => {
-        const role = localStorage.getItem('userRole');
-        if (role === 'student') {
+        const roles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+        if (roles.includes('student')) {
             setIsAuthorized(true);
-        } else if (role === 'president') {
+        } else if (roles.includes('president')) {
             router.push('/dashboard/president');
-        } else if (role === 'admin') {
+        } else if (roles.includes('admin')) {
             router.push('/dashboard/admin');
-        } else if (role === 'clubs') {
+        } else if (roles.includes('clubs')) {
             router.push('/dashboard/clubs');
         } else {
             router.push('/login');

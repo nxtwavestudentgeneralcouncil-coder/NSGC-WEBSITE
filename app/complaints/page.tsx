@@ -45,8 +45,8 @@ function ComplaintsContent() {
 
     useEffect(() => {
         // Check for authentication
-        const userRole = localStorage.getItem('userRole');
-        if (userRole) {
+        const roles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+        if (roles.length > 0) {
             setIsLoggedIn(true);
         } else {
             setIsLoggedIn(false);

@@ -13,9 +13,17 @@ interface User {
     id: string;
     name: string;
     email: string;
-    role: string;
+    roles: string[];
     status: 'Active' | 'Suspended';
 }
+
+const AVAILABLE_ROLES = [
+    { id: 'student', label: 'Student' },
+    { id: 'admin', label: 'Admin' },
+    { id: 'president', label: 'President' },
+    { id: 'council', label: 'Council' },
+    { id: 'clubs', label: 'Club Manager' }
+];
 
 export default function AdminDashboard() {
     const router = useRouter();
@@ -40,38 +48,71 @@ export default function AdminDashboard() {
     const [formData, setFormData] = useState<Omit<User, 'id'>>({
         name: '',
         email: '',
-        role: 'Student',
+        roles: ['student'],
         status: 'Active'
     });
 
     useEffect(() => {
-        const role = localStorage.getItem('userRole');
-        if (role === 'admin') {
-            setIsAuthorized(true);
-        } else if (role === 'president') {
-            router.push('/dashboard/president');
-        } else if (role === 'clubs') {
-            router.push('/dashboard/clubs');
-        } else if (role === 'student') {
-            router.push('/dashboard/student');
-        } else {
-            router.push('/login');
-        }
+        const checkAuth = () => {
+            let roles: string[] = [];
+            const roleStr = localStorage.getItem('userRoles');
+            const legacyRole = localStorage.getItem('userRole');
+            
+            if (roleStr) {
+                try {
+                    roles = JSON.parse(roleStr);
+                } catch(e) {
+                    roles = [roleStr];
+                }
+            } else if (legacyRole) {
+                roles = [legacyRole];
+            }
+
+            if (roles.includes('admin')) {
+                setIsAuthorized(true);
+            } else {
+                router.push(roles.includes('president') ? '/dashboard/president' 
+                    : roles.includes('council') ? '/dashboard/council'
+                    : roles.includes('clubs') ? '/dashboard/clubs'
+                    : '/dashboard/student');
+            }
+        };
+
+        checkAuth();
 
         // Check for persisted lockdown state
         const savedLockdown = localStorage.getItem('lockdownMode');
         if (savedLockdown === 'true') {
             setLockdownMode(true);
         }
+
+        // Load users from localStorage
+        const storedUsers = localStorage.getItem('nsgc_users');
+        if (storedUsers) {
+            try {
+                setUsers(JSON.parse(storedUsers));
+            } catch (e) {
+                console.error('Failed to parse stored users', e);
+            }
+        }
     }, [router]);
+
+    // Save users to localStorage whenever they change
+    useEffect(() => {
+        if (isAuthorized) { // Only save if we fully loaded and are auth'd, to prevent overwriting with empty array on initial mount
+           if (users.length > 0 || localStorage.getItem('nsgc_users')) {
+               localStorage.setItem('nsgc_users', JSON.stringify(users));
+           }
+        }
+    }, [users, isAuthorized]);
 
     // Export Handler
     const handleExportData = () => {
         // Convert users to CSV
-        const headers = ['ID', 'Name', 'Email', 'Role', 'Status'];
+        const headers = ['ID', 'Name', 'Email', 'Roles', 'Status'];
         const csvContent = [
             headers.join(','),
-            ...users.map(u => [u.id, u.name, u.email, u.role, u.status].join(','))
+            ...users.map(u => [u.id, u.name, u.email, u.roles.join('; '), u.status].join(','))
         ].join('\n');
 
         // Create blob and download link
@@ -101,7 +142,7 @@ export default function AdminDashboard() {
     // Handlers
     const handleAddUser = () => {
         setEditingUser(null);
-        setFormData({ name: '', email: '', role: 'Student', status: 'Active' });
+        setFormData({ name: '', email: '', roles: ['student'], status: 'Active' });
         setIsModalOpen(true);
     };
 
@@ -110,14 +151,31 @@ export default function AdminDashboard() {
         setFormData({
             name: user.name,
             email: user.email,
-            role: user.role,
+            roles: [...user.roles],
             status: user.status
         });
         setIsModalOpen(true);
     };
 
+    const handleRoleChange = (roleId: string, checked: boolean) => {
+        setFormData(prev => {
+            if (checked) {
+                return { ...prev, roles: [...prev.roles, roleId] };
+            } else {
+                return { ...prev, roles: prev.roles.filter(r => r !== roleId) };
+            }
+        });
+    };
+
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Ensure at least one role is selected
+        if (formData.roles.length === 0) {
+            alert('Please select at least one role.');
+            return;
+        }
+
         if (editingUser) {
             // Edit existing
             setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...formData } : u));
@@ -133,9 +191,6 @@ export default function AdminDashboard() {
         }
         setIsModalOpen(false);
         setShowSuccessModal(true);
-
-        // Auto-close success modal after 2s
-        // setTimeout(() => setShowSuccessModal(false), 2000);
     };
 
     const initiateDeleteUser = (id: string) => {
@@ -261,7 +316,7 @@ export default function AdminDashboard() {
                                     <tr className="border-b border-white/10 text-gray-400 text-sm">
                                         <th className="pb-4">Name</th>
                                         <th className="pb-4">Email</th>
-                                        <th className="pb-4">Role</th>
+                                        <th className="pb-4 gap-2">Roles</th>
                                         <th className="pb-4">Status</th>
                                         <th className="pb-4 text-right">Actions</th>
                                     </tr>
@@ -272,7 +327,13 @@ export default function AdminDashboard() {
                                             <td className="py-4 font-medium">{user.name}</td>
                                             <td className="py-4 text-gray-400">{user.email}</td>
                                             <td className="py-4">
-                                                <Badge variant="outline" className="border-white/20">{user.role}</Badge>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {user.roles.map(role => (
+                                                        <Badge key={role} variant="outline" className="border-white/20 capitalize">
+                                                            {role}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
                                             </td>
                                             <td className="py-4">
                                                 <span className={`inline-block w-2 h-2 rounded-full mr-2 ${user.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -312,71 +373,75 @@ export default function AdminDashboard() {
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                className="bg-gray-900 border border-white/10 rounded-lg w-full max-w-md shadow-2xl"
+                                className="bg-gray-900 border border-white/10 rounded-lg w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
                             >
-                                <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                                <div className="p-6 border-b border-white/10 flex justify-between items-center bg-gray-900 z-10">
                                     <h2 className="text-xl font-bold">{editingUser ? 'Edit User' : 'Add New User'}</h2>
                                     <Button variant="ghost" size="sm" onClick={() => setIsModalOpen(false)}>
                                         <X className="w-4 h-4" />
                                     </Button>
                                 </div>
-                                <form onSubmit={handleSave} className="p-6 space-y-4">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-gray-300">Full Name</label>
-                                        <input
-                                            type="text"
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                            className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium text-gray-300">Email Address</label>
-                                        <input
-                                            type="email"
-                                            value={formData.email}
-                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Role</label>
-                                            <select
-                                                value={formData.role}
-                                                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                                className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
-                                            >
-                                                <option value="Student">Student</option>
-                                                <option value="Admin">Admin</option>
-                                                <option value="President">President</option>
-                                                <option value="Vice President">Vice President</option>
-                                                <option value="Faculty">Faculty</option>
-                                            </select>
+                                <div className="overflow-y-auto p-6">
+                                    <form id="user-form" onSubmit={handleSave} className="space-y-6">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium text-gray-300">Full Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.name}
+                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                    className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium text-gray-300">Email Address (Used for login)</label>
+                                                <input
+                                                    type="email"
+                                                    value={formData.email}
+                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                    className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="space-y-3 pt-2 border-t border-white/10">
+                                                <label className="text-sm font-medium text-gray-300">Assigned Roles</label>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {AVAILABLE_ROLES.map((role) => (
+                                                        <label key={role.id} className="flex items-center space-x-3 p-2 rounded-md border border-white/5 hover:bg-white/5 cursor-pointer transition-colors">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={formData.roles.includes(role.id)}
+                                                                onChange={(e) => handleRoleChange(role.id, e.target.checked)}
+                                                                className="w-4 h-4 text-cyan-500 bg-black/50 border-white/20 rounded focus:ring-cyan-500 focus:ring-offset-gray-900"
+                                                            />
+                                                            <span className="text-sm text-gray-200">{role.label}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2 pt-2 border-t border-white/10">
+                                                <label className="text-sm font-medium text-gray-300">Status</label>
+                                                <select
+                                                    value={formData.status}
+                                                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'Active' | 'Suspended' })}
+                                                    className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                                                >
+                                                    <option value="Active">Active</option>
+                                                    <option value="Suspended">Suspended</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium text-gray-300">Status</label>
-                                            <select
-                                                value={formData.status}
-                                                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'Active' | 'Suspended' })}
-                                                className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
-                                            >
-                                                <option value="Active">Active</option>
-                                                <option value="Suspended">Suspended</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="pt-4 flex gap-4">
-                                        <Button type="button" variant="outline" className="w-full border-white/20" onClick={() => setIsModalOpen(false)}>
-                                            Cancel
-                                        </Button>
-                                        <Button type="submit" className="w-full bg-cyan-500 text-black hover:bg-cyan-400 font-bold">
-                                            <Save className="w-4 h-4 mr-2" /> Save User
-                                        </Button>
-                                    </div>
-                                </form>
+                                    </form>
+                                </div>
+                                <div className="p-6 border-t border-white/10 bg-gray-900 z-10 mt-auto flex gap-4">
+                                    <Button type="button" variant="outline" className="w-full border-white/20" onClick={() => setIsModalOpen(false)}>
+                                        Cancel
+                                    </Button>
+                                    <Button form="user-form" type="submit" className="w-full bg-cyan-500 text-black hover:bg-cyan-400 font-bold">
+                                        <Save className="w-4 h-4 mr-2" /> Save User
+                                    </Button>
+                                </div>
                             </motion.div>
                         </div>
                     )}

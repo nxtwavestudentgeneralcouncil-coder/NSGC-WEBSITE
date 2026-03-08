@@ -45,12 +45,25 @@ export function Navbar() {
 
     useEffect(() => {
         const checkAuth = () => {
-            const role = localStorage.getItem('userRole');
+            const roleStr = localStorage.getItem('userRoles');
+            const legacyRole = localStorage.getItem('userRole');
             const name = localStorage.getItem('userName');
-            if (role && name) {
+            
+            let roles: string[] = [];
+            if (roleStr) {
+                try {
+                    roles = JSON.parse(roleStr);
+                } catch(e) {
+                    roles = [roleStr];
+                }
+            } else if (legacyRole) {
+                roles = [legacyRole];
+            }
+
+            if (roles.length > 0 && name) {
                 setIsLoggedIn(true);
                 setUserName(name);
-                setUserRole(role);
+                setUserRole(roles[0]);
             } else {
                 setIsLoggedIn(false);
                 setUserName('');
@@ -86,20 +99,7 @@ export function Navbar() {
                     isMobileMenuOpen ? "translate-x-0 w-64 pt-16" : "-translate-x-full md:translate-x-0 pt-0"
                 )}
             >
-                {/* Persistent Sidebar Ticker */}
-                <div className="absolute right-0 top-0 bottom-0 w-6 lg:w-8 border-l border-blue-500/20 overflow-hidden hidden md:flex flex-col pointer-events-none">
-                    <motion.div
-                        animate={{ y: [0, -1000] }}
-                        transition={{ ease: "linear", duration: 20, repeat: Infinity }}
-                        className="flex flex-col gap-10 pt-10 text-[10px] font-mono text-blue-500/50 uppercase whitespace-nowrap opacity-70"
-                    >
-                        {Array.from({ length: 10 }).map((_, i) => (
-                            <div key={i} className="[-webkit-writing-mode:vertical-rl] rotate-180 tracking-[0.3em]">
-                                SYS_OP: ONLINE // STATUS: NOMINAL // COORD: 34.02°N 10.4°W // NODE: ALPHA-7 // MEM: 45TB OK // TCK: ACTIVE //
-                            </div>
-                        ))}
-                    </motion.div>
-                </div>
+
 
                 <div className="p-4 lg:p-6 flex flex-col gap-8 flex-1 overflow-y-auto scrollbar-hide relative z-10 w-full md:pr-6 lg:pr-8">
 
@@ -144,40 +144,6 @@ export function Navbar() {
                     {isLoggedIn ? (
                         <div className="flex flex-col gap-3">
                             {/* Dashboard link depending on role */}
-                            {userRole === 'president' && (
-                                <Button variant="ghost" className="w-full justify-start gap-3 rounded-sm text-xs font-mono uppercase tracking-widest text-cyan-500 hover:text-cyan-400 hover:bg-cyan-500/10 border border-cyan-500/20" asChild onClick={() => setIsMobileMenuOpen(false)}>
-                                    <Link href="/dashboard/president">
-                                        <Crown className="w-4 h-4" />
-                                        <span className="inline md:hidden lg:inline">C-LEVEL</span>
-                                    </Link>
-                                </Button>
-                            )}
-                            {userRole === 'council' && (
-                                <Button variant="ghost" className="w-full justify-start gap-3 rounded-sm text-xs font-mono uppercase tracking-widest text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 border border-blue-500/20" asChild onClick={() => setIsMobileMenuOpen(false)}>
-                                    <Link href="/dashboard/council">
-                                        <Users className="w-4 h-4" />
-                                        <span className="inline md:hidden lg:inline">COUNCIL</span>
-                                    </Link>
-                                </Button>
-                            )}
-                            {userRole === 'clubs' && (
-                                <Button variant="ghost" className="w-full justify-start gap-3 rounded-sm text-xs font-mono uppercase tracking-widest text-teal-400 hover:text-teal-300 hover:bg-teal-500/10 border border-teal-500/20" asChild onClick={() => setIsMobileMenuOpen(false)}>
-                                    <Link href="/dashboard/clubs">
-                                        <Flag className="w-4 h-4" />
-                                        <span className="inline md:hidden lg:inline">CLUB MGR</span>
-                                    </Link>
-                                </Button>
-                            )}
-                            {(!userRole || userRole === 'student') && (
-                                <Button variant="ghost" className="w-full justify-start gap-3 rounded-sm text-xs font-mono uppercase tracking-widest text-gray-300 hover:text-white hover:bg-white/5 border border-white/10" asChild onClick={() => setIsMobileMenuOpen(false)}>
-                                    <Link href="/dashboard/student">
-                                        <LayoutDashboard className="w-4 h-4" />
-                                        <span className="inline md:hidden lg:inline">DASHBOARD</span>
-                                    </Link>
-                                </Button>
-                            )}
-
-
 
                             {/* Utility Icons */}
                             <div className="flex items-center gap-2 mt-2">
@@ -192,6 +158,7 @@ export function Navbar() {
                                     className="text-red-500/70 hover:text-red-400 hover:bg-red-500/10 rounded-sm w-full lg:w-10"
                                     onClick={() => {
                                         localStorage.removeItem('userRole');
+                                        localStorage.removeItem('userRoles');
                                         localStorage.removeItem('userName');
                                         window.dispatchEvent(new Event('auth-change'));
                                         window.location.href = '/login';

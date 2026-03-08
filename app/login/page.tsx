@@ -19,21 +19,49 @@ export default function LoginPage() {
         e.preventDefault();
         setLoading(true);
 
-        // Server-Side Universal Login Check
+        const storedUsersStr = localStorage.getItem('nsgc_users');
+        if (storedUsersStr) {
+            try {
+                const storedUsers = JSON.parse(storedUsersStr);
+                const matchedUser = storedUsers.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
+                if (matchedUser) {
+                    // We don't check password for mock users yet in this prototype
+                    localStorage.setItem('userRoles', JSON.stringify(matchedUser.roles));
+                    localStorage.setItem('userName', matchedUser.name);
+                    localStorage.removeItem('userRole'); // clear legacy
+                    window.dispatchEvent(new Event('auth-change'));
+                    
+                    // Route to highest privilege dashboard or just student
+                    if (matchedUser.roles.includes('admin')) router.push('/dashboard/admin');
+                    else if (matchedUser.roles.includes('president')) router.push('/dashboard/president');
+                    else if (matchedUser.roles.includes('council')) router.push('/dashboard/council');
+                    else if (matchedUser.roles.includes('clubs')) router.push('/dashboard/clubs');
+                    else router.push('/dashboard/student');
+                    
+                    return;
+                }
+            } catch (error) {
+                console.error('Failed to parse stored users during login', error);
+            }
+        }
+
+        // Server-Side Universal Login Check (Fallback)
         import('@/app/actions/auth').then(async ({ universalLogin }) => {
-            const result = await universalLogin(email, password); // Change local var 'role' to email from input if possible, but here we use state
+            const result = await universalLogin(email, password); 
 
             if (result.success && result.role) {
                 // It's a special role (Admin/President/Council)
-                localStorage.setItem('userRole', result.role);
+                localStorage.setItem('userRoles', JSON.stringify([result.role]));
                 localStorage.setItem('userName', result.userName || 'User');
+                localStorage.removeItem('userRole'); // clear legacy
                 window.dispatchEvent(new Event('auth-change'));
                 router.push(`/dashboard/${result.role}`);
             } else {
                 // Fallback to Student Login (Mock)
                 setTimeout(() => {
-                    localStorage.setItem('userRole', 'student');
+                    localStorage.setItem('userRoles', JSON.stringify(['student']));
                     localStorage.setItem('userName', 'Student Name');
+                    localStorage.removeItem('userRole'); // clear legacy
                     window.dispatchEvent(new Event('auth-change'));
                     router.push('/dashboard/student');
                     setLoading(false);
