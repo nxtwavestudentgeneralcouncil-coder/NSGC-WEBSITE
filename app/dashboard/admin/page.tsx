@@ -251,11 +251,31 @@ export default function AdminDashboard() {
         setShowDeleteModal(true);
     };
 
-    const confirmDeleteUser = () => {
+    const confirmDeleteUser = async () => {
         if (userToDelete) {
-            setUsers(prev => prev.filter(u => u.id !== userToDelete));
-            setUserToDelete(null);
-            setShowDeleteModal(false);
+            try {
+                const response = await fetch('/api/nhost/delete-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: userToDelete })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to delete user');
+                }
+
+                setUsers(prev => prev.filter(u => u.id !== userToDelete));
+                setSuccessMessage('User deleted successfully.');
+                setShowDeleteModal(false);
+                setUserToDelete(null);
+                setShowSuccessModal(true);
+            } catch (err: any) {
+                console.error("Failed to delete user:", err);
+                alert(`Error deleting user: ${err.message || 'Check logs for details.'}`);
+                setShowDeleteModal(false);
+                setUserToDelete(null);
+            }
         }
     };
 

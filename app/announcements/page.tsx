@@ -29,10 +29,10 @@ export default function AnnouncementsPage() {
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
 
     const filteredAnnouncements = useMemo(() => {
-        return announcements.map(a => ({
+        return announcements.map((a: any) => ({
             ...a,
             category: a.category || "General"
-        })).filter(a => {
+        })).filter((a: any) => {
             const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                                   a.content.toLowerCase().includes(searchQuery.toLowerCase());
             
@@ -135,7 +135,7 @@ export default function AnnouncementsPage() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         <AnimatePresence mode="popLayout">
-                            {filteredAnnouncements.map((announcement, index) => (
+                            {filteredAnnouncements.map((announcement: any, index: number) => (
                                 <motion.div
                                     key={announcement.id}
                                     layout

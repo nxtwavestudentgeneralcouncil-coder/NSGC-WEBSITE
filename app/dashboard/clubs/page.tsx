@@ -101,8 +101,8 @@ export default function ClubsDashboard() {
 
         const { type, id } = itemToDelete;
         switch (type) {
-            case 'event': setEvents(prev => prev.filter(i => i.id !== id)); break;
-            case 'announcement': setAnnouncements(prev => prev.filter(i => i.id !== id)); break;
+            case 'event': setEvents((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
+            case 'announcement': setAnnouncements((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
             case 'member':
                 setClubs(prev => prev.map(club => {
                     if (club.name === currentClubName) {
@@ -111,7 +111,7 @@ export default function ClubsDashboard() {
                     return club;
                 }));
                 break;
-            case 'gallery': setGalleryImages(prev => prev.filter(i => i.id !== id)); break;
+            case 'gallery': setGalleryImages(prev => prev.filter((i: any) => i.id !== id)); break;
         }
         setIsDeleteModalOpen(false);
         setItemToDelete(null);
@@ -126,14 +126,14 @@ export default function ClubsDashboard() {
         // Helper to update or add
         const updateState = (prev: any[], newItem: any) => {
             if (isEditing) {
-                return prev.map(item => item.id === itemId ? { ...item, ...newItem } : item);
+                return prev.map((item: any) => item.id === itemId ? { ...item, ...newItem } : item);
             }
             return [newItem, ...prev]; // Add to top
         };
 
         switch (addModalType) {
             case 'event':
-                setEvents(prev => updateState(prev, {
+                setEvents((prev: any[]) => updateState(prev, {
                     ...newData,
                     organizer: currentClubName, // Stamp the event with this club's name
                     addedByRole: 'Club Manager',
@@ -141,7 +141,7 @@ export default function ClubsDashboard() {
                 }));
                 break;
             case 'announcement':
-                setAnnouncements(prev => updateState(prev, {
+                setAnnouncements((prev: any[]) => updateState(prev, {
                     ...newData,
                     date: (newData as Announcement).date || new Date().toISOString().split('T')[0],
                     author: currentClubName, // Stamp the announcement with this club's name
@@ -188,7 +188,7 @@ export default function ClubsDashboard() {
                     alert("Please upload an image before saving.");
                     return;
                 }
-                setGalleryImages(prev => updateState(prev, {
+                setGalleryImages((prev: any[]) => updateState(prev, {
                     ...newData,
                     src: formData.src,
                     span: formData.span || 'col-span-1 row-span-1',

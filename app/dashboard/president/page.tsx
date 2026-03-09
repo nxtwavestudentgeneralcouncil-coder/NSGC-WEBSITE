@@ -197,16 +197,16 @@ function PresidentDashboardContent() {
 
         const { type, id } = itemToDelete;
         switch (type) {
-            case 'announcement': setAnnouncements(prev => prev.filter(i => i.id !== id)); break;
-            case 'member': setMembers(prev => prev.filter(i => i.id !== id)); break;
-            case 'club': setClubs(prev => prev.filter(i => i.id !== id)); break;
-            case 'event': setEvents(prev => prev.filter(i => i.id !== id)); break;
-            case 'election': setElections(prev => prev.filter(i => i.id !== id)); break;
-            case 'achievement': setAchievements(prev => prev.filter(i => i.id !== id)); break;
-            case 'user': setUsers(prev => prev.filter(i => i.id !== id)); break;
-            case 'poll': setPolls(prev => prev.filter(i => i.id !== id)); break;
-            case 'survey': setSurveys(prev => prev.filter(i => i.id !== id)); break;
-            case 'gallery': setGalleryImages(prev => prev.filter(i => i.id !== id)); break;
+            case 'announcement': setAnnouncements((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
+            case 'member': setMembers(prev => prev.filter((i: any) => i.id !== id)); break;
+            case 'club': setClubs(prev => prev.filter((i: any) => i.id !== id)); break;
+            case 'event': setEvents((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
+            case 'election': setElections(prev => prev.filter((i: any) => i.id !== id)); break;
+            case 'achievement': setAchievements(prev => prev.filter((i: any) => i.id !== id)); break;
+            case 'user': setUsers(prev => prev.filter((i: any) => i.id !== id)); break;
+            case 'poll': setPolls(prev => prev.filter((i: any) => i.id !== id)); break;
+            case 'survey': setSurveys(prev => prev.filter((i: any) => i.id !== id)); break;
+            case 'gallery': setGalleryImages(prev => prev.filter((i: any) => i.id !== id)); break;
         }
         setIsDeleteModalOpen(false);
         setItemToDelete(null);
@@ -221,29 +221,29 @@ function PresidentDashboardContent() {
         // Helper to update or add
         const updateState = (prev: any[], newItem: any) => {
             if (isEditing) {
-                return prev.map(item => item.id === itemId ? { ...item, ...newItem } : item);
+                return prev.map((item: any) => item.id === itemId ? { ...item, ...newItem } : item);
             }
             return [...prev, newItem];
         };
 
         switch (addModalType) {
             case 'announcement':
-                setAnnouncements(prev => updateState(prev, { ...newData, addedByRole: 'President', date: (newData as Announcement).date || new Date().toISOString().split('T')[0] }));
+                setAnnouncements((prev: any[]) => updateState(prev, { ...newData, addedByRole: 'President', date: (newData as Announcement).date || new Date().toISOString().split('T')[0] }));
                 break;
             case 'member':
-                setMembers(prev => updateState(prev, { ...newData, status: (newData as CouncilMember).status || 'Active' }));
+                setMembers((prev: any[]) => updateState(prev, { ...newData, status: (newData as CouncilMember).status || 'Active' }));
                 break;
             case 'club':
-                setClubs(prev => updateState(prev, { ...newData, members: (newData as Club).members || 0 }));
+                setClubs((prev: any[]) => updateState(prev, { ...newData, members: (newData as Club).members || 0 }));
                 break;
             case 'event':
-                setEvents(prev => updateState(prev, { ...newData, addedByRole: 'President' }));
+                setEvents((prev: any[]) => updateState(prev, { ...newData, addedByRole: 'President' }));
                 break;
             case 'election':
-                setElections(prev => updateState(prev, { ...newData, candidates: (newData as any).candidates || [] }));
+                setElections((prev: any[]) => updateState(prev, { ...newData, candidates: (newData as any).candidates || [] }));
                 break;
             case 'achievement':
-                setAchievements(prev => updateState(prev, { ...newData, image: (newData as any).image || '', addedByRole: 'President' }));
+                setAchievements((prev: any[]) => updateState(prev, { ...newData, image: (newData as any).image || '', addedByRole: 'President' }));
                 break;
             case 'user':
                 setUsers(prev => {
@@ -254,17 +254,17 @@ function PresidentDashboardContent() {
                     return prev;
                 });
             case 'poll':
-                setPolls(prev => updateState(prev, { ...newData, options: (newData as any).options || [], votes: 0, status: (newData as any).status || 'Active' }));
+                setPolls((prev: any[]) => updateState(prev, { ...newData, options: (newData as any).options || [], votes: 0, status: (newData as any).status || 'Active' }));
                 break;
             case 'survey':
-                setSurveys(prev => updateState(prev, { ...newData, status: (newData as any).status || 'Active' }));
+                setSurveys((prev: any[]) => updateState(prev, { ...newData, status: (newData as any).status || 'Active' }));
                 break;
             case 'gallery':
                 if (!(newData as any).src) {
                     alert("Please upload an image before saving.");
                     return;
                 }
-                setGalleryImages(prev => updateState(prev, {
+                setGalleryImages((prev: any[]) => updateState(prev, {
                     ...newData,
                     src: (newData as GalleryImage).src,
                     span: (newData as GalleryImage).span || 'col-span-1 row-span-1',
@@ -642,7 +642,7 @@ function PresidentDashboardContent() {
                                                     <div className="mt-4 space-y-3">
                                                         <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Results</h4>
                                                         <div className="space-y-2">
-                                                            {election.candidates.map(candidate => {
+                                                            {election.candidates.map((candidate: any) => {
                                                                 const totalVotes = election.candidates.reduce((sum: number, c: any) => sum + (c.votes || 0), 0);
                                                                 // Percentage based on total registered users
                                                                 const percentage = totalUsers > 0 ? Math.round(((candidate.votes || 0) / totalUsers) * 100) : 0;
@@ -1127,7 +1127,7 @@ function PresidentDashboardContent() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-300">Content</label>
-                                    <Textarea required value={formData.content || ''} onChange={(e: any) => setFormData({ ...formData, content: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50 transition-colors" placeholder="Announcement details..." />
+                                    <Textarea required value={formData.content || ''} onChange={e => setFormData({ ...formData, content: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50 transition-colors" placeholder="Announcement details..." />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-300">Category</label>
@@ -1478,7 +1478,7 @@ function PresidentDashboardContent() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-300">Description</label>
-                                    <Textarea required value={formData.description || ''} onChange={(e: any) => setFormData({ ...formData, description: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
+                                    <Textarea required value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-300">Date</label>
@@ -1636,7 +1636,7 @@ function PresidentDashboardContent() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-300">Description</label>
-                                    <Textarea required value={formData.description || ''} onChange={(e: any) => setFormData({ ...formData, description: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
+                                    <Textarea required value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-300">Category</label>

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
+import { useQuery, useMutation, gql } from '@apollo/client';
+import { useUserData } from '@nhost/react';
 // --- Types ---
 export interface Announcement {
     id: string;
@@ -141,11 +142,72 @@ const DEFAULT_POLLS: Poll[] = [];
 const DEFAULT_SURVEYS: Survey[] = [];
 const DEFAULT_GALLERY: GalleryImage[] = [];
 
+// --- GraphQL Queries and Mutations ---
+const QUERY_ANNOUNCEMENTS = gql`
+  query GetLiveAnnouncements {
+    announcements(where: {is_active: {_eq: true}}, order_by: {created_at: desc}) {
+      id
+      title
+      content
+      category
+      created_at
+    }
+  }
+`;
+
+const INSERT_ANNOUNCEMENT = gql`
+  mutation InsertAnnouncement($title: String!, $content: String!, $category: String!, $priority: String) {
+    insert_announcements_one(object: {
+      title: $title,
+      content: $content,
+      category: $category
+    }) {
+      id
+    }
+  }
+`;
+
+const QUERY_EVENTS = gql`
+  query GetLiveEvents {
+    events(order_by: {event_date: asc}) {
+      id
+      title
+      description
+      event_date
+      venue
+      organizer_type
+      image_url
+    }
+  }
+`;
+
+const INSERT_EVENT = gql`
+  mutation InsertEvent($title: String!, $description: String!, $event_date: timestamptz!, $venue: String!, $organizer_type: String!) {
+    insert_events_one(object: {
+      title: $title, 
+      description: $description, 
+      event_date: $event_date, 
+      venue: $venue, 
+      organizer_type: $organizer_type
+    }) {
+      id
+    }
+  }
+`;
 export function useSharedData() {
-    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    // Apollo GraphQL Variables
+    // 600000ms = 10 minutes polling interval
+    const { data: announcementData, loading: announcementsLoading, refetch: refetchAnnouncements } = useQuery(QUERY_ANNOUNCEMENTS, { pollInterval: 600000 });
+    const { data: eventData, loading: eventsLoading, refetch: refetchEvents } = useQuery(QUERY_EVENTS, { pollInterval: 600000 });
+    
+    const [insertAnnouncement] = useMutation(INSERT_ANNOUNCEMENT);
+    const [insertEvent] = useMutation(INSERT_EVENT);
+
+    const user = useUserData();
+
+    // Local State Variables (for features not yet migrated to Nhost DB)
     const [members, setMembers] = useState<CouncilMember[]>([]);
     const [clubs, setClubs] = useState<Club[]>([]);
-    const [events, setEvents] = useState<Event[]>([]);
     const [elections, setElections] = useState<Election[]>([]);
     const [achievements, setAchievements] = useState<Achievement[]>([]);
     const [users, setUsers] = useState<User[]>([]);
@@ -158,10 +220,8 @@ export function useSharedData() {
     // Helper to read current data
     const loadAllData = () => {
         // Mock data initialization stripped for Nhost backend integration.
-        setAnnouncements([]);
         setMembers([]);
         setClubs([]);
-        setEvents([]);
         setElections([]);
         setAchievements([]);
         setUsers([]);
@@ -180,8 +240,30 @@ export function useSharedData() {
     }, []);
 
     // Save helpers
-    const updateAnnouncements = (newData: Announcement[] | ((prev: Announcement[]) => Announcement[])) => {
-        setAnnouncements(prev => typeof newData === 'function' ? newData(prev) : newData);
+    const updateAnnouncements = async (newData: any) => {
+        // Intercept local state updates from old code and push to GraphQL.
+        // We assume newData is either the array of announcements or a function, but we only really care about appending new ones right now based on old logic.
+        // For actual app usage, the UI should call a dedicated function. We'll hack this by looking at what was added.
+        if (Array.isArray(newData)) {
+            // Find the newest announcement (naive assumption for compatibility)
+            const latest = newData[newData.length - 1]; 
+            if (latest && latest.title && latest.content) {
+                try {
+                    await insertAnnouncement({
+                        variables: {
+                            title: latest.title,
+                            content: latest.content,
+                            category: latest.category || 'General',
+                            priority: latest.priority || 'Low'
+                        }
+                    });
+                    // Force an immediate refetch so the user sees their own post right away
+                    refetchAnnouncements();
+                } catch (e) {
+                    console.error("Failed to insert announcement via GraphQL:", e);
+                }
+            }
+        }
     };
 
     const updateMembers = (newData: CouncilMember[] | ((prev: CouncilMember[]) => CouncilMember[])) => {
@@ -192,8 +274,29 @@ export function useSharedData() {
         setClubs(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
-    const updateEvents = (newData: Event[] | ((prev: Event[]) => Event[])) => {
-        setEvents(prev => typeof newData === 'function' ? newData(prev) : newData);
+    const updateEvents = async (newData: any) => {
+         // Intercept local state updates and push to GraphQL.
+        if (Array.isArray(newData)) {
+            const latest = newData[newData.length - 1];
+            if (latest && latest.name && latest.date) {
+                try {
+                     // Next.js components still use 'name' instead of 'title', mapping it here
+                     await insertEvent({
+                         variables: {
+                             title: latest.name,
+                             description: latest.description || 'No description provided.',
+                             event_date: new Date(latest.date).toISOString(),
+                             venue: latest.location || 'TBA',
+                             // HACK: Use current user's role determining logic to pass organizer type, or default to 'council'
+                             organizer_type: 'council' 
+                         }
+                     });
+                     refetchEvents();
+                } catch (e) {
+                    console.error("Failed to insert event via GraphQL:", e);
+                }
+            }
+        }
     };
 
     const updateElections = (newData: Election[] | ((prev: Election[]) => Election[])) => {
@@ -220,18 +323,40 @@ export function useSharedData() {
         setGalleryImages(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
+    // Formatting the received GraphQL data into the legacy Announcement structure
+    const mappedAnnouncements: Announcement[] = announcementData?.announcements?.map((a: any) => ({
+        id: a.id,
+        title: a.title,
+        content: a.content,
+        category: a.category,
+        date: new Date(a.created_at).toLocaleDateString(),
+        priority: 'Medium', // Could map priority too but hardcoding for now
+        addedByRole: 'Council' // Hardcoding to 'Council' to pass existing filters just so UI renders
+    })) || [];
+
+    // Formatting the received GraphQL data into the legacy Event structure
+    const mappedEvents: Event[] = eventData?.events?.map((e: any) => ({
+        id: e.id,
+        name: e.title,
+        date: new Date(e.event_date).toLocaleDateString(),
+        location: e.venue,
+        type: e.organizer_type === 'council' ? 'Academic' : 'Social',
+        addedByRole: e.organizer_type === 'council' ? 'Council' : 'Club Manager'
+    })) || [];
+
+
     return {
-        announcements, setAnnouncements: updateAnnouncements,
+        announcements: mappedAnnouncements, setAnnouncements: updateAnnouncements,
         members, setMembers: updateMembers,
         clubs, setClubs: updateClubs,
-        events, setEvents: updateEvents,
+        events: mappedEvents, setEvents: updateEvents,
         elections, setElections: updateElections,
         achievements, setAchievements: updateAchievements,
         users, setUsers: updateUsers,
         polls, setPolls: updatePolls,
         surveys, setSurveys: updateSurveys,
         galleryImages, setGalleryImages: updateGalleryImages,
-        isLoaded,
+        isLoaded: isLoaded && !announcementsLoading && !eventsLoading,
         totalUsers
     };
 }

@@ -17,7 +17,7 @@ export function GlassModal({ isOpen, onClose, title, children, footer, variant =
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div key="glass-modal-container" className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}

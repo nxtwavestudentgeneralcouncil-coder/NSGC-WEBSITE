@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NSGC NEXUS Command
+
+Welcome to **NSGC NEXUS Command**, the official Space-Grade Terminal and Command Center for the NxtWave Student General Council (NSGC). This portal serves as the definitive platform for managing council operations, student clubs, events, announcements, and more across the campus.
+
+## Overview
+
+NSGC NEXUS is built with a sleek, futuristic "cyber-solar" aesthetic featuring glassmorphism, dynamic 3D elements, and a terminal-style interface. 
+
+The application provides specialized dashboards and tools for:
+- **President & Executive Admin:** Global overview, user oversight, and broad control.
+- **Council Members:** Management of incoming complaints, feedback, and initiatives.
+- **Club Heads:** Granular management of club resources, members, and custom events.
+- **Students:** Real-time access to announcements, event registrations, club applications, and the suggestion box.
+
+## Tech Stack
+
+- **Framework:** [Next.js 15+ (App Router)](https://nextjs.org/)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS, Framer Motion (for fluid animations and transitions)
+- **Backend/BaaS:** [Nhost](https://nhost.io/) (PostgreSQL, GraphQL via Hasura, Auth, and Storage)
+- **Database Interaction:** `@apollo/client` and `@nhost/react-apollo` for real-time GraphQL subscriptions and mutations.
+- **UI Components:** [shadcn/ui](https://ui.shadcn.com/) (Radix Primitives + Tailwind)
+
+## Features
+
+- **Role-Based Access Control (RBAC):** Secure access to dedicated dashboards (Admin, President, Council, Club Head, Student) managed transparently via Nhost and Hasura.
+- **Real-Time Data:** Instant updates using GraphQL subscriptions for announcements, complaints, and event RSVPs using the Apollo Client.
+- **Dynamic Mobile Layout:** Fully responsive layout with an intuitive bottom navigation bar and clean top headers specifically designed for smooth mobile interaction.
+- **Interactive Global Environment:** Features an interactive 3D solar system built into the background.
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+You will need an active Nhost backend project to run this locally.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. Clone the repository.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Copy the environment variables:
+   ```bash
+   cp .env.example .env.local
+   ```
+   *Note: Fill in your Nhost Subdomain and Region in the `.env.local` file.*
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
+5. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Contributing
 
-## Learn More
+Designed and developed by **V_Mach**. Contributions to improving the portal's aesthetic, adding advanced terminal commands, or optimizing the GraphQL queries are welcome.
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
