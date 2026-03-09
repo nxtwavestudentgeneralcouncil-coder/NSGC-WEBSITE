@@ -2,14 +2,26 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Crown, Users, Flag, LayoutDashboard, Shield } from 'lucide-react';
+import { Crown, Users, Flag, LayoutDashboard, Shield, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
+import { useClubData } from '@/hooks/useClubData';
+import { useSharedData } from '@/hooks/useSharedData';
 
 export function GlobalDashboards() {
     const { isAuthenticated, isLoading } = useAuthenticationStatus();
     const user = useUserData();
+    const { myClubByEmail, clubs } = useClubData();
+    const { members } = useSharedData();
 
     if (isLoading || !isAuthenticated || !user) return null;
 
@@ -17,12 +29,15 @@ export function GlobalDashboards() {
     const userRoles = user?.roles ? user.roles : [];
     
     // Nhost typical roles come back like "me_user", "public_user", and custom ones like "admin" etc. 
-    // We can just check normally. You may need to refine the exact role string mapping depending on Hasura configuration.
     const hasRole = (role: string) => userRoles.some(r => r.toLowerCase() === role.toLowerCase());
+
+    const isCouncilMember = hasRole('admin') || hasRole('developer') || members.some(m => m.email && user?.email && m.email.toLowerCase() === user.email.toLowerCase());
+    const isPresident = hasRole('president') || hasRole('admin') || hasRole('developer');
+    const isAdminOrDev = hasRole('admin') || hasRole('developer');
 
     return (
         <div className="fixed top-4 right-4 md:top-6 md:right-6 z-[9999] flex items-center gap-2 pointer-events-auto">
-            {hasRole('president') && (
+            {isPresident && (
                 <>
                     <Button 
                         variant="ghost" 
@@ -42,7 +57,7 @@ export function GlobalDashboards() {
                 </>
             )}
             
-            {hasRole('council_member') && (
+            {isCouncilMember && (
                 <>
                     <Button 
                         variant="ghost" 
@@ -62,25 +77,52 @@ export function GlobalDashboards() {
                 </>
             )}
             
-            {hasRole('club_head') && (
+            {isAdminOrDev ? (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button 
+                            variant="ghost" 
+                            className="hidden sm:flex gap-2 rounded-sm text-[10px] md:text-xs font-mono uppercase tracking-widest text-teal-400 hover:text-teal-300 hover:bg-teal-500/10 border border-teal-500/20 bg-black/50 backdrop-blur-md shadow-[0_0_15px_rgba(45,212,191,0.1)]"
+                        >
+                            <Flag className="w-3.5 h-3.5" />
+                            <span>Club Manager</span>
+                            <ChevronDown className="w-3.5 h-3.5 opacity-50 ml-1" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56 bg-black/90 border-white/10 backdrop-blur-xl text-white">
+                        <DropdownMenuLabel className="font-mono text-xs text-teal-500 uppercase tracking-widest">Select Club</DropdownMenuLabel>
+                        <DropdownMenuSeparator className="bg-white/10" />
+                        {clubs?.map((club: any) => (
+                            <DropdownMenuItem key={club.id} className="hover:bg-white/5 focus:bg-white/5 cursor-pointer">
+                                <Link href={`/dashboard/club/${club.slug}`} className="w-full">
+                                    {club.name}
+                                </Link>
+                            </DropdownMenuItem>
+                        ))}
+                        {(!clubs || clubs.length === 0) && (
+                            <DropdownMenuItem disabled className="text-gray-500 italic">No clubs found</DropdownMenuItem>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            ) : myClubByEmail ? (
                 <>
                     <Button 
                         variant="ghost" 
                         className="hidden sm:flex gap-2 rounded-sm text-[10px] md:text-xs font-mono uppercase tracking-widest text-teal-400 hover:text-teal-300 hover:bg-teal-500/10 border border-teal-500/20 bg-black/50 backdrop-blur-md shadow-[0_0_15px_rgba(45,212,191,0.1)]"
                         asChild
                     >
-                        <Link href="/dashboard/clubs">
+                        <Link href={`/dashboard/club/${myClubByEmail.slug}`}>
                             <Flag className="w-3.5 h-3.5" />
-                            <span>Club Mgr</span>
+                            <span>Club Dashboard</span>
                         </Link>
                     </Button>
                     <div className="flex sm:hidden flex-col gap-2">
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-sm text-teal-400 border border-teal-500/20 bg-black/80 backdrop-blur-md" asChild>
-                            <Link href="/dashboard/clubs"><Flag className="w-3.5 h-3.5" /></Link>
+                            <Link href={`/dashboard/club/${myClubByEmail.slug}`}><Flag className="w-3.5 h-3.5" /></Link>
                         </Button>
                     </div>
                 </>
-            )}
+            ) : null}
             
             <>
                 <Button 

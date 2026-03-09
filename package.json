@@ -13,6 +13,7 @@
     "@nhost/nextjs": "^2.3.1",
     "@nhost/react": "^3.11.2",
     "@nhost/react-apollo": "^18.0.2",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-slot": "^1.2.4",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.2",
@@ -35,7 +36,7 @@
     "react-easy-crop": "^5.5.6",
     "recharts": "^3.5.1",
     "subscriptions-transport-ws": "^0.11.0",
-    "tailwind-merge": "^3.4.0",
+    "tailwind-merge": "^3.5.0",
     "three": "^0.181.2",
     "uuid": "^13.0.0"
   },

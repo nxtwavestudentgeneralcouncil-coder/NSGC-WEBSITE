@@ -25,7 +25,7 @@ function CouncilDashboardContent() {
     // Contexts
     const { tickets, updateTicketStatus } = useTickets();
     const { announcements, events, addAnnouncement, addEvent } = useCouncil();
-    const { achievements, setAchievements, galleryImages, setGalleryImages } = useSharedData();
+    const { achievements, setAchievements, galleryImages, setGalleryImages, members } = useSharedData();
     // UI States
     const [activeTab, setActiveTab] = useState('announcements');
     const [selectedTicket, setSelectedTicket] = useState<any>(null); // For viewing full complaint details
@@ -53,18 +53,19 @@ function CouncilDashboardContent() {
                 router.push('/login');
                 return;
             }
-            
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const roles = (user as any).roles || [];
-            const defaultRole = user.defaultRole || '';
+            const defaultRole = user?.defaultRole || '';
+            const isEmailAuthorized = members.some(m => m.email && user?.email && m.email.toLowerCase() === user.email.toLowerCase());
+            const hasOverrideRole = roles.includes('admin') || roles.includes('developer') || defaultRole === 'admin' || defaultRole === 'developer';
             
-            if (roles.includes('council_member') || defaultRole === 'council_member') {
+            if (isEmailAuthorized || hasOverrideRole) {
                 setIsAuthorized(true);
             } else {
                 router.push('/dashboard/student');
             }
         }
-    }, [isAuthenticated, isLoading, user, router]);
+    }, [isAuthenticated, isLoading, user, router, members]);
 
     if (!isAuthorized) {
         return <div className="min-h-screen bg-black" />;

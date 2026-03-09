@@ -83,7 +83,7 @@ export default function AdminDashboard() {
         setFetchError(null);
         
         try {
-            const response = await fetch('/api/nhost/get-users', {
+            const response = await fetch('/api/v1/nhost/get-users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -210,7 +210,7 @@ export default function AdminDashboard() {
 
             // We proxy this through our internal Next.js API to bypass complex Hasura user-table rules securely
             try {
-                const response = await fetch('/api/nhost/update-user-role', {
+                const response = await fetch('/api/v1/nhost/update-user-role', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -254,7 +254,7 @@ export default function AdminDashboard() {
     const confirmDeleteUser = async () => {
         if (userToDelete) {
             try {
-                const response = await fetch('/api/nhost/delete-user', {
+                const response = await fetch('/api/v1/nhost/delete-user', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: userToDelete })

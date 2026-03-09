@@ -15,32 +15,49 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
 import { useSharedData, Announcement, Event, ClubTeamMember, GalleryImage } from '@/hooks/useSharedData';
+import { useMutation, useQuery } from '@apollo/client';
+import { useClubData } from '@/hooks/useClubData';
+import { use } from 'react';
 
-export default function ClubsDashboard() {
+export default function ClubDashboard({ params }: { params: Promise<{ slug: string }> }) {
+    const resolvedParams = use(params);
     const router = useRouter();
     const [isAuthorized, setIsAuthorized] = useState(false);
 
-    // For demo purposes, we will bypass actual login and assume the user is a club lead
-    // Let's pretend they are the lead of a specific club. We'll pick the first available club
-    // or create a default context if none exist.
-    const [currentClubName, setCurrentClubName] = useState('Tech Club');
-
     // --- State Management ---
     const {
-        announcements, setAnnouncements,
-        events, setEvents,
-        clubs, setClubs,
-        galleryImages, setGalleryImages,
-        isLoaded
+        announcements, setAnnouncements, // Keep announcements on local state since it's not in Nhost clubs schema
+        galleryImages, setGalleryImages, // Keep gallery images local too
     } = useSharedData();
+
+    const { 
+        myClubByEmail, 
+        myClubByEmailLoading, 
+        refetchMyClubByEmail,
+        GET_CLUB_BY_SLUG,
+        UPDATE_CLUB_PROFILE,
+        INSERT_CLUB_EVENT,
+        UPDATE_CLUB_EVENT,
+        DELETE_CLUB_EVENT,
+        INSERT_CLUB_MEMBER,
+        UPDATE_CLUB_MEMBER_ROLE,
+        DELETE_CLUB_MEMBER
+    } = useClubData();
+
+    const [updateClubProfile] = useMutation(UPDATE_CLUB_PROFILE);
+    const [insertClubEvent] = useMutation(INSERT_CLUB_EVENT);
+    const [updateClubEvent] = useMutation(UPDATE_CLUB_EVENT);
+    const [deleteClubEvent] = useMutation(DELETE_CLUB_EVENT);
+    const [insertClubMember] = useMutation(INSERT_CLUB_MEMBER);
+    const [updateClubMemberRole] = useMutation(UPDATE_CLUB_MEMBER_ROLE);
+    const [deleteClubMember] = useMutation(DELETE_CLUB_MEMBER);
 
     // UI States
     const [activeTab, setActiveTab] = useState('events');
 
     // Add Modal State
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [addModalType, setAddModalType] = useState<'event' | 'announcement' | 'member' | 'gallery'>('event');
-
+    const [addModalType, setAddModalType] = useState<'event' | 'announcement' | 'member' | 'gallery' | 'profile'>('event');
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<{ type: string, id: string } | null>(null);
@@ -51,6 +68,17 @@ export default function ClubsDashboard() {
     const { isAuthenticated, isLoading } = useAuthenticationStatus();
     const user = useUserData();
 
+    // Roles and Overrides
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userRoles = (user as any)?.roles || [];
+    const defaultRole = user?.defaultRole || '';
+    const hasOverrideRole = userRoles.includes('admin') || userRoles.includes('developer') || defaultRole === 'admin' || defaultRole === 'developer';
+
+    const { data: clubBySlugData, loading: clubBySlugLoading } = useQuery(GET_CLUB_BY_SLUG, {
+        variables: { slug: resolvedParams.slug },
+        skip: !resolvedParams.slug || !hasOverrideRole // Only fetch by slug if override role
+    });
+
     // Login Access Check
     useEffect(() => {
         if (!isLoading) {
@@ -58,36 +86,83 @@ export default function ClubsDashboard() {
                 router.push('/login');
                 return;
             }
-            
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const roles = (user as any).roles || [];
-            const defaultRole = user.defaultRole || '';
-            
-            if (roles.includes('club_head') || defaultRole === 'club_head') {
-                setIsAuthorized(true);
+
+            if (hasOverrideRole) {
+                if (!clubBySlugLoading) {
+                    if (!clubBySlugData?.clubs?.[0]) {
+                        router.push('/dashboard/student');
+                        return;
+                    }
+                    setIsAuthorized(true);
+                }
             } else {
-                router.push('/dashboard/student');
+                if (!myClubByEmailLoading) {
+                    if (!myClubByEmail || myClubByEmail.slug !== resolvedParams.slug) {
+                        router.push('/dashboard/student'); // Redirect to generic dashboard
+                        return;
+                    }
+                    setIsAuthorized(true);
+                }
             }
         }
-    }, [isAuthenticated, isLoading, user, router]);
+    }, [isAuthenticated, isLoading, user, router, myClubByEmailLoading, myClubByEmail, resolvedParams.slug, hasOverrideRole, clubBySlugLoading, clubBySlugData]);
 
-    useEffect(() => {
-        if (isLoaded && clubs.length > 0) {
-            // We arbitrarily pick the first club to simulate being its lead.
-            // In reality, this would come from the user's logged-in profile.
-            setCurrentClubName(clubs[0].name);
-        }
-    }, [isLoaded, clubs]);
+    const activeClub = hasOverrideRole ? clubBySlugData?.clubs?.[0] : myClubByEmail;
+    const currentClubId = activeClub?.id;
+    const currentClubName = activeClub?.name || 'Club';
 
-    // Filter data to only show items created by THIS club
-    const clubEvents = events.filter(e => e.organizer === currentClubName || !e.organizer); // Fallback: show all if none have organizer for demo
+    // Map new Nhost data to expected legacy UI format
+    const currentClubDetails = activeClub ? {
+        id: activeClub.id,
+        name: activeClub.name,
+        description: activeClub.description,
+        image: activeClub.logo_url,
+        website: '', // contact_email was dropped
+        lead: activeClub.club_members?.find((m: any) => m.role === 'manager')?.user?.displayName || 'Club Manager',
+        members: activeClub.club_members?.length || 0,
+        teamMembers: activeClub.club_members?.map((m: any) => ({
+            id: m.id, // club_member id
+            name: m.user?.displayName || m.user?.email || 'Unknown',
+            role: m.role,
+            avatar: m.user?.avatarUrl
+        })) || []
+    } : null;
+
+    const clubEvents = activeClub?.club_events?.map((e: any) => ({
+        id: e.id,
+        name: e.title,
+        date: new Date(e.event_date).toLocaleDateString(),
+        location: e.description?.slice(0, 30) || 'Virtual', // truncate description for location field
+        type: 'Event',
+        image: e.image_url,
+        registrationLink: ''
+    })) || [];
+
     const clubAnnouncements = announcements.filter(a => a.author === currentClubName || !a.author);
     const clubGalleryImages = galleryImages.filter(img => img.addedByRole?.includes(currentClubName));
 
     // --- Helpers ---
-    const openAddModal = (type: 'event' | 'announcement' | 'member' | 'gallery', data?: any) => {
+    const openAddModal = (type: 'event' | 'announcement' | 'member' | 'gallery' | 'profile', data?: any) => {
         setAddModalType(type);
-        setFormData(data || {}); // Reset form or load existing data
+        // Reverse map legacy data to form data
+        let initialData = { ...data };
+        if (type === 'event' && data) {
+            initialData = {
+                id: data.id,
+                title: data.name,
+                description: data.location,
+                event_date: new Date(data.date).toISOString().slice(0, 16),
+                image_url: data.image
+            };
+        } else if (type === 'profile' && data) {
+            initialData = {
+                id: data.id,
+                name: data.name,
+                description: data.description,
+                logo_url: data.image
+            };
+        }
+        setFormData(initialData || {});
         setIsAddModalOpen(true);
     };
 
@@ -96,117 +171,88 @@ export default function ClubsDashboard() {
         setIsDeleteModalOpen(true);
     };
 
-    const executeDelete = () => {
+    const executeDelete = async () => {
         if (!itemToDelete) return;
-
         const { type, id } = itemToDelete;
-        switch (type) {
-            case 'event': setEvents((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
-            case 'announcement': setAnnouncements((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
-            case 'member':
-                setClubs(prev => prev.map(club => {
-                    if (club.name === currentClubName) {
-                        return { ...club, teamMembers: (club.teamMembers || []).filter(m => m.id !== id) };
-                    }
-                    return club;
-                }));
-                break;
-            case 'gallery': setGalleryImages(prev => prev.filter((i: any) => i.id !== id)); break;
+        
+        try {
+            switch (type) {
+                case 'event': 
+                    await deleteClubEvent({ variables: { id } });
+                    refetchMyClubByEmail();
+                    break;
+                case 'announcement': setAnnouncements((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
+                case 'member':
+                    await deleteClubMember({ variables: { id } });
+                    refetchMyClubByEmail();
+                    break;
+                case 'gallery': setGalleryImages((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
+            }
+        } catch (e) {
+            console.error("Error deleting:", e);
         }
+        
         setIsDeleteModalOpen(false);
         setItemToDelete(null);
     };
 
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         const isEditing = !!formData.id;
-        const itemId = isEditing ? formData.id : Math.random().toString(36).slice(2, 11);
-        const newData = { ...formData, id: itemId };
 
-        // Helper to update or add
-        const updateState = (prev: any[], newItem: any) => {
-            if (isEditing) {
-                return prev.map((item: any) => item.id === itemId ? { ...item, ...newItem } : item);
-            }
-            return [newItem, ...prev]; // Add to top
-        };
-
-        switch (addModalType) {
-            case 'event':
-                setEvents((prev: any[]) => updateState(prev, {
-                    ...newData,
-                    organizer: currentClubName, // Stamp the event with this club's name
-                    addedByRole: 'Club Manager',
-                    type: (newData as Event).type || 'Social', // Default type
-                }));
-                break;
-            case 'announcement':
-                setAnnouncements((prev: any[]) => updateState(prev, {
-                    ...newData,
-                    date: (newData as Announcement).date || new Date().toISOString().split('T')[0],
-                    author: currentClubName, // Stamp the announcement with this club's name
-                    addedByRole: 'Club Manager',
-                    priority: (newData as Announcement).priority || 'Low',
-                    category: (newData as Announcement).category || 'General'
-                }));
-                break;
-            case 'member':
-                setClubs(prev => {
-                    const clubExists = prev.find(c => c.name === currentClubName);
-                    if (clubExists) {
-                        return prev.map(club => {
-                            if (club.name === currentClubName) {
-                                const existingTeam = club.teamMembers || [];
-                                let newTeam;
-                                if (isEditing) {
-                                    newTeam = existingTeam.map(m => m.id === itemId ? { ...m, ...newData as any } : m);
-                                } else {
-                                    newTeam = [{ ...newData as any }, ...existingTeam];
-                                }
-                                return { ...club, teamMembers: newTeam };
-                            }
-                            return club;
-                        });
+        try {
+            switch (addModalType) {
+                case 'event':
+                    if (isEditing) {
+                        await updateClubEvent({ variables: { id: formData.id, title: formData.title, description: formData.description, event_date: formData.event_date, image_url: formData.image_url } });
                     } else {
-                        // Create shell club if it does not exist
-                        return [
-                            ...prev,
-                            {
-                                id: Math.random().toString(36).slice(2, 11),
-                                name: currentClubName,
-                                description: 'Newly registered club.',
-                                lead: 'Club Lead',
-                                members: 1,
-                                teamMembers: [{ ...newData as any }]
-                            }
-                        ];
+                        await insertClubEvent({ variables: { club_id: currentClubId, title: formData.title || 'New Event', description: formData.description, event_date: formData.event_date || new Date().toISOString(), image_url: formData.image_url } });
                     }
-                });
-                break;
-            case 'gallery':
-                if (!formData.src) {
-                    alert("Please upload an image before saving.");
-                    return;
-                }
-                setGalleryImages((prev: any[]) => updateState(prev, {
-                    ...newData,
-                    src: formData.src,
-                    span: formData.span || 'col-span-1 row-span-1',
-                    addedByRole: `Club Manager (${currentClubName})`,
-                    dateAdded: formData.dateAdded || new Date().toISOString().split('T')[0]
-                }));
-                break;
+                    refetchMyClubByEmail();
+                    break;
+                case 'announcement':
+                    const itemId = isEditing ? formData.id : Math.random().toString(36).slice(2, 11);
+                    const newData = { ...formData, id: itemId };
+                    setAnnouncements((prev: any[]) => {
+                        if (isEditing) return prev.map((item: any) => item.id === itemId ? { ...item, ...newData } : item);
+                        return [{ ...newData, date: new Date().toISOString().split('T')[0], author: currentClubName, addedByRole: 'Club Manager' }, ...prev];
+                    });
+                    break;
+                case 'member':
+                    if (isEditing) {
+                        await updateClubMemberRole({ variables: { id: formData.id, role: formData.role || 'member' } });
+                    } else {
+                        await insertClubMember({ variables: { club_id: currentClubId, user_id: formData.user_id, role: formData.role || 'member' } });
+                    }
+                    refetchMyClubByEmail();
+                    break;
+                case 'gallery':
+                    if (!formData.src) return alert("Please upload an image before saving.");
+                    const galId = isEditing ? formData.id : Math.random().toString(36).slice(2, 11);
+                    setGalleryImages((prev: any[]) => {
+                        if (isEditing) return prev.map((item: any) => item.id === galId ? { ...item, ...formData } : item);
+                        return [{ ...formData, id: galId, span: formData.span || 'col-span-1 row-span-1', addedByRole: `Club Manager (${currentClubName})`, dateAdded: new Date().toISOString().split('T')[0] }, ...prev];
+                    });
+                    break;
+                case 'profile':
+                    if (isEditing) {
+                        await updateClubProfile({ variables: { id: formData.id, name: formData.name, description: formData.description, logo_url: formData.image } });
+                        refetchMyClubByEmail();
+                    }
+                    // Ignoring profile creation here because managers can't create clubs, only admins can.
+                    break;
+            }
+        } catch (e) {
+            console.error("Save error:", e);
         }
         setIsAddModalOpen(false);
     };
 
-    if (!isAuthorized || !isLoaded) {
+    if (!isAuthorized || isLoading || (!hasOverrideRole && myClubByEmailLoading) || (hasOverrideRole && clubBySlugLoading)) {
         return <div className="min-h-screen bg-black flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div>
         </div>;
     }
-
-    const currentClubDetails = clubs.find(c => c.name === currentClubName);
 
     return (
         <div className="min-h-screen bg-[#0B1120] text-white pt-24 md:pt-10 pb-20 font-sans">
@@ -214,19 +260,46 @@ export default function ClubsDashboard() {
 
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 relative border-b border-white/5 pb-6">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <h1 className="text-3xl md:text-[40px] font-extrabold tracking-widest uppercase leading-none font-mono">
-                                <span className="text-white">Club</span> <span className="text-[#0ea5e9]">Manager</span>
-                            </h1>
-                        </div>
-                        <div className="flex items-center gap-4 mt-2">
-                            <p className="text-[#64748B] text-[10px] tracking-[0.2em] font-mono uppercase">System.Access.Level_03</p>
-                            <Badge variant="outline" className="border-[#10b981]/30 bg-[#10b981]/5 text-[#10b981] rounded-full px-3 py-0.5 text-[8px] font-bold tracking-[0.2em] uppercase flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" /> Encrypted Connection
-                            </Badge>
+                    <div className="flex items-center gap-6">
+                        {currentClubDetails?.image && (
+                            <img src={currentClubDetails.image} alt={currentClubDetails.name} className="w-20 h-20 rounded-2xl object-cover border border-white/10" />
+                        )}
+                        <div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <h1 className="text-3xl md:text-[40px] font-extrabold tracking-widest uppercase leading-none font-mono">
+                                    <span className="text-white">{currentClubDetails?.name || currentClubName || "Club"}</span> <span className="text-[#0ea5e9]">Manager</span>
+                                </h1>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-4 mt-2">
+                                <p className="text-[#64748B] text-[10px] tracking-[0.2em] font-mono uppercase">System.Access.Level_03</p>
+                                <Badge variant="outline" className="border-[#10b981]/30 bg-[#10b981]/5 text-[#10b981] rounded-full px-3 py-0.5 text-[8px] font-bold tracking-[0.2em] uppercase flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" /> Encrypted Connection
+                                </Badge>
+                                {currentClubDetails?.website && (
+                                    <a href={currentClubDetails.website} target="_blank" rel="noopener noreferrer" className="text-[#00E5FF] text-[10px] tracking-[0.2em] font-mono uppercase hover:underline">
+                                        Website
+                                    </a>
+                                )}
+                            </div>
+                            {currentClubDetails?.description && (
+                                <p className="text-slate-400 text-sm mt-3 max-w-2xl leading-relaxed">
+                                    {currentClubDetails.description}
+                                </p>
+                            )}
+                            {currentClubDetails?.lead && (
+                                <p className="text-slate-500 text-xs mt-1 font-medium">
+                                    Led by: <span className="text-white">{currentClubDetails.lead}</span>
+                                </p>
+                            )}
                         </div>
                     </div>
+                    {currentClubDetails && (
+                        <div className="flex shrink-0">
+                            <Button variant="outline" onClick={() => openAddModal('profile', { ...currentClubDetails, originalName: currentClubDetails.name })} className="border-white/10 text-white hover:bg-white/5">
+                                Edit Profile
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Incomplete Profile Alert */}
@@ -241,7 +314,9 @@ export default function ClubsDashboard() {
                                 <p className="text-[11px] text-slate-400">Complete your club's profile verification to unlock all premium management features.</p>
                             </div>
                         </div>
-                        <Button className="bg-[#00E5FF]/10 hover:bg-[#00E5FF] text-[#00E5FF] hover:text-black border border-[#00E5FF]/30 font-bold text-xs h-9 px-6 rounded-md transition-all">
+                        <Button 
+                            onClick={() => openAddModal('profile', { name: currentClubName, originalName: currentClubName })}
+                            className="bg-[#00E5FF]/10 hover:bg-[#00E5FF] text-[#00E5FF] hover:text-black border border-[#00E5FF]/30 font-bold text-xs h-9 px-6 rounded-md transition-all">
                             Complete Now
                         </Button>
                     </div>
@@ -354,7 +429,7 @@ export default function ClubsDashboard() {
                                     </Button>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {clubEvents.map((event) => (
+                                    {clubEvents.map((event: any) => (
                                         <Card key={event.id} className="bg-[#0F172A] border-white/5 group relative overflow-hidden flex flex-col h-full">
                                             {event.image && (
                                                 <div className="h-40 w-full relative">
@@ -507,7 +582,7 @@ export default function ClubsDashboard() {
                                     </Button>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {currentClubDetails.teamMembers.map((member) => (
+                                    {currentClubDetails?.teamMembers?.map((member: any) => (
                                         <Card key={member.id} className="bg-[#0F172A] border-white/5 p-6 hover:border-[#00E5FF]/30 transition-all duration-300 group">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-16 h-16 rounded-2xl bg-[#00E5FF]/10 flex items-center justify-center text-[#00E5FF] overflow-hidden border border-[#00E5FF]/20 group-hover:scale-105 transition-transform duration-500">
@@ -622,7 +697,7 @@ export default function ClubsDashboard() {
                             >
                                 <div className="p-6 border-b border-white/10 flex justify-between items-center bg-black/50">
                                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                        {formData.id ? 'Edit' : 'Create'} {addModalType === 'event' ? 'Event' : addModalType === 'announcement' ? 'Announcement' : 'Member'}
+                                        {formData.id ? 'Edit' : 'Create'} {addModalType === 'event' ? 'Event' : addModalType === 'announcement' ? 'Announcement' : addModalType === 'member' ? 'Member' : addModalType === 'profile' ? 'Profile' : 'Item'}
                                     </h2>
                                     <Button variant="ghost" size="sm" onClick={() => setIsAddModalOpen(false)} className="rounded-full h-8 w-8 p-0">
                                         ✕
@@ -798,26 +873,27 @@ export default function ClubsDashboard() {
                                                     <div className="space-y-2">
                                                         <label className="text-sm font-medium text-gray-300">Grid Width (Columns)</label>
                                                         <select
-                                                            value={formData.span ? formData.span.split(' ')[0] : 'col-span-1'}
-                                                            onChange={(e) => {
+                                                            value={(formData.span || 'col-span-1').split(' ')[0]}
+                                                            onChange={e => {
                                                                 const currentSpan = formData.span || 'col-span-1 row-span-1';
-                                                                const newSpan = `${e.target.value} ${currentSpan.split(' ')[1]}`;
-                                                                setFormData({ ...formData, span: newSpan });
+                                                                const [, rowSpan] = currentSpan.split(' ');
+                                                                setFormData({ ...formData, span: `${e.target.value} ${rowSpan || 'row-span-1'}` });
                                                             }}
                                                             className="w-full bg-black/50 border border-white/10 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:border-teal-500 h-10"
                                                         >
                                                             <option value="col-span-1">1 Column</option>
                                                             <option value="col-span-2">2 Columns</option>
+                                                            <option value="col-span-3">3 Columns</option>
                                                         </select>
                                                     </div>
                                                     <div className="space-y-2">
                                                         <label className="text-sm font-medium text-gray-300">Grid Height (Rows)</label>
                                                         <select
-                                                            value={formData.span ? formData.span.split(' ')[1] : 'row-span-1'}
-                                                            onChange={(e) => {
+                                                            value={(formData.span || 'row-span-1').includes('row-span-2') ? 'row-span-2' : 'row-span-1'}
+                                                            onChange={e => {
                                                                 const currentSpan = formData.span || 'col-span-1 row-span-1';
-                                                                const newSpan = `${currentSpan.split(' ')[0]} ${e.target.value}`;
-                                                                setFormData({ ...formData, span: newSpan });
+                                                                const [colSpan] = currentSpan.split(' ');
+                                                                setFormData({ ...formData, span: `${colSpan} ${e.target.value}` });
                                                             }}
                                                             className="w-full bg-black/50 border border-white/10 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:border-teal-500 h-10"
                                                         >
@@ -826,82 +902,85 @@ export default function ClubsDashboard() {
                                                         </select>
                                                     </div>
                                                 </div>
-
-                                                <div className="space-y-2 pt-2">
-                                                    <label className="text-sm font-medium text-gray-300">Image Upload (Max 1MB) <span className="text-red-500">*</span></label>
-                                                    <Input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        required
-                                                        onChange={(e) => {
-                                                            const file = e.target.files?.[0];
-                                                            if (file) {
-                                                                if (file.size > 1048576) {
-                                                                    alert("File size exceeds 1MB. Please upload a smaller image.");
-                                                                    e.target.value = '';
-                                                                    return;
-                                                                }
-                                                                const reader = new FileReader();
-                                                                reader.onloadend = () => {
-                                                                    setFormData({ ...formData, src: reader.result as string });
-                                                                };
-                                                                reader.readAsDataURL(file);
-                                                            }
-                                                        }}
-                                                        className="bg-black/50 border-white/10 text-white focus:border-teal-500 file:bg-teal-500 file:text-black file:border-0 file:rounded-md file:mr-4 file:px-2 file:py-1 file:text-sm file:font-semibold hover:file:bg-teal-400"
-                                                    />
-                                                    {formData.src && (
-                                                        <div className="mt-4 pt-4 border-t border-white/10">
-                                                            <p className="text-sm text-gray-400 mb-2">Preview:</p>
-                                                            <img src={formData.src} alt="Preview" className="w-full h-48 object-cover rounded-md border border-white/10" />
-                                                        </div>
-                                                    )}
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-medium text-gray-300">Image Source <span className="text-red-500">*</span></label>
+                                                    <Input required value={formData.src || ''} onChange={e => setFormData({ ...formData, src: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-teal-500" placeholder="https://example.com/image.jpg" />
+                                                    <p className="text-[10px] text-gray-400 mt-1">Provide a direct URL to an image, preferably hosted on an image sharing service or cloud storage.</p>
                                                 </div>
                                             </>
                                         )}
+
+                                        {/* Modals for Club Profile */}
+                                        {addModalType === 'profile' && (
+                                            <>
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-medium text-gray-300">Club Name <span className="text-red-500">*</span></label>
+                                                    <Input
+                                                        value={formData.name || ''}
+                                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                        required
+                                                        className="bg-black/50 border-white/10 text-white"
+                                                        placeholder="e.g. Coding Club"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-medium text-gray-300">Description <span className="text-red-500">*</span></label>
+                                                    <Textarea
+                                                        value={formData.description || ''}
+                                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                                        required
+                                                        className="bg-black/50 border-white/10 text-white min-h-[100px]"
+                                                        placeholder="Brief description of your club's mission and activities..."
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-medium text-gray-300">Club Lead / President <span className="text-red-500">*</span></label>
+                                                    <Input
+                                                        value={formData.lead || ''}
+                                                        onChange={(e) => setFormData({ ...formData, lead: e.target.value })}
+                                                        required
+                                                        className="bg-black/50 border-white/10 text-white"
+                                                        placeholder="e.g. John Doe"
+                                                    />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4 pt-2">
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-300">Website / Linktree (Optional)</label>
+                                                        <Input
+                                                            value={formData.website || ''}
+                                                            onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                                                            className="bg-black/50 border-white/10 text-white"
+                                                            placeholder="https://linktr.ee/..."
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-300">Profile Image URL (Optional)</label>
+                                                        <Input
+                                                            value={formData.image || ''}
+                                                            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                                                            className="bg-black/50 border-white/10 text-white"
+                                                            placeholder="https://example.com/logo.jpg"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+
                                     </form>
                                 </div>
 
-                                <div className="p-4 border-t border-white/10 bg-black/50 flex justify-end gap-3">
-                                    <Button type="button" variant="outline" className="border-white/20 hover:bg-white/5" onClick={() => setIsAddModalOpen(false)}>
+                                <div className="p-6 border-t border-white/10 bg-black/50 flex justify-end gap-3">
+                                    <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)} className="border-white/10 text-white hover:bg-white/5">
                                         Cancel
                                     </Button>
-                                    <Button type="submit" form="resource-form" className="bg-teal-600 hover:bg-teal-500 text-white font-medium min-w-[100px]">
-                                        {formData.id ? 'Save Changes' : 'Publish'}
+                                    <Button type="submit" form="resource-form" className="bg-[#00E5FF] hover:bg-[#00E5FF]/90 text-black font-semibold min-w-24">
+                                        Save Data
                                     </Button>
                                 </div>
                             </motion.div>
                         </div>
                     )}
                 </AnimatePresence>
-
-                {/* Delete Confirmation Modal */}
-                <AnimatePresence>
-                    {isDeleteModalOpen && (
-                        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                className="bg-gray-900 border border-red-500/50 rounded-xl p-6 max-w-sm w-full shadow-2xl"
-                            >
-                                <h3 className="text-xl font-bold text-white mb-2">Confirm Deletion</h3>
-                                <p className="text-gray-400 mb-6 text-sm">
-                                    Are you sure you want to delete this {itemToDelete?.type}? This action cannot be undone.
-                                </p>
-                                <div className="flex gap-3 justify-end">
-                                    <Button variant="outline" className="border-white/10 hover:bg-white/5 text-gray-300" onClick={() => setIsDeleteModalOpen(false)}>
-                                        Cancel
-                                    </Button>
-                                    <Button variant="destructive" className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50" onClick={executeDelete}>
-                                        Yes, Delete
-                                    </Button>
-                                </div>
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence>
-
             </div>
         </div>
     );

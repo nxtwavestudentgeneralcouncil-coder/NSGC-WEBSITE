@@ -219,9 +219,28 @@ export function useSharedData() {
 
     // Helper to read current data
     const loadAllData = () => {
-        // Mock data initialization stripped for Nhost backend integration.
-        setMembers([]);
-        setClubs([]);
+        // Try loading from localStorage first to persist data across reloads during prototyping
+        try {
+            const savedClubs = localStorage.getItem('nsgc_clubs');
+            if (savedClubs) {
+                setClubs(JSON.parse(savedClubs));
+            } else {
+                setClubs([]);
+            }
+
+            const savedMembers = localStorage.getItem('nsgc_members');
+            if (savedMembers) {
+                setMembers(JSON.parse(savedMembers));
+            } else {
+                setMembers([]);
+            }
+        } catch (e) {
+            console.error('Failed to load local storage data', e);
+            setClubs([]);
+            setMembers([]);
+        }
+
+        // Keep other mocked states empty for now, or you could add localStorage caching for them too
         setElections([]);
         setAchievements([]);
         setUsers([]);
@@ -267,11 +286,27 @@ export function useSharedData() {
     };
 
     const updateMembers = (newData: CouncilMember[] | ((prev: CouncilMember[]) => CouncilMember[])) => {
-        setMembers(prev => typeof newData === 'function' ? newData(prev) : newData);
+        setMembers(prev => {
+            const nextState = typeof newData === 'function' ? newData(prev) : newData;
+            try {
+                localStorage.setItem('nsgc_members', JSON.stringify(nextState));
+            } catch (e) {
+                console.error("Failed to save members to local storage", e);
+            }
+            return nextState;
+        });
     };
 
     const updateClubs = (newData: Club[] | ((prev: Club[]) => Club[])) => {
-        setClubs(prev => typeof newData === 'function' ? newData(prev) : newData);
+        setClubs(prev => {
+            const nextState = typeof newData === 'function' ? newData(prev) : newData;
+            try {
+                localStorage.setItem('nsgc_clubs', JSON.stringify(nextState));
+            } catch (e) {
+                console.error("Failed to save clubs to local storage", e);
+            }
+            return nextState;
+        });
     };
 
     const updateEvents = async (newData: any) => {

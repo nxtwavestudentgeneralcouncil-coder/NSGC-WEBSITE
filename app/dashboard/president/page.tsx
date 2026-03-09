@@ -20,10 +20,14 @@ import Link from 'next/link';
 import { useSharedData, Announcement, CouncilMember, Club, Event, Election, Achievement, User, GalleryImage } from '@/hooks/useSharedData';
 import { ImageCropper } from '@/components/ui/image-cropper';
 import { useAuthenticationStatus, useUserData, useSignOut } from '@nhost/react';
+import { useMutation } from '@apollo/client';
+import { INSERT_CLUB, useClubData } from '@/hooks/useClubData';
 
 function PresidentDashboardContent() {
     const router = useRouter();
     const [isAuthorized, setIsAuthorized] = useState(false);
+
+    const { refetchMyClubByEmail } = useClubData();
 
     // --- State Management ---
     const {
@@ -39,6 +43,8 @@ function PresidentDashboardContent() {
         galleryImages, setGalleryImages,
         totalUsers
     } = useSharedData();
+
+    const [insertClub] = useMutation(INSERT_CLUB);
 
     const { tickets, updateTicketStatus } = useTickets();
 
@@ -91,7 +97,7 @@ function PresidentDashboardContent() {
             const roles = (user as any).roles || [];
             const defaultRole = user.defaultRole || '';
             
-            if (roles.includes('president') || defaultRole === 'president') {
+            if (roles.includes('president') || defaultRole === 'president' || roles.includes('admin') || roles.includes('developer') || defaultRole === 'admin' || defaultRole === 'developer') {
                 setIsAuthorized(true);
             } else {
                 router.push('/dashboard/student');
@@ -234,7 +240,24 @@ function PresidentDashboardContent() {
                 setMembers((prev: any[]) => updateState(prev, { ...newData, status: (newData as CouncilMember).status || 'Active' }));
                 break;
             case 'club':
-                setClubs((prev: any[]) => updateState(prev, { ...newData, members: (newData as Club).members || 0 }));
+                const clubSlug = (formData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                if (!isEditing) {
+                    insertClub({
+                        variables: {
+                            name: formData.name,
+                            slug: clubSlug,
+                            description: formData.description,
+                            logo_url: formData.image,
+                            club_email: formData.clubEmail || ''
+                        }
+                    }).then(() => {
+                        refetchMyClubByEmail();
+                    }).catch(e => {
+                        console.error("Failed to insert club in DB:", e);
+                        alert(`Database insertion failed for club. Error: ${e.message || 'Unknown error'}`);
+                    });
+                }
+                setClubs((prev: any[]) => updateState(prev, { ...newData, slug: clubSlug, members: (newData as Club).members || 0 }));
                 break;
             case 'event':
                 setEvents((prev: any[]) => updateState(prev, { ...newData, addedByRole: 'President' }));
@@ -1365,6 +1388,10 @@ function PresidentDashboardContent() {
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-300">Club Name</label>
                                     <Input required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-300">Club Official Email <span className="text-red-500">*</span></label>
+                                    <Input required type="email" value={formData.clubEmail || ''} onChange={e => setFormData({ ...formData, clubEmail: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" placeholder="club@college.edu" />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-300">Description</label>

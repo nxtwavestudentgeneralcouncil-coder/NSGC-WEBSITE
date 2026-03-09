@@ -4,9 +4,10 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Search, Bot, Palette, Dribbble, Music, Clapperboard, Globe, User } from 'lucide-react';
-import { useSharedData } from '@/hooks/useSharedData';
+import { useClubData } from '@/hooks/useClubData';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import Link from 'next/link';
 
 // Helper to determine category icon and colors
 const getCategoryDetails = (club: any) => {
@@ -30,13 +31,13 @@ const getCategoryDetails = (club: any) => {
 };
 
 export default function ClubsPage() {
-    const { clubs } = useSharedData();
+    const { clubs, clubsLoading } = useClubData();
     const [searchQuery, setSearchQuery] = useState('');
 
     const filteredClubs = useMemo(() => {
-        return clubs.filter(club => {
-            return club.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                   club.description.toLowerCase().includes(searchQuery.toLowerCase());
+        return clubs.filter((club: any) => {
+            return club.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                   club.description?.toLowerCase().includes(searchQuery.toLowerCase());
         });
     }, [clubs, searchQuery]);
 
@@ -86,7 +87,11 @@ export default function ClubsPage() {
                 </div>
 
                 {/* Grid */}
-                {filteredClubs.length === 0 ? (
+                {clubsLoading ? (
+                    <div className="flex justify-center items-center py-24">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div>
+                    </div>
+                ) : filteredClubs.length === 0 ? (
                     <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -99,10 +104,11 @@ export default function ClubsPage() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         <AnimatePresence mode="popLayout">
-                            {filteredClubs.map((club, index) => {
+                            {filteredClubs.map((club: any, index: number) => {
                                 const { icon: Icon, color, bg, label } = getCategoryDetails(club);
                                 const mockAvatars = ["bg-slate-700", "bg-slate-600", "bg-slate-500"];
-                                const remainingMembers = Math.max(0, club.members - mockAvatars.length);
+                                const membersCount = club.club_members?.length || 0;
+                                const remainingMembers = Math.max(0, membersCount - mockAvatars.length);
 
                                 return (
                                     <motion.div
@@ -113,52 +119,60 @@ export default function ClubsPage() {
                                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
                                         transition={{ duration: 0.3, delay: index * 0.05 }}
                                     >
-                                        <Card className="bg-[#0B1224]/80 border-white/5 backdrop-blur-md overflow-hidden hover:border-white/10 transition-all duration-500 group h-full cursor-pointer hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
-                                            <CardContent className="p-6 flex flex-col h-full">
-                                                
-                                                {/* Top Row: Icon & Badge */}
-                                                <div className="flex justify-between items-start mb-6">
-                                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${bg} ${color} shadow-inner transition-transform duration-500 group-hover:scale-110`}>
-                                                        <Icon className="w-6 h-6" />
-                                                    </div>
-                                                    <Badge className="bg-white/5 hover:bg-white/10 text-slate-300 border-none px-2 py-0.5 text-[9px] font-bold tracking-widest uppercase rounded-sm">
-                                                        {label}
-                                                    </Badge>
-                                                </div>
-
-                                                {/* Titles & Desc */}
-                                                <div className="flex-grow">
-                                                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors line-clamp-1">
-                                                        {club.name}
-                                                    </h3>
-                                                    <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed h-[42px]">
-                                                        {club.description}
-                                                    </p>
-                                                </div>
-
-                                                {/* Bottom Row: Avatars & Count */}
-                                                <div className="flex justify-between items-end mt-6 pt-6 border-t border-white/5">
-                                                    <div className="flex -space-x-3">
-                                                        {mockAvatars.map((bgColor, i) => (
-                                                            <div 
-                                                                key={i} 
-                                                                className={`w-8 h-8 rounded-full border-2 border-[#0B1224] ${bgColor} relative`}
-                                                                style={{ zIndex: 30 - i * 10 }}
-                                                            />
-                                                        ))}
-                                                        {remainingMembers > 0 && (
-                                                            <div className="w-8 h-8 rounded-full border-2 border-[#0B1224] bg-white/10 flex items-center justify-center text-[10px] font-bold text-white relative z-0 backdrop-blur-sm">
-                                                                +{Math.min(remainingMembers, 99)}
+                                        <Link href={`/clubs/${club.id}`} className="block h-full">
+                                            <Card className="bg-[#0B1224]/80 border-white/5 backdrop-blur-md overflow-hidden hover:border-white/10 transition-all duration-500 group h-full cursor-pointer hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+                                                <CardContent className="p-6 flex flex-col h-full">
+                                                    
+                                                    {/* Top Row: Icon/Logo & Badge */}
+                                                    <div className="flex justify-between items-start mb-6">
+                                                        {club.logo_url ? (
+                                                            <div className="w-12 h-12 rounded-2xl overflow-hidden border border-white/10 shrink-0 transition-transform duration-500 group-hover:scale-110">
+                                                                <img src={club.logo_url} alt={club.name} className="w-full h-full object-cover" />
+                                                            </div>
+                                                        ) : (
+                                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${bg} ${color} shadow-inner shrink-0 transition-transform duration-500 group-hover:scale-110`}>
+                                                                <Icon className="w-6 h-6" />
                                                             </div>
                                                         )}
+                                                        <Badge className="bg-white/5 hover:bg-white/10 text-slate-300 border-none px-2 py-0.5 text-[9px] font-bold tracking-widest uppercase rounded-sm shrink-0 ml-2">
+                                                            {label}
+                                                        </Badge>
                                                     </div>
-                                                    <span className="text-xs font-medium text-slate-500">
-                                                        {club.members} Members
-                                                    </span>
-                                                </div>
 
-                                            </CardContent>
-                                        </Card>
+                                                    {/* Titles & Desc */}
+                                                    <div className="flex-grow">
+                                                        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors line-clamp-1">
+                                                            {club.name}
+                                                        </h3>
+                                                        <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed h-[42px]">
+                                                            {club.description}
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Bottom Row: Avatars & Count */}
+                                                    <div className="flex justify-between items-end mt-6 pt-6 border-t border-white/5">
+                                                        <div className="flex -space-x-3">
+                                                            {mockAvatars.map((bgColor, i) => (
+                                                                <div 
+                                                                    key={i} 
+                                                                    className={`w-8 h-8 rounded-full border-2 border-[#0B1224] ${bgColor} relative`}
+                                                                    style={{ zIndex: 30 - i * 10 }}
+                                                                />
+                                                            ))}
+                                                            {remainingMembers > 0 && (
+                                                                <div className="w-8 h-8 rounded-full border-2 border-[#0B1224] bg-white/10 flex items-center justify-center text-[10px] font-bold text-white relative z-0 backdrop-blur-sm">
+                                                                    +{Math.min(remainingMembers, 99)}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-xs font-medium text-slate-500">
+                                                            {membersCount} Members
+                                                        </span>
+                                                    </div>
+
+                                                </CardContent>
+                                            </Card>
+                                        </Link>
                                     </motion.div>
                                 );
                             })}
