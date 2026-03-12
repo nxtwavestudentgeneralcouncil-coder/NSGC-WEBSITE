@@ -39,3 +39,36 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AI / Tooling Directories
+.claude/
+.gemini/
+.codex/
+.opencode/
+
+# Get Shit Done (GSD) specific patterns
+**/get-shit-done/
+**/gsd-file-manifest.json
+**/*gsd*
+
+# TestSprite & Testing
+testsprite_tests/
+*.log
+
+# Database & Migrations
+hasura_migrations.sql
+*.sql
+
+# Backend Testing Scripts
+scripts/test_*.js
+scripts/test_*.ts
+tmp_*.mjs
+tmp_*.js
+scripts/add_registration_link.js
+scripts/create_election_candidates.js
+scripts/track_clubs_table.js
+scripts/alter_elections.ts
+scripts/extract_logo.py
+
+# Source Images & Media
+Gemini_Generated_Image_*.png

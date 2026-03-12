@@ -25,6 +25,10 @@ const dmMono = DM_Mono({
 export const metadata: Metadata = {
   title: "NSGC NEXUS COMMAND",
   description: "Space-grade terminal for the Student Council.",
+  icons: {
+    icon: "/images/nsgc_logo_transparent.png",
+    apple: "/images/nsgc_logo_transparent.png",
+  }
 };
 
 export default function RootLayout({

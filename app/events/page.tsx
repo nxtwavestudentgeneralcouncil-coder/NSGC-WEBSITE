@@ -148,10 +148,6 @@ export default function EventsPage() {
                                                             <Badge className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2.5 py-0.5 text-[10px] font-bold tracking-widest rounded-md uppercase">
                                                                 {event.type}
                                                             </Badge>
-                                                            <span className="text-slate-500">•</span>
-                                                            <span className="text-slate-400 text-sm font-medium">
-                                                                {event.time || "9:00 AM - 4:00 PM"}
-                                                            </span>
                                                         </div>
                                                         
                                                         <h3 className="text-2xl font-bold text-white group-hover:text-cyan-300 transition-colors leading-tight">
@@ -163,10 +159,6 @@ export default function EventsPage() {
                                                                 <MapPin className="w-4 h-4 text-slate-600" />
                                                                 <span>{event.location}</span>
                                                             </div>
-                                                            <div className="flex items-center gap-2 text-slate-500 text-sm">
-                                                                <Users className="w-4 h-4 text-slate-600" />
-                                                                <span>{registeredUsers} Registered</span>
-                                                            </div>
                                                         </div>
                                                     </div>
 
@@ -174,14 +166,16 @@ export default function EventsPage() {
                                                     <div className="p-6 md:p-8 flex items-center justify-start md:justify-end border-t md:border-t-0 border-white/5 shrink-0">
                                                         {activeTab === 'upcoming' ? (
                                                             <Button 
-                                                                className={`w-full md:w-auto px-8 h-12 font-bold tracking-widest text-xs uppercase shadow-[0_0_15px_rgba(6,182,212,0.2)] transition-all ${
-                                                                    event.registrationLink 
-                                                                    ? 'bg-cyan-500 hover:bg-cyan-400 text-black hover:scale-105' 
-                                                                    : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white border border-white/10'
-                                                                }`}
-                                                                onClick={() => event.registrationLink && window.open(event.registrationLink, '_blank')}
+                                                                className={`w-full md:w-auto px-8 h-12 font-bold tracking-widest text-xs uppercase shadow-[0_0_15px_rgba(6,182,212,0.2)] transition-all bg-cyan-500 hover:bg-cyan-400 text-black hover:scale-105`}
+                                                                onClick={() => {
+                                                                    if (event.registrationLink) {
+                                                                        window.open(event.registrationLink, '_blank');
+                                                                    } else {
+                                                                        alert("Registration link not provided for this event.");
+                                                                    }
+                                                                }}
                                                             >
-                                                                {event.registrationLink ? 'REGISTER' : 'DETAILS'}
+                                                                REGISTER NOW
                                                             </Button>
                                                         ) : (
                                                             <Button 

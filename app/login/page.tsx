@@ -62,8 +62,8 @@ export default function LoginPage() {
 
             <Card className="w-full max-w-md bg-white/5 border-white/10 relative z-10">
                 <CardHeader className="text-center">
-                    <div className="w-12 h-12 bg-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4 text-black font-bold text-xl">
-                        N
+                    <div className="w-16 h-16 bg-cyan-500/10 border border-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+                        <img src="/images/nsgc_logo_transparent.png" alt="NSGC Logo" className="w-12 h-12 object-contain" />
                     </div>
                     <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
                     <CardDescription>Sign in to access the NSGC Portal</CardDescription>

@@ -17,7 +17,7 @@ import { useTickets, TicketProvider, TicketStatus } from '@/lib/ticket-context';
 import Link from 'next/link';
 
 // --- Types ---
-import { useSharedData, Announcement, CouncilMember, Club, Event, Election, Achievement, User, GalleryImage } from '@/hooks/useSharedData';
+import { useSharedData, Announcement, CouncilMember, Club, Event, Election, Achievement, User, GalleryImage, INSERT_ANNOUNCEMENT, INSERT_EVENT } from '@/hooks/useSharedData';
 import { ImageCropper } from '@/components/ui/image-cropper';
 import { useAuthenticationStatus, useUserData, useSignOut } from '@nhost/react';
 import { useMutation } from '@apollo/client';
@@ -27,13 +27,13 @@ function PresidentDashboardContent() {
     const router = useRouter();
     const [isAuthorized, setIsAuthorized] = useState(false);
 
-    const { refetchMyClubByEmail } = useClubData();
+    const { refetchMyClubByEmail, clubs, refetchClubs } = useClubData();
 
     // --- State Management ---
     const {
         announcements, setAnnouncements,
         members, setMembers,
-        clubs, setClubs,
+        setClubs,
         events, setEvents,
         elections, setElections,
         achievements, setAchievements,
@@ -41,10 +41,14 @@ function PresidentDashboardContent() {
         polls, setPolls,
         surveys, setSurveys,
         galleryImages, setGalleryImages,
-        totalUsers
+        totalUsers,
+        refetchAnnouncements,
+        refetchEvents
     } = useSharedData();
 
     const [insertClub] = useMutation(INSERT_CLUB);
+    const [insertAnnouncement] = useMutation(INSERT_ANNOUNCEMENT);
+    const [insertEvent] = useMutation(INSERT_EVENT);
 
     const { tickets, updateTicketStatus } = useTickets();
 
@@ -105,7 +109,78 @@ function PresidentDashboardContent() {
         }
     }, [isAuthenticated, isLoading, user, router]);
 
-    // --- Helpers ---
+    // Load dashboard data from DB after authorization is confirmed
+    useEffect(() => {
+        if (!isAuthorized) return;
+        fetch('/api/v1/nhost/get-dashboard-data')
+            .then(res => res.json())
+            .then(data => {
+                if (!data || data.error) return;
+                if (data.council_members?.length > 0) {
+                    setMembers(data.council_members.map((m: any) => ({
+                        id: m.id,
+                        name: m.name,
+                        role: m.role,
+                        email: m.email,
+                        status: m.status || 'Active',
+                        image: m.image
+                    })));
+                }
+                if (data.elections?.length > 0) {
+                    setElections(data.elections.map((e: any) => ({
+                        id: e.id,
+                        title: e.title,
+                        date: e.date,
+                        description: e.description,
+                        candidates: []
+                    })));
+                }
+                if (data.achievements?.length > 0) {
+                    setAchievements(data.achievements.map((a: any) => ({
+                        id: a.id,
+                        student: a.student_id || '',
+                        title: a.title,
+                        category: a.category,
+                        date: a.achievement_date,
+                        description: a.description,
+                        image: a.image_url,
+                        addedByRole: 'President'
+                    })));
+                }
+                if (data.polls?.length > 0) {
+                    setPolls(data.polls.map((p: any) => ({
+                        id: p.id,
+                        question: p.question,
+                        status: p.is_active ? 'Active' : 'Closed',
+                        options: p.options || [],
+                        votes: 0
+                    })));
+                }
+                if (data.surveys?.length > 0) {
+                    setSurveys(data.surveys.map((s: any) => ({
+                        id: s.id,
+                        title: s.title,
+                        description: s.description,
+                        time: s.time,
+                        link: s.link,
+                        status: s.status || 'Active'
+                    })));
+                }
+                if (data.gallery_images?.length > 0) {
+                    setGalleryImages(data.gallery_images.map((g: any) => ({
+                        id: g.id,
+                        src: g.src,
+                        alt: g.alt || '',
+                        span: g.span || 'col-span-1 row-span-1',
+                        addedByRole: g.added_by_role || 'President',
+                        dateAdded: g.date_added
+                    })));
+                }
+            })
+            .catch(err => console.error('Failed to load dashboard data from DB:', err));
+    }, [isAuthorized]);
+
+
     const openAddModal = (type: 'announcement' | 'member' | 'club' | 'event' | 'election' | 'achievement' | 'user' | 'poll' | 'survey' | 'gallery', data?: any) => {
         setAddModalType(type);
         setFormData(data || {}); // Reset form or load existing data
@@ -234,24 +309,72 @@ function PresidentDashboardContent() {
 
         switch (addModalType) {
             case 'announcement':
-                setAnnouncements((prev: any[]) => updateState(prev, { ...newData, addedByRole: 'President', date: (newData as Announcement).date || new Date().toISOString().split('T')[0] }));
+                if (isEditing) {
+                    fetch('/api/v1/nhost/update-announcement', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: itemId,
+                            title: formData.title || 'Untitled',
+                            content: formData.content || '',
+                            category: formData.category || 'General'
+                        })
+                    }).then(res => res.json()).then(() => {
+                        refetchAnnouncements();
+                    }).catch(e => {
+                        console.error("Failed to update announcement:", e);
+                    });
+                    
+                    // Optimistic update locally
+                    setAnnouncements((prev: any[]) => updateState(prev, { ...newData, addedByRole: 'President', date: (newData as Announcement).date || new Date().toISOString().split('T')[0] }));
+                } else {
+                    fetch('/api/v1/nhost/insert-announcement', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: formData.title || 'Untitled',
+                            content: formData.content || '',
+                            category: formData.category || 'General'
+                        })
+                    }).then(res => res.json()).then(() => {
+                        refetchAnnouncements();
+                    }).catch(e => {
+                        console.error("Failed to insert announcement:", e);
+                    });
+                }
                 break;
             case 'member':
+                if (!isEditing) {
+                    fetch('/api/v1/nhost/insert-council-member', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: formData.name,
+                            role: formData.role,
+                            email: formData.email,
+                            image: formData.image
+                        })
+                    }).then(res => res.json()).then(data => {
+                        window.location.reload();
+                    }).catch(console.error);
+                }
                 setMembers((prev: any[]) => updateState(prev, { ...newData, status: (newData as CouncilMember).status || 'Active' }));
                 break;
             case 'club':
                 const clubSlug = (formData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
                 if (!isEditing) {
-                    insertClub({
-                        variables: {
+                    fetch('/api/v1/nhost/insert-club', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
                             name: formData.name,
                             slug: clubSlug,
                             description: formData.description,
                             logo_url: formData.image,
                             club_email: formData.clubEmail || ''
-                        }
-                    }).then(() => {
-                        refetchMyClubByEmail();
+                        })
+                    }).then(res => res.json()).then(() => {
+                        window.location.reload();
                     }).catch(e => {
                         console.error("Failed to insert club in DB:", e);
                         alert(`Database insertion failed for club. Error: ${e.message || 'Unknown error'}`);
@@ -260,12 +383,112 @@ function PresidentDashboardContent() {
                 setClubs((prev: any[]) => updateState(prev, { ...newData, slug: clubSlug, members: (newData as Club).members || 0 }));
                 break;
             case 'event':
-                setEvents((prev: any[]) => updateState(prev, { ...newData, addedByRole: 'President' }));
+                if (isEditing) {
+                    fetch('/api/v1/nhost/update-event', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: itemId,
+                            title: formData.name || 'Untitled',
+                            description: formData.description || 'No description provided',
+                            event_date: new Date(formData.date || new Date()).toISOString(),
+                            venue: formData.location || 'TBA',
+                            registration_link: formData.registrationLink || null
+                        })
+                    }).then(res => res.json()).then(() => {
+                        refetchEvents();
+                    }).catch(e => {
+                        console.error("Failed to update event:", e);
+                    });
+                    
+                    // Optimistic update locally
+                    setEvents((prev: any[]) => updateState(prev, { ...newData, addedByRole: 'President', event_date: new Date(formData.date || new Date()).toISOString(), registration_link: formData.registrationLink || null }));
+                } else {
+                    fetch('/api/v1/nhost/insert-event', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: formData.name || 'Untitled',
+                            description: formData.description || 'No description provided',
+                            event_date: new Date(formData.date || new Date()).toISOString(),
+                            venue: formData.location || 'TBA',
+                            organizer_type: 'council',
+                            registration_link: formData.registrationLink || null
+                        })
+                    }).then(res => res.json()).then(() => {
+                        refetchEvents();
+                    }).catch(e => console.error("Failed to insert event:", e));
+                }
                 break;
             case 'election':
+                const electionPayloadDescription = JSON.stringify({
+                    description: formData.description || 'No description',
+                    startDate: formData.startDate,
+                    startTime: formData.startTime,
+                    endDate: formData.endDate,
+                    endTime: formData.endTime
+                });
+
+                if (!isEditing) {
+                    fetch('/api/v1/nhost/insert-election', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: formData.title || formData.name,
+                            date: formData.startDate ? new Date(`${formData.startDate}T${formData.startTime || '00:00'}`).toISOString() : new Date().toISOString(),
+                            description: electionPayloadDescription,
+                            candidates: [
+                                ...(formData.candidates || []),
+                                ...(tempCandidateName.trim() ? [{ name: tempCandidateName.trim(), image: tempCandidateImage || null }] : [])
+                            ].map((c: any) => ({
+                                name: c.name,
+                                image: c.image || null
+                            }))
+                        })
+                    }).then(res => res.json()).then(data => {
+                        refetchAnnouncements(); // triggers fetchDashboardData which loads elections too
+                    }).catch(console.error);
+                } else {
+                    fetch('/api/v1/nhost/update-election', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: itemId,
+                            title: formData.title || formData.name,
+                            date: formData.startDate ? new Date(`${formData.startDate}T${formData.startTime || '00:00'}`).toISOString() : new Date().toISOString(),
+                            description: electionPayloadDescription,
+                            candidates: [
+                                ...(formData.candidates || []),
+                                ...(tempCandidateName.trim() ? [{ name: tempCandidateName.trim(), image: tempCandidateImage || null, votes: 0 }] : [])
+                            ].map((c: any) => ({
+                                name: c.name,
+                                image: c.image || null,
+                                votes: c.votes || 0
+                            }))
+                        })
+                    }).then(res => res.json()).then(() => {
+                        refetchAnnouncements(); // refresh all dashboard data
+                    }).catch(console.error);
+                }
                 setElections((prev: any[]) => updateState(prev, { ...newData, candidates: (newData as any).candidates || [] }));
                 break;
             case 'achievement':
+                if (!isEditing) {
+                    fetch('/api/v1/nhost/insert-achievement', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            student: formData.student || formData.name,
+                            title: formData.title || formData.achievement,
+                            category: formData.category || 'General',
+                            date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
+                            description: formData.description || 'No description',
+                            image: formData.image
+                        })
+                    }).then(res => res.json()).then(data => {
+                        window.location.reload();
+                    }).catch(console.error);
+                }
                 setAchievements((prev: any[]) => updateState(prev, { ...newData, image: (newData as any).image || '', addedByRole: 'President' }));
                 break;
             case 'user':
@@ -277,15 +500,53 @@ function PresidentDashboardContent() {
                     return prev;
                 });
             case 'poll':
+                if (!isEditing) {
+                    fetch('/api/v1/nhost/insert-poll', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            question: formData.question || formData.title
+                        })
+                    }).then(res => res.json()).then(() => {
+                        window.location.reload();
+                    }).catch(console.error);
+                }
                 setPolls((prev: any[]) => updateState(prev, { ...newData, options: (newData as any).options || [], votes: 0, status: (newData as any).status || 'Active' }));
                 break;
             case 'survey':
+                if (!isEditing) {
+                    fetch('/api/v1/nhost/insert-survey', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: formData.title,
+                            description: formData.description || 'No description',
+                            time: formData.time || formData.estimatedTime || '5 mins',
+                            link: formData.link
+                        })
+                    }).then(res => res.json()).then(() => {
+                        window.location.reload();
+                    }).catch(console.error);
+                }
                 setSurveys((prev: any[]) => updateState(prev, { ...newData, status: (newData as any).status || 'Active' }));
                 break;
             case 'gallery':
                 if (!(newData as any).src) {
                     alert("Please upload an image before saving.");
                     return;
+                }
+                if (!isEditing) {
+                    fetch('/api/v1/nhost/insert-gallery-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            src: formData.src,
+                            alt: formData.alt || formData.title || 'Gallery image',
+                            span: formData.span || 'col-span-1 row-span-1'
+                        })
+                    }).then(res => res.json()).then(() => {
+                        window.location.reload();
+                    }).catch(console.error);
                 }
                 setGalleryImages((prev: any[]) => updateState(prev, {
                     ...newData,
@@ -440,7 +701,7 @@ function PresidentDashboardContent() {
                                                         <Badge variant="secondary" className="bg-white/10 text-gray-300">{item.category || 'General'}</Badge>
                                                     </div>
                                                     <p className="text-gray-400 mb-2">{item.content}</p>
-                                                    <p className="text-xs text-gray-500">Posted: {item.date}</p>
+                                                    <p className="text-xs text-gray-500">Posted: {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                                                 </div>
                                                 <div className="flex flex-col gap-2">
                                                     {item.link && (
@@ -522,7 +783,7 @@ function PresidentDashboardContent() {
                             </div>
                         ) : (
                             <div className="grid gap-4 mt-8">
-                                {clubs.map((club) => (
+                                {clubs.map((club: any) => (
                                     <Card key={club.id} className="bg-white/5 border-white/10">
                                         <CardContent className="p-6 flex flex-col md:flex-row justify-between items-center gap-4">
                                             <div className="flex items-center gap-4">
@@ -609,7 +870,7 @@ function PresidentDashboardContent() {
                                                 <h3 className="text-xl font-bold mb-2">{event.name}</h3>
                                                 <div className="flex items-center gap-2 text-sm text-gray-400">
                                                     <Calendar className="w-4 h-4" />
-                                                    <span>{event.date}</span>
+                                                    <span>{new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
                                                     <Star className="w-4 h-4" />
@@ -1141,7 +1402,7 @@ function PresidentDashboardContent() {
                         </>
                     }
                 >
-                    <form id="add-form" className="space-y-4">
+                    <form id="add-form" className="space-y-4" onSubmit={handleSave}>
                         {addModalType === 'announcement' && (
                             <>
                                 <div className="space-y-2">
@@ -1507,16 +1768,25 @@ function PresidentDashboardContent() {
                                     <label className="text-sm font-medium text-gray-300">Description</label>
                                     <Textarea required value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-300">Date</label>
-                                    <Input type="date" required value={formData.date || ''} onChange={e => setFormData({ ...formData, date: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" style={{ colorScheme: 'dark' }} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-gray-300">Start Date</label>
+                                        <Input type="date" required value={formData.startDate || ''} onChange={e => setFormData({ ...formData, startDate: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" style={{ colorScheme: 'dark' }} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-gray-300">Start Time</label>
+                                        <Input type="time" required value={formData.startTime || ''} onChange={e => setFormData({ ...formData, startTime: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" style={{ colorScheme: 'dark' }} />
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <select value={formData.status || 'Upcoming'} onChange={e => setFormData({ ...formData, status: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded-md p-2 text-white focus:border-cyan-500/50 outline-none">
-                                        <option value="Upcoming">Upcoming</option>
-                                        <option value="Ongoing">Ongoing</option>
-                                        <option value="Completed">Completed</option>
-                                    </select>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-gray-300">End Date</label>
+                                        <Input type="date" required value={formData.endDate || ''} onChange={e => setFormData({ ...formData, endDate: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" style={{ colorScheme: 'dark' }} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-gray-300">End Time</label>
+                                        <Input type="time" required value={formData.endTime || ''} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" style={{ colorScheme: 'dark' }} />
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">

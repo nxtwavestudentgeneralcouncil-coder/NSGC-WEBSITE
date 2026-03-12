@@ -165,7 +165,7 @@ function StudentDashboardContent() {
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex justify-between items-start gap-4 mb-2">
                                                         <h4 className="text-[15px] font-bold text-white leading-tight truncate">{item.title}</h4>
-                                                        <span className="text-[11px] text-[#64748B] font-mono whitespace-nowrap">{(item as any).date || new Date((item as any).createdAt).toLocaleDateString()}</span>
+                                                        <span className="text-[11px] text-[#64748B] font-mono whitespace-nowrap">{(item as any).date ? new Date((item as any).date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date((item as any).createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                                                     </div>
                                                     <p className="text-sm text-[#94a3b8] line-clamp-2 leading-relaxed">{item.content}</p>
                                                 </div>
@@ -207,7 +207,7 @@ function StudentDashboardContent() {
                                                     <div className="flex items-center gap-2 text-xs text-[#64748B] font-mono">
                                                         <span>{item.id}</span>
                                                         <span>•</span>
-                                                        <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                                                        <span>{new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                                                         <span className="hidden sm:inline">•</span>
                                                         <span className="hidden sm:inline font-sans">{item.type}</span>
                                                     </div>

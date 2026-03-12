@@ -266,7 +266,7 @@ export function useClubData() {
     const userEmail = user?.email;
 
     // Get basic list of all clubs
-    const { data: clubsData, loading: clubsLoading, refetch: refetchClubs } = useQuery(GET_CLUBS);
+    const { data: clubsData, loading: clubsLoading, error: clubsError, refetch: refetchClubs } = useQuery(GET_CLUBS);
 
     // Get clubs managed by the current user
     const { data: managedClubsData, loading: managedClubsLoading, refetch: refetchManagedClubs } = useQuery(GET_MY_MANAGED_CLUBS, {
@@ -283,6 +283,7 @@ export function useClubData() {
     return {
         clubs: clubsData?.clubs || [],
         clubsLoading,
+        clubsError,
         refetchClubs,
         
         managedClubs: managedClubsData?.club_members?.map((cm: any) => cm.club) || [],

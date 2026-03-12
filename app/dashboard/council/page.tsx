@@ -15,8 +15,9 @@ import {
 import { useTickets, TicketProvider } from '@/lib/ticket-context';
 import { useCouncil, CouncilProvider } from '@/lib/council-context';
 import Link from 'next/link';
-import { useSharedData, Announcement, Achievement, GalleryImage } from '@/hooks/useSharedData';
+import { useSharedData, Announcement, Achievement, GalleryImage, INSERT_ANNOUNCEMENT, INSERT_EVENT } from '@/hooks/useSharedData';
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
+import { useMutation } from '@apollo/client';
 
 function CouncilDashboardContent() {
     const router = useRouter();
@@ -24,8 +25,9 @@ function CouncilDashboardContent() {
 
     // Contexts
     const { tickets, updateTicketStatus } = useTickets();
-    const { announcements, events, addAnnouncement, addEvent } = useCouncil();
-    const { achievements, setAchievements, galleryImages, setGalleryImages, members } = useSharedData();
+    const { announcements, setAnnouncements, events, setEvents, achievements, setAchievements, galleryImages, setGalleryImages, members, refetchAnnouncements, refetchEvents } = useSharedData();
+    const [insertAnnouncement] = useMutation(INSERT_ANNOUNCEMENT);
+    const [insertEvent] = useMutation(INSERT_EVENT);
     // UI States
     const [activeTab, setActiveTab] = useState('announcements');
     const [selectedTicket, setSelectedTicket] = useState<any>(null); // For viewing full complaint details
@@ -160,47 +162,77 @@ function CouncilDashboardContent() {
         });
     };
 
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         const isEditing = !!formData.id;
         const itemId = isEditing ? formData.id : Math.random().toString(36).slice(2, 11);
         const newData = { ...formData, id: itemId };
 
-        if (addModalType === 'announcement') {
-            addAnnouncement(formData.title || 'Untitled', formData.content || '', 'Council User', formData.link, formData.category, formData.priority);
-        } else if (addModalType === 'event') {
-            addEvent(
-                formData.name || 'Untitled',
-                formData.date || new Date().toISOString().split('T')[0],
-                formData.location || 'TBA',
-                formData.type || 'Social',
-                formData.registrationLink,
-                formData.image
-            );
-        } else if (addModalType === 'achievement') {
-            setAchievements(prev => {
-                const updated = isEditing
-                    ? prev.map(item => item.id === itemId ? { ...item, ...newData } as Achievement : item)
-                    : [...prev, { ...newData, image: formData.image || '', addedByRole: 'Council' } as Achievement];
-                return updated;
-            });
-        } else if (addModalType === 'gallery') {
-            if (!formData.src) {
-                alert("Please upload an image before saving.");
-                return;
+        try {
+            if (addModalType === 'announcement') {
+                if (isEditing) {
+                    // Assuming no update mutation for now, falling back to local state only for edits if preferred, or alerting.
+                    alert("Edit functionality for announcements is not fully hooked up to the DB yet. Simulating locally.");
+                    setAnnouncements(prev => prev.map(a => a.id === formData.id ? { ...a, ...newData } as Announcement : a));
+                } else {
+                    const res = await fetch('/api/v1/nhost/insert-announcement', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: formData.title || 'Untitled',
+                            content: formData.content || '',
+                            category: formData.category || 'General'
+                        })
+                    });
+                    await res.json();
+                    refetchAnnouncements();
+                }
+            } else if (addModalType === 'event') {
+                if (isEditing) {
+                    alert("Edit functionality for events is not fully hooked up to the DB yet. Simulating locally.");
+                    setEvents(prev => prev.map(ev => ev.id === formData.id ? { ...ev, ...newData } as any : ev));
+                } else {
+                    const res = await fetch('/api/v1/nhost/insert-event', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: formData.name || 'Untitled',
+                            description: formData.description || 'No description provided',
+                            event_date: new Date(formData.date || new Date()).toISOString(),
+                            venue: formData.location || 'TBA',
+                            organizer_type: 'council'
+                        })
+                    });
+                    await res.json();
+                    refetchEvents();
+                }
+            } else if (addModalType === 'achievement') {
+                setAchievements(prev => {
+                    const updated = isEditing
+                        ? prev.map(item => item.id === itemId ? { ...item, ...newData } as Achievement : item)
+                        : [...prev, { ...newData, image: formData.image || '', addedByRole: 'Council' } as Achievement];
+                    return updated;
+                });
+            } else if (addModalType === 'gallery') {
+                if (!formData.src) {
+                    alert("Please upload an image before saving.");
+                    return;
+                }
+                setGalleryImages(prev => {
+                    const updated = isEditing
+                        ? prev.map(item => item.id === itemId ? { ...item, ...newData } as GalleryImage : item)
+                        : [...prev, {
+                            ...newData,
+                            src: formData.src,
+                            span: formData.span || 'col-span-1 row-span-1',
+                            addedByRole: 'Council',
+                            dateAdded: formData.dateAdded || new Date().toISOString().split('T')[0]
+                        } as GalleryImage];
+                    return updated;
+                });
             }
-            setGalleryImages(prev => {
-                const updated = isEditing
-                    ? prev.map(item => item.id === itemId ? { ...item, ...newData } as GalleryImage : item)
-                    : [...prev, {
-                        ...newData,
-                        src: formData.src,
-                        span: formData.span || 'col-span-1 row-span-1',
-                        addedByRole: 'Council',
-                        dateAdded: formData.dateAdded || new Date().toISOString().split('T')[0]
-                    } as GalleryImage];
-                return updated;
-            });
+        } catch (e) {
+            console.error("Error saving data:", e);
         }
         setIsAddModalOpen(false);
     };
@@ -321,7 +353,7 @@ function CouncilDashboardContent() {
                                                     <Badge variant="secondary" className="bg-white/10 text-gray-300">{item.category || 'General'}</Badge>
                                                 </div>
                                                 <p className="text-gray-400 mb-2">{item.content}</p>
-                                                <p className="text-xs text-gray-500">Posted: {new Date(item.createdAt).toLocaleDateString()}</p>
+                                                <p className="text-xs text-gray-500">Posted: {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                                             </div>
                                             <div className="flex flex-col gap-2">
                                                 {item.link && (
@@ -409,7 +441,7 @@ function CouncilDashboardContent() {
                                             <h3 className="text-xl font-bold mb-2">{event.name}</h3>
                                             <div className="flex items-center gap-2 text-sm text-gray-400">
                                                 <Calendar className="w-4 h-4" />
-                                                <span>{new Date(event.date).toLocaleDateString()}</span>
+                                                <span>{new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                                             </div>
                                             <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
                                                 <Star className="w-4 h-4" />
@@ -555,6 +587,9 @@ function CouncilDashboardContent() {
                                                                 </div>
                                                             </div>
 
+                                                            <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">
+                                                            Posted: {new Date(ticket.createdAt).toLocaleDateString()}
+                                                        </p>
                                                             <p className="text-gray-400 text-sm line-clamp-3">{ticket.description}</p>
 
                                                             {ticket.image && (

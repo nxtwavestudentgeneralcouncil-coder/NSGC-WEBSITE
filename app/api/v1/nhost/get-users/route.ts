@@ -39,6 +39,15 @@ export async function POST() {
             return NextResponse.json({ error: errorMessage }, { status: 500 });
         }
 
+        // Format data for test expectations (TestSprite TC001 expects allowedRoles)
+        if (data && data.users) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            data.users = data.users.map((user: any) => ({
+                ...user,
+                allowedRoles: user.roles ? user.roles.map((r: any) => r.role) : []
+            }));
+        }
+
         return NextResponse.json(data, { status: 200 });
     } catch (error) {
         console.error(error);

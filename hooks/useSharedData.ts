@@ -70,6 +70,10 @@ export interface Election {
     date: string;
     status: 'Upcoming' | 'Ongoing' | 'Completed';
     description: string;
+    startDate?: string;
+    startTime?: string;
+    endDate?: string;
+    endTime?: string;
     candidates: Candidate[];
 }
 
@@ -142,46 +146,24 @@ const DEFAULT_POLLS: Poll[] = [];
 const DEFAULT_SURVEYS: Survey[] = [];
 const DEFAULT_GALLERY: GalleryImage[] = [];
 
-// --- GraphQL Queries and Mutations ---
-const QUERY_ANNOUNCEMENTS = gql`
-  query GetLiveAnnouncements {
-    announcements(where: {is_active: {_eq: true}}, order_by: {created_at: desc}) {
-      id
-      title
-      content
-      category
-      created_at
-    }
-  }
-`;
+// --- GraphQL Queries (kept for reference but no longer actively used for fetching) ---
+// Announcements and Events are now fetched via the API route /api/v1/nhost/get-dashboard-data
+// which uses the admin secret, bypassing Hasura role-based permissions.
 
-const INSERT_ANNOUNCEMENT = gql`
-  mutation InsertAnnouncement($title: String!, $content: String!, $category: String!, $priority: String) {
+export const INSERT_ANNOUNCEMENT = gql`
+  mutation InsertAnnouncement($title: String!, $content: String!, $category: String!) {
     insert_announcements_one(object: {
       title: $title,
       content: $content,
-      category: $category
+      category: $category,
+      is_active: true
     }) {
       id
     }
   }
 `;
 
-const QUERY_EVENTS = gql`
-  query GetLiveEvents {
-    events(order_by: {event_date: asc}) {
-      id
-      title
-      description
-      event_date
-      venue
-      organizer_type
-      image_url
-    }
-  }
-`;
-
-const INSERT_EVENT = gql`
+export const INSERT_EVENT = gql`
   mutation InsertEvent($title: String!, $description: String!, $event_date: timestamptz!, $venue: String!, $organizer_type: String!) {
     insert_events_one(object: {
       title: $title, 
@@ -194,95 +176,241 @@ const INSERT_EVENT = gql`
     }
   }
 `;
-export function useSharedData() {
-    // Apollo GraphQL Variables
-    // 600000ms = 10 minutes polling interval
-    const { data: announcementData, loading: announcementsLoading, refetch: refetchAnnouncements } = useQuery(QUERY_ANNOUNCEMENTS, { pollInterval: 600000 });
-    const { data: eventData, loading: eventsLoading, refetch: refetchEvents } = useQuery(QUERY_EVENTS, { pollInterval: 600000 });
-    
-    const [insertAnnouncement] = useMutation(INSERT_ANNOUNCEMENT);
-    const [insertEvent] = useMutation(INSERT_EVENT);
 
+export function useSharedData() {
     const user = useUserData();
 
+    // State for API-fetched data
+    const [apiAnnouncements, setApiAnnouncements] = useState<Announcement[]>([]);
+    const [apiEvents, setApiEvents] = useState<Event[]>([]);
+    const [apiLoading, setApiLoading] = useState(true);
+
     // Local State Variables (for features not yet migrated to Nhost DB)
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [members, setMembers] = useState<CouncilMember[]>([]);
     const [clubs, setClubs] = useState<Club[]>([]);
+    const [events, setEvents] = useState<Event[]>([]);
     const [elections, setElections] = useState<Election[]>([]);
     const [achievements, setAchievements] = useState<Achievement[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [polls, setPolls] = useState<Poll[]>([]);
-    const [surveys, setSurveys] = useState<Survey[]>([]); // "Feedback" forms
+    const [surveys, setSurveys] = useState<Survey[]>([]);
     const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
     const [totalUsers, setTotalUsers] = useState(0);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    // Helper to read current data
-    const loadAllData = () => {
-        // Try loading from localStorage first to persist data across reloads during prototyping
+    // Fetch data from API route (uses admin secret, bypasses Hasura role permissions)
+    const fetchDashboardData = async () => {
         try {
-            const savedClubs = localStorage.getItem('nsgc_clubs');
-            if (savedClubs) {
-                setClubs(JSON.parse(savedClubs));
-            } else {
-                setClubs([]);
+            const res = await fetch('/api/v1/nhost/get-dashboard-data');
+            const data = await res.json();
+
+            // Map announcements
+            const mappedAnnouncements: Announcement[] = (data.announcements || []).map((a: any) => ({
+                id: a.id,
+                title: a.title,
+                content: a.content,
+                category: a.category,
+                date: new Date(a.created_at).toISOString().split('T')[0],
+                priority: 'Medium',
+                addedByRole: 'Council'
+            }));
+            setApiAnnouncements(mappedAnnouncements);
+
+            // Map events
+            const mappedEvents: Event[] = (data.events || []).map((e: any) => ({
+                id: e.id,
+                name: e.title,
+                date: new Date(e.event_date).toISOString().split('T')[0],
+                location: e.venue,
+                type: e.organizer_type === 'council' ? 'Academic' as const : 'Social' as const,
+                addedByRole: e.organizer_type === 'council' ? 'Council' : 'Club Manager',
+                registrationLink: e.registration_link || ''
+            }));
+            setApiEvents(mappedEvents);
+
+            // Map clubs 
+            if (data.clubs) {
+                const mappedClubs: Club[] = data.clubs.map((c: any) => ({
+                    id: c.id,
+                    name: c.name,
+                    description: c.description || '',
+                    lead: '',
+                    members: 0,
+                    image: c.logo_url,
+                    website: ''
+                }));
+                setClubs(mappedClubs);
             }
 
+            // Map elections
+            // Map elections
+            if (data.elections) {
+                const mappedElections: Election[] = data.elections.map((el: any) => {
+                    let description = el.description || '';
+                    let startDate = '';
+                    let startTime = '';
+                    let endDate = '';
+                    let endTime = '';
+                    let status: 'Upcoming' | 'Ongoing' | 'Completed' = 'Upcoming';
+
+                    try {
+                        const parsed = JSON.parse(el.description);
+                        if (parsed && typeof parsed === 'object' && parsed.description) {
+                            description = parsed.description;
+                            startDate = parsed.startDate || '';
+                            startTime = parsed.startTime || '';
+                            endDate = parsed.endDate || '';
+                            endTime = parsed.endTime || '';
+                        }
+                    } catch (e) {
+                        // Not valid JSON, fallback to raw description
+                    }
+
+                    if (startDate && endDate) {
+                        const now = new Date();
+                        const start = new Date(`${startDate}T${startTime || '00:00'}`);
+                        const end = new Date(`${endDate}T${endTime || '23:59'}`);
+                        
+                        if (now < start) {
+                            status = 'Upcoming';
+                        } else if (now >= start && now <= end) {
+                            status = 'Ongoing';
+                        } else {
+                            status = 'Completed';
+                        }
+                    } else {
+                        status = 'Ongoing'; // Fallback for old data
+                    }
+
+                    return {
+                        id: el.id,
+                        title: el.title,
+                        date: el.date ? new Date(el.date).toISOString().split('T')[0] : '',
+                        status,
+                        description,
+                        startDate,
+                        startTime,
+                        endDate,
+                        endTime,
+                        candidates: (el.candidates || []).map((c: any) => ({
+                            id: c.id || Math.random().toString(36).substr(2, 9),
+                            name: c.name,
+                            votes: c.votes || 0,
+                            image: c.image || ''
+                        }))
+                    };
+                });
+                setElections(mappedElections);
+            }
+
+            // Map council members
+            if (data.council_members) {
+                const mappedMembers: CouncilMember[] = data.council_members.map((m: any) => ({
+                    id: m.id,
+                    name: m.name,
+                    role: m.role || '',
+                    email: m.email || '',
+                    status: m.status || 'Active',
+                    image: m.image || ''
+                }));
+                setMembers(mappedMembers);
+            }
+
+            // Map achievements
+            if (data.achievements) {
+                const mappedAchievements: Achievement[] = data.achievements.map((a: any) => ({
+                    id: a.id,
+                    student: a.student_id || '',
+                    title: a.title,
+                    category: a.category || 'Academic',
+                    date: a.achievement_date ? new Date(a.achievement_date).toISOString().split('T')[0] : '',
+                    description: a.description || '',
+                    image: a.image_url || ''
+                }));
+                setAchievements(mappedAchievements);
+            }
+
+            // Map polls
+            if (data.polls) {
+                const mappedPolls: Poll[] = data.polls.map((p: any) => ({
+                    id: p.id,
+                    question: p.question,
+                    options: Array.isArray(p.options) ? p.options.map((o: any) => ({
+                        id: o.id || Math.random().toString(36).substr(2, 9),
+                        text: o.text || o,
+                        votes: o.votes || 0
+                    })) : [],
+                    totalVotes: 0,
+                    userVoted: false,
+                    status: p.is_active ? 'Active' as const : 'Closed' as const,
+                    dueDate: p.end_date || ''
+                }));
+                setPolls(mappedPolls);
+            }
+
+            // Map surveys
+            if (data.surveys) {
+                const mappedSurveys: Survey[] = data.surveys.map((s: any) => ({
+                    id: s.id,
+                    title: s.title,
+                    description: s.description || '',
+                    questions: 0,
+                    time: s.time || '',
+                    link: s.link || '',
+                    status: s.status || 'Active'
+                }));
+                setSurveys(mappedSurveys);
+            }
+
+            // Map gallery images
+            if (data.gallery_images) {
+                const mappedGallery: GalleryImage[] = data.gallery_images.map((g: any) => ({
+                    id: g.id,
+                    src: g.src,
+                    alt: g.alt || '',
+                    span: g.span || 'col-span-1 row-span-1',
+                    addedByRole: g.added_by_role || '',
+                    dateAdded: g.date_added || ''
+                }));
+                setGalleryImages(mappedGallery);
+            }
+
+            setApiLoading(false);
+        } catch (e) {
+            console.error('Failed to fetch dashboard data:', e);
+            setApiLoading(false);
+        }
+    };
+
+    const refetchAnnouncements = () => fetchDashboardData();
+    const refetchEvents = () => fetchDashboardData();
+
+    // Helper to read current data from localStorage
+    const loadLocalData = () => {
+        // Try loading from localStorage first to persist data across reloads during prototyping
+        try {
             const savedMembers = localStorage.getItem('nsgc_members');
             if (savedMembers) {
                 setMembers(JSON.parse(savedMembers));
-            } else {
-                setMembers([]);
             }
         } catch (e) {
             console.error('Failed to load local storage data', e);
-            setClubs([]);
-            setMembers([]);
         }
-
-        // Keep other mocked states empty for now, or you could add localStorage caching for them too
-        setElections([]);
-        setAchievements([]);
-        setUsers([]);
-        setTotalUsers(0);
-        setPolls([]);
-        setSurveys([]);
-        setGalleryImages([]);
     };
 
     // Initial Load
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            loadAllData();
+            loadLocalData();
+            fetchDashboardData();
             setIsLoaded(true);
         }
     }, []);
 
     // Save helpers
-    const updateAnnouncements = async (newData: any) => {
-        // Intercept local state updates from old code and push to GraphQL.
-        // We assume newData is either the array of announcements or a function, but we only really care about appending new ones right now based on old logic.
-        // For actual app usage, the UI should call a dedicated function. We'll hack this by looking at what was added.
-        if (Array.isArray(newData)) {
-            // Find the newest announcement (naive assumption for compatibility)
-            const latest = newData[newData.length - 1]; 
-            if (latest && latest.title && latest.content) {
-                try {
-                    await insertAnnouncement({
-                        variables: {
-                            title: latest.title,
-                            content: latest.content,
-                            category: latest.category || 'General',
-                            priority: latest.priority || 'Low'
-                        }
-                    });
-                    // Force an immediate refetch so the user sees their own post right away
-                    refetchAnnouncements();
-                } catch (e) {
-                    console.error("Failed to insert announcement via GraphQL:", e);
-                }
-            }
-        }
+    const updateAnnouncements = (newData: Announcement[] | ((prev: Announcement[]) => Announcement[])) => {
+        setAnnouncements(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
     const updateMembers = (newData: CouncilMember[] | ((prev: CouncilMember[]) => CouncilMember[])) => {
@@ -309,29 +437,8 @@ export function useSharedData() {
         });
     };
 
-    const updateEvents = async (newData: any) => {
-         // Intercept local state updates and push to GraphQL.
-        if (Array.isArray(newData)) {
-            const latest = newData[newData.length - 1];
-            if (latest && latest.name && latest.date) {
-                try {
-                     // Next.js components still use 'name' instead of 'title', mapping it here
-                     await insertEvent({
-                         variables: {
-                             title: latest.name,
-                             description: latest.description || 'No description provided.',
-                             event_date: new Date(latest.date).toISOString(),
-                             venue: latest.location || 'TBA',
-                             // HACK: Use current user's role determining logic to pass organizer type, or default to 'council'
-                             organizer_type: 'council' 
-                         }
-                     });
-                     refetchEvents();
-                } catch (e) {
-                    console.error("Failed to insert event via GraphQL:", e);
-                }
-            }
-        }
+    const updateEvents = (newData: Event[] | ((prev: Event[]) => Event[])) => {
+        setEvents(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
     const updateElections = (newData: Election[] | ((prev: Election[]) => Election[])) => {
@@ -358,40 +465,21 @@ export function useSharedData() {
         setGalleryImages(prev => typeof newData === 'function' ? newData(prev) : newData);
     };
 
-    // Formatting the received GraphQL data into the legacy Announcement structure
-    const mappedAnnouncements: Announcement[] = announcementData?.announcements?.map((a: any) => ({
-        id: a.id,
-        title: a.title,
-        content: a.content,
-        category: a.category,
-        date: new Date(a.created_at).toLocaleDateString(),
-        priority: 'Medium', // Could map priority too but hardcoding for now
-        addedByRole: 'Council' // Hardcoding to 'Council' to pass existing filters just so UI renders
-    })) || [];
-
-    // Formatting the received GraphQL data into the legacy Event structure
-    const mappedEvents: Event[] = eventData?.events?.map((e: any) => ({
-        id: e.id,
-        name: e.title,
-        date: new Date(e.event_date).toLocaleDateString(),
-        location: e.venue,
-        type: e.organizer_type === 'council' ? 'Academic' : 'Social',
-        addedByRole: e.organizer_type === 'council' ? 'Council' : 'Club Manager'
-    })) || [];
-
-
     return {
-        announcements: mappedAnnouncements, setAnnouncements: updateAnnouncements,
+        announcements: apiAnnouncements, setAnnouncements: updateAnnouncements,
         members, setMembers: updateMembers,
         clubs, setClubs: updateClubs,
-        events: mappedEvents, setEvents: updateEvents,
+        events: apiEvents, setEvents: updateEvents,
         elections, setElections: updateElections,
         achievements, setAchievements: updateAchievements,
         users, setUsers: updateUsers,
         polls, setPolls: updatePolls,
         surveys, setSurveys: updateSurveys,
         galleryImages, setGalleryImages: updateGalleryImages,
-        isLoaded: isLoaded && !announcementsLoading && !eventsLoading,
-        totalUsers
+        isLoaded: isLoaded && !apiLoading,
+        totalUsers,
+        refetchAnnouncements,
+        refetchEvents
     };
 }
+

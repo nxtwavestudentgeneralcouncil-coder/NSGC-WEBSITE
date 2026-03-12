@@ -32,7 +32,7 @@ export function MobileBottomNav() {
   ];
 
   return (
-    <>
+    <div className="contents">
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-[60] bg-black/80 backdrop-blur-xl border-t border-cyan-900/30 supports-[backdrop-filter]:bg-zinc-950/60 transition-colors pb-safe">
         <div className="flex items-center justify-around h-16 px-2 w-full">
           {primaryTabs.map((tab) => {
@@ -145,6 +145,6 @@ export function MobileBottomNav() {
            </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

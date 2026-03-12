@@ -8,6 +8,23 @@ import { Badge } from '@/components/ui/badge';
 import { GlassModal } from '@/components/ui/glass-modal';
 import { Vote, CheckCircle, Shield, Clock, Users, ArrowRight, User, Info } from 'lucide-react';
 import { useSharedData, Election } from '@/hooks/useSharedData';
+function getRemainingTime(dateString?: string, timeString?: string) {
+    if (!dateString) return 'TBD';
+    const targetDate = new Date(`${dateString}T${timeString || '23:59:59'}`);
+    const now = new Date();
+    const diff = targetDate.getTime() - now.getTime();
+    
+    if (diff <= 0) return 'ENDED';
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 48) {
+        return `${Math.floor(hours / 24)} DAYS`;
+    }
+    
+    return `${hours}H ${minutes}M`;
+}
 
 export default function ElectionsPage() {
     const { elections, setElections } = useSharedData();
@@ -84,7 +101,7 @@ export default function ElectionsPage() {
                                         {/* Top Meta */}
                                         <div className="flex justify-between items-center">
                                             <Badge className="bg-cyan-500/10 text-cyan-400 border-none px-2.5 py-1 text-[10px] font-bold tracking-widest rounded-md uppercase">
-                                                {election.title.includes('President') ? 'GENERAL COUNCIL' : election.title.includes('Cultural') ? 'CULTURAL WING' : 'SPORTS COUNCIL'}
+                                                {election.title}
                                             </Badge>
                                             <div className="flex items-center gap-1.5 animate-pulse">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
@@ -127,8 +144,14 @@ export default function ElectionsPage() {
                                         {/* Voting Progress */}
                                         <div className="space-y-3 mt-auto pt-6">
                                             <div className="flex justify-between items-center text-[10px] font-bold tracking-widest uppercase">
-                                                <span className="text-slate-500">VOTING ENDS IN</span>
-                                                <span className="text-cyan-400">14H 22M</span>
+                                                <span className="text-slate-500">
+                                                    {election.status === 'Upcoming' ? 'VOTING BEGINS IN' :
+                                                     election.status === 'Ongoing' ? 'VOTING ENDS IN' : 'ELECTION'}
+                                                </span>
+                                                <span className="text-cyan-400">
+                                                    {election.status === 'Upcoming' ? getRemainingTime(election.startDate, election.startTime) :
+                                                     election.status === 'Ongoing' ? getRemainingTime(election.endDate, election.endTime) : 'ENDED'}
+                                                </span>
                                             </div>
                                             <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
                                                 <motion.div 

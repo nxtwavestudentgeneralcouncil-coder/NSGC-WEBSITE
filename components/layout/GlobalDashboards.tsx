@@ -18,12 +18,15 @@ import { useClubData } from '@/hooks/useClubData';
 import { useSharedData } from '@/hooks/useSharedData';
 
 export function GlobalDashboards() {
+    const [mounted, setMounted] = useState(false);
     const { isAuthenticated, isLoading } = useAuthenticationStatus();
     const user = useUserData();
     const { myClubByEmail, clubs } = useClubData();
     const { members } = useSharedData();
 
-    if (isLoading || !isAuthenticated || !user) return null;
+    useEffect(() => { setMounted(true); }, []);
+
+    if (!mounted || isLoading || !isAuthenticated || !user) return null;
 
     // Default to mapping nhost roles if they exist, or fallback to an empty array
     const userRoles = user?.roles ? user.roles : [];

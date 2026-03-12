@@ -13,8 +13,8 @@ export function MobileHeader() {
     <div className="md:hidden sticky top-0 z-[40] bg-zinc-950/80 backdrop-blur-xl border-b border-cyan-900/30 supports-[backdrop-filter]:bg-zinc-950/60 transition-colors">
       <div className="flex h-16 items-center justify-between px-4 shadow-[0_4px_30px_rgba(6,182,212,0.1)]">
         <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-cyan-500/10 border border-cyan-500 rounded-sm flex items-center justify-center text-cyan-400 font-bold text-lg relative overflow-hidden">
-                <span className="font-display font-bold tracking-widest relative z-10">N</span>
+            <div className="w-8 h-8 bg-cyan-500/10 border border-cyan-500 rounded-sm flex items-center justify-center relative overflow-hidden">
+                <img src="/images/nsgc_logo_transparent.png" alt="NSGC Logo" className="w-6 h-6 object-contain relative z-10" />
             </div>
             <span className="text-lg font-display tracking-[0.2em] text-white">NSGC</span>
         </Link>

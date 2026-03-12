@@ -7,8 +7,8 @@ export function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
                     <div className="col-span-1 md:col-span-2">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-full flex items-center justify-center text-black font-bold text-sm">
-                                N
+                            <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-full flex items-center justify-center text-black font-bold text-sm overflow-hidden">
+                                <img src="/images/nsgc_logo_transparent.png" alt="NSGC Logo" className="w-6 h-6 object-contain" />
                             </div>
                             <span className="text-xl font-bold text-white">NSGC</span>
                         </div>

@@ -50,8 +50,8 @@ export function Navbar() {
             <div className="p-4 lg:p-6 flex flex-col gap-8 flex-1 overflow-y-auto scrollbar-hide relative z-10 w-full md:pr-6 lg:pr-8">
                 {/* LOGO */}
                 <Link href="/" className="flex items-center gap-3 group relative mb-4 hidden md:flex">
-                    <div className="w-10 h-10 bg-cyan-500/10 border border-cyan-500 rounded-sm flex items-center justify-center text-cyan-400 font-bold text-xl relative overflow-hidden group-hover:bg-cyan-500/20 transition-all shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-                        <span className="font-display font-bold tracking-widest relative z-10">N</span>
+                    <div className="w-10 h-10 bg-cyan-500/10 border border-cyan-500 rounded-sm flex items-center justify-center relative overflow-hidden group-hover:bg-cyan-500/20 transition-all shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+                        <img src="/images/nsgc_logo_transparent.png" alt="NSGC Logo" className="w-8 h-8 object-contain relative z-10" />
                     </div>
                     <div className="flex md:hidden lg:flex flex-col">
                         <span className="text-lg font-display tracking-[0.3em] text-white leading-none group-hover:text-cyan-400 transition-colors uppercase">NSGC</span>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSubscription, useMutation, gql } from '@apollo/client';
 import { useUserData } from '@nhost/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -42,7 +42,7 @@ const MARK_AS_READ_MUTATION = gql`
   }
 `;
 
-export default function NotificationBell() {
+function NotificationBellContent() {
   const user = useUserData();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -190,4 +190,22 @@ export default function NotificationBell() {
       </AnimatePresence>
     </div>
   );
+}
+
+export default function NotificationBell() {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <div className="p-2">
+        <Bell className="w-6 h-6 text-gray-500" />
+      </div>
+    );
+  }
+
+  return <NotificationBellContent />;
 }
