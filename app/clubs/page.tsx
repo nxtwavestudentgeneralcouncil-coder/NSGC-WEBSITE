@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Search, Bot, Palette, Dribbble, Music, Clapperboard, Globe, User } from 'lucide-react';
-import { useClubData } from '@/hooks/useClubData';
+import { useSharedData } from '@/hooks/useSharedData';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
@@ -31,7 +31,8 @@ const getCategoryDetails = (club: any) => {
 };
 
 export default function ClubsPage() {
-    const { clubs, clubsLoading } = useClubData();
+    const { clubs, isLoaded } = useSharedData();
+    const clubsLoading = !isLoaded;
     const [searchQuery, setSearchQuery] = useState('');
 
     const filteredClubs = useMemo(() => {
@@ -154,7 +155,7 @@ export default function ClubsPage() {
                                                         <div className="flex -space-x-3">
                                                             {mockAvatars.map((bgColor, i) => (
                                                                 <div 
-                                                                    key={i} 
+                                                                    key={bgColor} 
                                                                     className={`w-8 h-8 rounded-full border-2 border-[#0B1224] ${bgColor} relative`}
                                                                     style={{ zIndex: 30 - i * 10 }}
                                                                 />

@@ -8,13 +8,24 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Search, Filter, Pencil } from 'lucide-react';
 import { useTickets, TicketProvider } from '@/lib/ticket-context';
 import { useState } from 'react';
+import { useUserData } from '@nhost/react';
 
 function ComplaintsHistoryContent() {
     const { tickets } = useTickets();
+    const user = useUserData();
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('All');
 
-    const filteredTickets = tickets.filter(ticket => {
+    // Filter tickets to only show the current student's own complaints
+    const userEmail = user?.email?.toLowerCase() || '';
+    const userName = user?.displayName || '';
+    const myTickets = tickets.filter(t => {
+        if (t.email && userEmail) return t.email.toLowerCase() === userEmail;
+        if (t.studentName && userName) return t.studentName === userName;
+        return false;
+    });
+
+    const filteredTickets = myTickets.filter(ticket => {
         const matchesSearch = ticket.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
             ticket.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
             ticket.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -161,8 +172,6 @@ function ComplaintsHistoryContent() {
 
 export default function ComplaintsHistoryPage() {
     return (
-        <TicketProvider>
-            <ComplaintsHistoryContent />
-        </TicketProvider>
+        <ComplaintsHistoryContent />
     );
 }

@@ -72,3 +72,4 @@ scripts/extract_logo.py
 
 # Source Images & Media
 Gemini_Generated_Image_*.png
+scripts/debug_graphql.mjs

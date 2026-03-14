@@ -7,7 +7,7 @@ export async function POST(req: Request) {
 
         // Ensure we have an ID to update
         if (!body.id) {
-            return NextResponse.json({ message: 'Missing event ID' }, { status: 400 });
+            return NextResponse.json({ message: 'Missing council member ID' }, { status: 400 });
         }
 
         const nhost = new NhostClient({
@@ -17,29 +17,27 @@ export async function POST(req: Request) {
         });
 
         const mutation = `
-            mutation UpdateEvent($id: uuid!, $title: String, $description: String, $event_date: timestamptz, $venue: String, $registration_link: String, $added_by_role: String) {
-                update_events_by_pk(pk_columns: {id: $id}, _set: {
-                    title: $title,
-                    description: $description,
-                    event_date: $event_date,
-                    venue: $venue,
-                    registration_link: $registration_link,
-                    added_by_role: $added_by_role
+            mutation UpdateCouncilMember($id: uuid!, $name: String, $role: String, $email: String, $status: String, $image: String) {
+                update_council_members_by_pk(pk_columns: {id: $id}, _set: {
+                    name: $name,
+                    role: $role,
+                    email: $email,
+                    status: $status,
+                    image: $image
                 }) {
                     id
-                    title
+                    name
                 }
             }
         `;
-
+ 
         const { data, error } = await nhost.graphql.request(mutation, {
             id: body.id,
-            title: body.title,
-            description: body.description,
-            event_date: body.event_date,
-            venue: body.venue,
-            registration_link: body.registration_link,
-            added_by_role: body.added_by_role || 'Council'
+            name: body.name,
+            role: body.role,
+            email: body.email,
+            status: body.status || 'Active',
+            image: body.image
         });
 
         if (error) {

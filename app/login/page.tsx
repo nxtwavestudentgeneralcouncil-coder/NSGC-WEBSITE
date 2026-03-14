@@ -50,7 +50,7 @@ export default function LoginPage() {
             if (roles.includes('admin') || defaultRole === 'admin') router.push('/dashboard/admin');
             else if (roles.includes('president') || defaultRole === 'president') router.push('/dashboard/president');
             else if (roles.includes('council_member') || defaultRole === 'council_member') router.push('/dashboard/council');
-            else if (roles.includes('club_head') || defaultRole === 'club_head') router.push('/dashboard/clubs');
+            else if (roles.includes('club_head') || defaultRole === 'club_head') router.push('/dashboard/club');
             else router.push('/dashboard/student');
         }
     };

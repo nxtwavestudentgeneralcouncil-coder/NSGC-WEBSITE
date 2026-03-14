@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { User, Settings, LayoutDashboard, LogOut, Crown, Megaphone, Calendar, Vote, MessageCircleWarning, Users, Trophy, MessageSquare, TerminalSquare, Flag, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,11 @@ export function Navbar() {
     const { isAuthenticated } = useAuthenticationStatus();
     const { signOut } = useSignOut();
     const pathname = usePathname();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     return (
         <nav
@@ -85,7 +91,9 @@ export function Navbar() {
 
             {/* BOTTOM ACTIONS */}
             <div className="p-4 lg:p-6 border-t border-cyan-500/20 relative z-10 w-full md:pr-6 lg:pr-8 flex flex-col gap-4">
-                {isAuthenticated ? (
+                {!mounted ? (
+                    <div className="h-10 w-full animate-pulse bg-white/5 rounded-sm" />
+                ) : isAuthenticated ? (
                     <div className="flex flex-col gap-3">
                         {/* Utility Icons */}
                         <div className="flex items-center gap-2 mt-2">

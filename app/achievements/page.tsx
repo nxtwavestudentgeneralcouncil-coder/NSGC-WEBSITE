@@ -73,13 +73,13 @@ export default function AchievementsPage() {
                                             {item.image ? (
                                                 <img
                                                     src={item.image}
-                                                    alt={item.student}
+                                                    alt={item.student || 'Student'}
                                                     className="w-full h-full object-cover rounded-full border-4 border-[#0b1324]"
                                                 />
                                             ) : (
                                                 <div className="w-full h-full bg-[#1a2333] rounded-full border-4 border-[#0b1324] flex items-center justify-center">
                                                     <span className="text-3xl font-black text-slate-600">
-                                                        {item.student.charAt(0)}
+                                                        {(item.student || 'S').charAt(0)}
                                                     </span>
                                                 </div>
                                             )}
@@ -93,7 +93,7 @@ export default function AchievementsPage() {
                                     {/* Text Content */}
                                     <div className="flex flex-col flex-grow w-full mt-2">
                                         <h2 className="text-2xl font-bold text-white mb-1 group-hover:text-yellow-400 transition-colors">
-                                            {item.student}
+                                            {item.student || 'Achievement'}
                                         </h2>
                                         <h3 className="text-[11px] font-black text-yellow-500 tracking-widest uppercase mb-6 leading-tight">
                                             {item.category}

@@ -12,14 +12,16 @@ export async function POST(req: Request) {
         });
 
         const mutation = `
-            mutation InsertEvent($title: String!, $description: String!, $event_date: timestamptz!, $venue: String!, $organizer_type: String!, $registration_link: String) {
+            mutation InsertEvent($title: String!, $description: String!, $event_date: timestamptz!, $venue: String!, $organizer_type: String!, $registration_link: String, $created_by: uuid, $added_by_role: String) {
                 insert_events_one(object: {
                     title: $title,
                     description: $description,
                     event_date: $event_date,
                     venue: $venue,
                     organizer_type: $organizer_type,
-                    registration_link: $registration_link
+                    registration_link: $registration_link,
+                    created_by: $created_by,
+                    added_by_role: $added_by_role
                 }) {
                     id
                     title
@@ -35,7 +37,9 @@ export async function POST(req: Request) {
             event_date: body.event_date || new Date().toISOString(),
             venue: body.venue || 'TBA',
             organizer_type: body.organizer_type || 'council',
-            registration_link: body.registration_link || null
+            registration_link: body.registration_link || null,
+            created_by: body.created_by || null,
+            added_by_role: body.added_by_role || 'Council'
         });
 
         if (error) {

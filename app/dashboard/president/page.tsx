@@ -27,13 +27,13 @@ function PresidentDashboardContent() {
     const router = useRouter();
     const [isAuthorized, setIsAuthorized] = useState(false);
 
-    const { refetchMyClubByEmail, clubs, refetchClubs } = useClubData();
+    const { refetchMyClubByEmail, refetchClubs: refetchClubsFromData } = useClubData();
 
     // --- State Management ---
     const {
         announcements, setAnnouncements,
         members, setMembers,
-        setClubs,
+        clubs, setClubs,
         events, setEvents,
         elections, setElections,
         achievements, setAchievements,
@@ -43,7 +43,9 @@ function PresidentDashboardContent() {
         galleryImages, setGalleryImages,
         totalUsers,
         refetchAnnouncements,
-        refetchEvents
+        refetchEvents,
+        refetchMembers,
+        refetchClubs
     } = useSharedData();
 
     const [insertClub] = useMutation(INSERT_CLUB);
@@ -65,6 +67,7 @@ function PresidentDashboardContent() {
     const [eventFilter, setEventFilter] = useState<'All' | 'President' | 'Council' | 'Club Manager'>('All');
     const [announcementFilter, setAnnouncementFilter] = useState<'All' | 'President' | 'Council' | 'Club Manager'>('All');
     const [achievementFilter, setAchievementFilter] = useState<'All' | 'President' | 'Council' | 'Club Manager'>('All');
+    const [galleryFilter, setGalleryFilter] = useState<'All' | 'President' | 'Council' | 'Club Manager'>('All');
 
     // Camera & Image State for Forms
     const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -109,76 +112,6 @@ function PresidentDashboardContent() {
         }
     }, [isAuthenticated, isLoading, user, router]);
 
-    // Load dashboard data from DB after authorization is confirmed
-    useEffect(() => {
-        if (!isAuthorized) return;
-        fetch('/api/v1/nhost/get-dashboard-data')
-            .then(res => res.json())
-            .then(data => {
-                if (!data || data.error) return;
-                if (data.council_members?.length > 0) {
-                    setMembers(data.council_members.map((m: any) => ({
-                        id: m.id,
-                        name: m.name,
-                        role: m.role,
-                        email: m.email,
-                        status: m.status || 'Active',
-                        image: m.image
-                    })));
-                }
-                if (data.elections?.length > 0) {
-                    setElections(data.elections.map((e: any) => ({
-                        id: e.id,
-                        title: e.title,
-                        date: e.date,
-                        description: e.description,
-                        candidates: []
-                    })));
-                }
-                if (data.achievements?.length > 0) {
-                    setAchievements(data.achievements.map((a: any) => ({
-                        id: a.id,
-                        student: a.student_id || '',
-                        title: a.title,
-                        category: a.category,
-                        date: a.achievement_date,
-                        description: a.description,
-                        image: a.image_url,
-                        addedByRole: 'President'
-                    })));
-                }
-                if (data.polls?.length > 0) {
-                    setPolls(data.polls.map((p: any) => ({
-                        id: p.id,
-                        question: p.question,
-                        status: p.is_active ? 'Active' : 'Closed',
-                        options: p.options || [],
-                        votes: 0
-                    })));
-                }
-                if (data.surveys?.length > 0) {
-                    setSurveys(data.surveys.map((s: any) => ({
-                        id: s.id,
-                        title: s.title,
-                        description: s.description,
-                        time: s.time,
-                        link: s.link,
-                        status: s.status || 'Active'
-                    })));
-                }
-                if (data.gallery_images?.length > 0) {
-                    setGalleryImages(data.gallery_images.map((g: any) => ({
-                        id: g.id,
-                        src: g.src,
-                        alt: g.alt || '',
-                        span: g.span || 'col-span-1 row-span-1',
-                        addedByRole: g.added_by_role || 'President',
-                        dateAdded: g.date_added
-                    })));
-                }
-            })
-            .catch(err => console.error('Failed to load dashboard data from DB:', err));
-    }, [isAuthorized]);
 
 
     const openAddModal = (type: 'announcement' | 'member' | 'club' | 'event' | 'election' | 'achievement' | 'user' | 'poll' | 'survey' | 'gallery', data?: any) => {
@@ -273,24 +206,67 @@ function PresidentDashboardContent() {
         }
     };
 
-    const executeDelete = () => {
+    const executeDelete = async () => {
         if (!itemToDelete) return;
 
         const { type, id } = itemToDelete;
-        switch (type) {
-            case 'announcement': setAnnouncements((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
-            case 'member': setMembers(prev => prev.filter((i: any) => i.id !== id)); break;
-            case 'club': setClubs(prev => prev.filter((i: any) => i.id !== id)); break;
-            case 'event': setEvents((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
-            case 'election': setElections(prev => prev.filter((i: any) => i.id !== id)); break;
-            case 'achievement': setAchievements(prev => prev.filter((i: any) => i.id !== id)); break;
-            case 'user': setUsers(prev => prev.filter((i: any) => i.id !== id)); break;
-            case 'poll': setPolls(prev => prev.filter((i: any) => i.id !== id)); break;
-            case 'survey': setSurveys(prev => prev.filter((i: any) => i.id !== id)); break;
-            case 'gallery': setGalleryImages(prev => prev.filter((i: any) => i.id !== id)); break;
+        
+        try {
+            const endpoint = `/api/v1/nhost/delete-${type === 'member' ? 'council-member' : type === 'gallery' ? 'gallery-image' : type}`;
+            const fullUrl = `${window.location.origin}${endpoint}`;
+            
+            console.log(`[Dashboard] Attempting to delete ${type} with ID ${id} at ${fullUrl}`);
+            
+            // Special handling for user deletion which expects 'userId' instead of 'id' in its current API implementation
+            const requestBody = type === 'user' ? { userId: id } : { id };
+
+            const res = await fetch(fullUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+            
+            let errorData: any = {};
+            try {
+                const text = await res.text();
+                errorData = text ? JSON.parse(text) : {};
+            } catch (e) {
+                console.error("[Dashboard] Could not parse error response as JSON");
+            }
+
+            if (!res.ok) {
+                throw new Error(errorData.message || errorData.error || `Failed to delete ${type} (Status: ${res.status})`);
+            }
+
+            // Optimistic/Local State Update fallback
+            switch (type) {
+                case 'announcement': setAnnouncements((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
+                case 'member': setMembers(prev => prev.filter((i: any) => i.id !== id)); break;
+                case 'club': setClubs(prev => prev.filter((i: any) => i.id !== id)); break;
+                case 'event': setEvents((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
+                case 'election': setElections(prev => prev.filter((i: any) => i.id !== id)); break;
+                case 'achievement': setAchievements(prev => prev.filter((i: any) => i.id !== id)); break;
+                case 'user': setUsers(prev => prev.filter((i: any) => i.id !== id)); break;
+                case 'poll': setPolls(prev => prev.filter((i: any) => i.id !== id)); break;
+                case 'survey': setSurveys(prev => prev.filter((i: any) => i.id !== id)); break;
+                case 'gallery': setGalleryImages(prev => prev.filter((i: any) => i.id !== id)); break;
+            }
+
+            // Trigger global refetch to ensure consistency
+            refetchAnnouncements();
+            
+        } catch (error: any) {
+            console.error(`[Dashboard] Error deleting ${type}:`, error);
+            // More descriptive alert for "fetch failed" to help user identify if it's a server config issue
+            const isFetchFailed = error.message.toLowerCase().includes('fetch failed') || error.message.toLowerCase().includes('failed to fetch');
+            const alertMsg = isFetchFailed 
+                ? `Delete failed: The server could not reach Nhost. Please check the server's Nhost environment variables (SUBDOMAIN, REGION, ADMIN_SECRET).`
+                : `Delete failed: ${error.message}`;
+            alert(alertMsg);
+        } finally {
+            setIsDeleteModalOpen(false);
+            setItemToDelete(null);
         }
-        setIsDeleteModalOpen(false);
-        setItemToDelete(null);
     };
 
     const handleSave = (e: React.FormEvent) => {
@@ -317,7 +293,10 @@ function PresidentDashboardContent() {
                             id: itemId,
                             title: formData.title || 'Untitled',
                             content: formData.content || '',
-                            category: formData.category || 'General'
+                            category: formData.category || 'General',
+                            priority: formData.priority || 'Low',
+                            link: formData.link || null,
+                            added_by_role: 'President'
                         })
                     }).then(res => res.json()).then(() => {
                         refetchAnnouncements();
@@ -334,7 +313,11 @@ function PresidentDashboardContent() {
                         body: JSON.stringify({
                             title: formData.title || 'Untitled',
                             content: formData.content || '',
-                            category: formData.category || 'General'
+                            category: formData.category || 'General',
+                            priority: formData.priority || 'Low',
+                            link: formData.link || null,
+                            created_by: user?.id,
+                            added_by_role: 'President'
                         })
                     }).then(res => res.json()).then(() => {
                         refetchAnnouncements();
@@ -344,7 +327,29 @@ function PresidentDashboardContent() {
                 }
                 break;
             case 'member':
-                if (!isEditing) {
+                if (isEditing) {
+                    fetch('/api/v1/nhost/update-council-member', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: itemId,
+                            name: formData.name,
+                            role: formData.role,
+                            email: formData.email,
+                            status: formData.status || 'Active',
+                            image: formData.image
+                        })
+                    }).then(async res => {
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || 'Failed to update member');
+                        return data;
+                    }).then(() => {
+                        refetchMembers();
+                    }).catch(e => {
+                        console.error("Failed to update council member:", e);
+                        alert(`Update failed: ${e.message}`);
+                    });
+                } else {
                     fetch('/api/v1/nhost/insert-council-member', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -352,17 +357,50 @@ function PresidentDashboardContent() {
                             name: formData.name,
                             role: formData.role,
                             email: formData.email,
+                            status: formData.status || 'Active',
                             image: formData.image
                         })
-                    }).then(res => res.json()).then(data => {
-                        window.location.reload();
-                    }).catch(console.error);
+                    }).then(async res => {
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || 'Failed to insert member');
+                        return data;
+                    }).then(() => {
+                        refetchMembers();
+                    }).catch(e => {
+                        console.error("Failed to insert council member:", e);
+                        alert(`Insertion failed: ${e.message}`);
+                    });
                 }
                 setMembers((prev: any[]) => updateState(prev, { ...newData, status: (newData as CouncilMember).status || 'Active' }));
                 break;
             case 'club':
                 const clubSlug = (formData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-                if (!isEditing) {
+                if (isEditing) {
+                    fetch('/api/v1/nhost/update-club', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: itemId,
+                            name: formData.name,
+                            slug: clubSlug,
+                            description: formData.description,
+                            logo_url: formData.image,
+                            club_email: formData.clubEmail || '',
+                            lead: formData.lead,
+                            website: formData.website,
+                            category: formData.category || 'General'
+                        })
+                    }).then(async res => {
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || 'Failed to update club');
+                        return data;
+                    }).then(() => {
+                        refetchClubs();
+                    }).catch(e => {
+                        console.error("Failed to update club:", e);
+                        alert(`Update failed: ${e.message}`);
+                    });
+                } else {
                     fetch('/api/v1/nhost/insert-club', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -371,10 +409,17 @@ function PresidentDashboardContent() {
                             slug: clubSlug,
                             description: formData.description,
                             logo_url: formData.image,
-                            club_email: formData.clubEmail || ''
+                            club_email: formData.clubEmail || '',
+                            lead: formData.lead,
+                            website: formData.website,
+                            category: formData.category || 'General'
                         })
-                    }).then(res => res.json()).then(() => {
-                        window.location.reload();
+                    }).then(async res => {
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || 'Failed to insert club');
+                        return data;
+                    }).then(() => {
+                        refetchClubs();
                     }).catch(e => {
                         console.error("Failed to insert club in DB:", e);
                         alert(`Database insertion failed for club. Error: ${e.message || 'Unknown error'}`);
@@ -393,7 +438,8 @@ function PresidentDashboardContent() {
                             description: formData.description || 'No description provided',
                             event_date: new Date(formData.date || new Date()).toISOString(),
                             venue: formData.location || 'TBA',
-                            registration_link: formData.registrationLink || null
+                            registration_link: formData.registrationLink || null,
+                            added_by_role: 'President'
                         })
                     }).then(res => res.json()).then(() => {
                         refetchEvents();
@@ -413,7 +459,9 @@ function PresidentDashboardContent() {
                             event_date: new Date(formData.date || new Date()).toISOString(),
                             venue: formData.location || 'TBA',
                             organizer_type: 'council',
-                            registration_link: formData.registrationLink || null
+                            registration_link: formData.registrationLink || null,
+                            created_by: user?.id,
+                            added_by_role: 'President'
                         })
                     }).then(res => res.json()).then(() => {
                         refetchEvents();
@@ -443,7 +491,9 @@ function PresidentDashboardContent() {
                             ].map((c: any) => ({
                                 name: c.name,
                                 image: c.image || null
-                            }))
+                            })),
+                            created_by: user?.id,
+                            added_by_role: 'President'
                         })
                     }).then(res => res.json()).then(data => {
                         refetchAnnouncements(); // triggers fetchDashboardData which loads elections too
@@ -464,7 +514,8 @@ function PresidentDashboardContent() {
                                 name: c.name,
                                 image: c.image || null,
                                 votes: c.votes || 0
-                            }))
+                            })),
+                            added_by_role: 'President'
                         })
                     }).then(res => res.json()).then(() => {
                         refetchAnnouncements(); // refresh all dashboard data
@@ -483,13 +534,16 @@ function PresidentDashboardContent() {
                             category: formData.category || 'General',
                             date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
                             description: formData.description || 'No description',
-                            image: formData.image
+                            image: formData.image,
+                            tier: formData.tier || '',
+                            created_by: user?.id,
+                            added_by_role: 'President'
                         })
                     }).then(res => res.json()).then(data => {
                         window.location.reload();
                     }).catch(console.error);
                 }
-                setAchievements((prev: any[]) => updateState(prev, { ...newData, image: (newData as any).image || '', addedByRole: 'President' }));
+                setAchievements((prev: any[]) => updateState(prev, { ...newData, image: (newData as any).image || '', tier: formData.tier || '', addedByRole: 'President' }));
                 break;
             case 'user':
                 setUsers(prev => {
@@ -542,7 +596,9 @@ function PresidentDashboardContent() {
                         body: JSON.stringify({
                             src: formData.src,
                             alt: formData.alt || formData.title || 'Gallery image',
-                            span: formData.span || 'col-span-1 row-span-1'
+                            span: formData.span || 'col-span-1 row-span-1',
+                            added_by_role: 'President',
+                            created_by: user?.id
                         })
                     }).then(res => res.json()).then(() => {
                         window.location.reload();
@@ -681,7 +737,7 @@ function PresidentDashboardContent() {
                             </div>
                         </div>
 
-                        {announcements.filter(a => announcementFilter === 'All' ? true : a.addedByRole === announcementFilter).length === 0 ? (
+                        {announcements.filter(a => announcementFilter === 'All' ? true : a.addedByRole?.includes(announcementFilter)).length === 0 ? (
                             <div className="border-2 border-dashed border-white/5 rounded-[32px] p-20 flex flex-col items-center justify-center text-center bg-[#111625]/20 mt-8 min-h-[400px]">
                                 <Megaphone className="w-20 h-20 text-[#64748B] mb-8 opacity-20" />
                                 <h3 className="text-2xl font-mono uppercase tracking-[0.2em] text-[#94a3b8] mb-4">No Active Announcements</h3>
@@ -690,7 +746,7 @@ function PresidentDashboardContent() {
                         ) : (
                             <div className="grid gap-4 mt-8">
                                 {announcements
-                                    .filter(a => announcementFilter === 'All' ? true : a.addedByRole === announcementFilter)
+                                    .filter(a => announcementFilter === 'All' ? true : a.addedByRole?.includes(announcementFilter))
                                     .map((item) => (
                                         <Card key={item.id} className="bg-white/5 border-white/10 hover:border-cyan-500/50 transition-colors">
                                             <div className="p-6 flex flex-col md:flex-row justify-between gap-4">
@@ -832,7 +888,7 @@ function PresidentDashboardContent() {
                             </div>
                         </div>
 
-                        {events.filter(e => eventFilter === 'All' ? true : e.addedByRole === eventFilter).length === 0 ? (
+                        {events.filter(e => eventFilter === 'All' ? true : e.addedByRole?.includes(eventFilter)).length === 0 ? (
                             <div className="border-2 border-dashed border-white/5 rounded-[32px] p-20 flex flex-col items-center justify-center text-center bg-[#111625]/20 mt-8 min-h-[400px]">
                                 <Calendar className="w-20 h-20 text-[#64748B] mb-8 opacity-20" />
                                 <h3 className="text-2xl font-mono uppercase tracking-[0.2em] text-[#94a3b8] mb-4">No Upcoming Events</h3>
@@ -841,7 +897,7 @@ function PresidentDashboardContent() {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                                 {events
-                                    .filter(e => eventFilter === 'All' ? true : e.addedByRole === eventFilter)
+                                    .filter(e => eventFilter === 'All' ? true : e.addedByRole?.includes(eventFilter))
                                     .map((event) => (
                                         <Card key={event.id} className="bg-white/5 border-white/10 group relative overflow-hidden">
                                             {event.image ? (
@@ -928,8 +984,8 @@ function PresidentDashboardContent() {
                                                         <div className="space-y-2">
                                                             {election.candidates.map((candidate: any) => {
                                                                 const totalVotes = election.candidates.reduce((sum: number, c: any) => sum + (c.votes || 0), 0);
-                                                                // Percentage based on total registered users
-                                                                const percentage = totalUsers > 0 ? Math.round(((candidate.votes || 0) / totalUsers) * 100) : 0;
+                                                                // Percentage based on total votes cast in this election
+                                                                const percentage = totalVotes > 0 ? Math.round(((candidate.votes || 0) / totalVotes) * 100) : 0;
                                                                 return (
                                                                     <div key={candidate.id} className="space-y-1">
                                                                         <div className="flex justify-between text-sm">
@@ -985,7 +1041,7 @@ function PresidentDashboardContent() {
                             </div>
                         </div>
 
-                        {achievements.filter(a => achievementFilter === 'All' ? true : a.addedByRole === achievementFilter).length === 0 ? (
+                        {achievements.filter(a => achievementFilter === 'All' ? true : a.addedByRole?.includes(achievementFilter)).length === 0 ? (
                             <div className="border-2 border-dashed border-white/5 rounded-[32px] p-20 flex flex-col items-center justify-center text-center bg-[#111625]/20 mt-8 min-h-[400px]">
                                 <Trophy className="w-20 h-20 text-[#64748B] mb-8 opacity-20" />
                                 <h3 className="text-2xl font-mono uppercase tracking-[0.2em] text-[#94a3b8] mb-4">No Achievements Found</h3>
@@ -994,7 +1050,7 @@ function PresidentDashboardContent() {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                                 {achievements
-                                    .filter(a => achievementFilter === 'All' ? true : a.addedByRole === achievementFilter)
+                                    .filter(a => achievementFilter === 'All' ? true : a.addedByRole?.includes(achievementFilter))
                                     .map((achievement) => (
                                         <Card key={achievement.id} className="bg-white/5 border-white/10 overflow-hidden">
                                             <div className="h-40 bg-zinc-900 relative">
@@ -1005,8 +1061,18 @@ function PresidentDashboardContent() {
                                                         <Trophy className="w-12 h-12" />
                                                     </div>
                                                 )}
-                                                <div className="absolute top-2 right-2">
+                                                <div className="absolute top-2 right-2 flex flex-col gap-2 items-end">
                                                     <Badge className="bg-black/50 text-white border-white/10 backdrop-blur-md">{achievement.category}</Badge>
+                                                    {achievement.tier && (
+                                                        <Badge className={`${
+                                                            achievement.tier === 'Gold' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30' :
+                                                            achievement.tier === 'Silver' ? 'bg-slate-300/20 text-slate-300 border-slate-300/30' :
+                                                            achievement.tier === 'Bronze' ? 'bg-orange-500/20 text-orange-500 border-orange-500/30' :
+                                                            'bg-cyan-500/20 text-cyan-500 border-cyan-500/30'
+                                                        } backdrop-blur-md`}>
+                                                            {achievement.tier}
+                                                        </Badge>
+                                                    )}
                                                 </div>
                                             </div>
                                             <CardContent className="p-6">
@@ -1307,23 +1373,36 @@ function PresidentDashboardContent() {
                         </div>
                     </TabsContent>
 
-                    {/* Gallery Content */}
                     <TabsContent value="gallery" className="space-y-8">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                             <h2 className="text-2xl font-mono uppercase tracking-widest text-white">Manage Gallery</h2>
-                            <Button onClick={() => openAddModal('gallery')} className="bg-[#0ea5e9] text-black hover:bg-[#38bdf8] font-bold tracking-wide rounded-lg px-6 py-2.5 h-auto transition-colors w-full sm:w-auto">
-                                <Plus className="w-4 h-4 mr-2" /> Add Image
-                            </Button>
+                            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                                <select
+                                    className="bg-[#111625] border border-white/5 rounded-lg px-4 py-2.5 text-sm text-[#94a3b8] font-medium outline-none focus:border-[#0ea5e9]/50 transition-colors w-full sm:w-[200px]"
+                                    value={galleryFilter}
+                                    onChange={(e) => setGalleryFilter(e.target.value as any)}
+                                >
+                                    <option value="All">All Images</option>
+                                    <option value="President">Added by President</option>
+                                    <option value="Council">Added by Council</option>
+                                    <option value="Club Manager">Added by Clubs</option>
+                                </select>
+                                <Button onClick={() => openAddModal('gallery')} className="bg-[#0ea5e9] text-black hover:bg-[#38bdf8] font-bold tracking-wide rounded-lg px-6 py-2.5 h-auto transition-colors w-full sm:w-auto">
+                                    <Plus className="w-4 h-4 mr-2" /> Add Image
+                                </Button>
+                            </div>
                         </div>
-                        {galleryImages.length === 0 ? (
+                        {galleryImages.filter(img => galleryFilter === 'All' ? true : img.addedByRole?.includes(galleryFilter)).length === 0 ? (
                             <div className="border-2 border-dashed border-white/5 rounded-[32px] p-20 flex flex-col items-center justify-center text-center bg-[#111625]/20 mt-8 min-h-[400px]">
                                 <Camera className="w-20 h-20 text-[#64748B] mb-8 opacity-20" />
                                 <h3 className="text-2xl font-mono uppercase tracking-[0.2em] text-[#94a3b8] mb-4">No Images Found</h3>
-                                <p className="text-[#64748B] italic max-w-sm">The gallery is currently empty. Upload photos to share moments with the student body.</p>
+                                <p className="text-[#64748B] italic max-w-sm">The gallery is currently empty or no images match your filter. Upload photos to share moments with the student body.</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {galleryImages.map((image) => (
+                                {galleryImages
+                                    .filter(img => galleryFilter === 'All' ? true : img.addedByRole?.includes(galleryFilter))
+                                    .map((image) => (
                                     <Card key={image.id} className="bg-white/5 border-white/10 overflow-hidden group">
                                         <div className="relative h-64 overflow-hidden">
                                             <img
@@ -1566,7 +1645,7 @@ function PresidentDashboardContent() {
                                     <label className="text-sm font-medium text-gray-300">Options</label>
                                     <div className="space-y-2">
                                         {(formData.options || []).map((opt: any, idx: number) => (
-                                            <div key={idx} className="flex gap-2">
+                                            <div key={opt.id || idx} className="flex gap-2">
                                                 <Input
                                                     value={opt.text}
                                                     onChange={(e) => {
@@ -1893,8 +1972,8 @@ function PresidentDashboardContent() {
 
 
                                         <div className="space-y-2 mt-2">
-                                            {(formData.candidates || []).map((cand: any) => (
-                                                <div key={cand.id} className="flex justify-between items-center bg-white/5 p-2 rounded border border-white/10">
+                                            {(formData.candidates || []).map((cand: any, idx: number) => (
+                                                <div key={cand.id || `cand-${idx}`} className="flex justify-between items-center bg-white/5 p-2 rounded border border-white/10">
                                                     <div className="flex items-center gap-2">
                                                         {cand.image && <img src={cand.image} alt={cand.name} className="w-6 h-6 rounded-full object-cover" />}
                                                         <span className="text-sm">{cand.name}</span>
@@ -1942,6 +2021,17 @@ function PresidentDashboardContent() {
                                         <option value="Sports">Sports</option>
                                         <option value="Research">Research</option>
                                         <option value="Cultural">Cultural</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-300">Tier / Standing</label>
+                                    <select value={formData.tier || ''} onChange={e => setFormData({ ...formData, tier: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded-md p-2 text-white focus:border-cyan-500/50 outline-none">
+                                        <option value="">None</option>
+                                        <option value="Gold">Gold / 1st Place</option>
+                                        <option value="Silver">Silver / 2nd Place</option>
+                                        <option value="Bronze">Bronze / 3rd Place</option>
+                                        <option value="Finalist">Finalist</option>
+                                        <option value="Participant">Participant</option>
                                     </select>
                                 </div>
                                 <div className="space-y-2">
@@ -2191,8 +2281,6 @@ function PresidentDashboardContent() {
 
 export default function PresidentDashboard() {
     return (
-        <TicketProvider>
-            <PresidentDashboardContent />
-        </TicketProvider>
+        <PresidentDashboardContent />
     );
 }

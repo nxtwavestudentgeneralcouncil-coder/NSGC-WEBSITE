@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Crown, Users, Flag, LayoutDashboard, Shield, ChevronDown } from 'lucide-react';
+import { Crown, Users, Flag, LayoutDashboard, Shield, ChevronDown, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -21,7 +21,7 @@ export function GlobalDashboards() {
     const [mounted, setMounted] = useState(false);
     const { isAuthenticated, isLoading } = useAuthenticationStatus();
     const user = useUserData();
-    const { myClubByEmail, clubs } = useClubData();
+    const { myClubByEmail, allClubs: clubs, isLoaded } = useClubData();
     const { members } = useSharedData();
 
     useEffect(() => { setMounted(true); }, []);
@@ -37,6 +37,7 @@ export function GlobalDashboards() {
     const isCouncilMember = hasRole('admin') || hasRole('developer') || members.some(m => m.email && user?.email && m.email.toLowerCase() === user.email.toLowerCase());
     const isPresident = hasRole('president') || hasRole('admin') || hasRole('developer');
     const isAdminOrDev = hasRole('admin') || hasRole('developer');
+    const isHostelWarden = hasRole('hostel-complaints') || hasRole('admin') || hasRole('developer') || hasRole('president');
 
     return (
         <div className="fixed top-4 right-4 md:top-6 md:right-6 z-[9999] flex items-center gap-2 pointer-events-auto">
@@ -79,6 +80,26 @@ export function GlobalDashboards() {
                     </div>
                 </>
             )}
+
+            {isHostelWarden && (
+                <>
+                    <Button 
+                        variant="ghost" 
+                        className="hidden sm:flex gap-2 rounded-sm text-[10px] md:text-xs font-mono uppercase tracking-widest text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 border border-orange-500/20 bg-black/50 backdrop-blur-md shadow-[0_0_15px_rgba(251,146,60,0.1)]"
+                        asChild
+                    >
+                        <Link href="/dashboard/hostel-complaints">
+                            <Home className="w-3.5 h-3.5" />
+                            <span>Hostel</span>
+                        </Link>
+                    </Button>
+                    <div className="flex sm:hidden flex-col gap-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-sm text-orange-400 border border-orange-500/20 bg-black/80 backdrop-blur-md" asChild>
+                            <Link href="/dashboard/hostel-complaints"><Home className="w-3.5 h-3.5" /></Link>
+                        </Button>
+                    </div>
+                </>
+            )}
             
             {isAdminOrDev ? (
                 <DropdownMenu>
@@ -95,14 +116,20 @@ export function GlobalDashboards() {
                     <DropdownMenuContent className="w-56 bg-black/90 border-white/10 backdrop-blur-xl text-white">
                         <DropdownMenuLabel className="font-mono text-xs text-teal-500 uppercase tracking-widest">Select Club</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-white/10" />
-                        {clubs?.map((club: any) => (
+                        {!isLoaded && (
+                            <DropdownMenuItem disabled className="text-gray-500 italic flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+                                Loading clubs...
+                            </DropdownMenuItem>
+                        )}
+                        {isLoaded && clubs?.map((club: any) => (
                             <DropdownMenuItem key={club.id} className="hover:bg-white/5 focus:bg-white/5 cursor-pointer">
                                 <Link href={`/dashboard/club/${club.slug}`} className="w-full">
                                     {club.name}
                                 </Link>
                             </DropdownMenuItem>
                         ))}
-                        {(!clubs || clubs.length === 0) && (
+                        {isLoaded && (!clubs || clubs.length === 0) && (
                             <DropdownMenuItem disabled className="text-gray-500 italic">No clubs found</DropdownMenuItem>
                         )}
                     </DropdownMenuContent>

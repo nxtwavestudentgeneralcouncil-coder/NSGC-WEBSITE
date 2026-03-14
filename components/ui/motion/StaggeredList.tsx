@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import React, { useRef } from "react";
 import { cn } from "@/lib/utils";
 
 interface StaggeredListProps {
@@ -54,11 +54,15 @@ export default function StaggeredList({
             variants={containerVariants}
             className={cn(className)}
         >
-            {children.map((child, index) => (
-                <motion.div key={index} variants={itemVariants[itemVariant]}>
-                    {child}
-                </motion.div>
-            ))}
+            {React.Children.map(children, (child, index) => {
+                if (!child) return null;
+                const childKey = React.isValidElement(child) && child.key !== null ? child.key : `stagger-item-${index}`;
+                return (
+                    <motion.div key={childKey} variants={itemVariants[itemVariant]}>
+                        {child}
+                    </motion.div>
+                );
+            })}
         </motion.div>
     );
 }

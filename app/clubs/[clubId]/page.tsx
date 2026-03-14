@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowLeft, MapPin, Calendar, Users, Mail, Globe, ExternalLink } from 'lucide-react';
 import { useQuery } from '@apollo/client';
-import { GET_CLUB_DETAILS } from '@/hooks/useClubData';
+import { useSharedData } from '@/hooks/useSharedData';
 import Link from 'next/link';
 
 export default function ClubProfilePage() {
@@ -15,10 +15,10 @@ export default function ClubProfilePage() {
     const router = useRouter();
     const clubId = params.clubId as string;
 
-    const { data, loading, error } = useQuery(GET_CLUB_DETAILS, {
-        variables: { id: clubId },
-        skip: !clubId
-    });
+    const { clubs, isLoaded } = useSharedData();
+    
+    const club = clubs.find(c => c.id === clubId);
+    const loading = !isLoaded;
 
     if (loading) {
         return (
@@ -28,7 +28,7 @@ export default function ClubProfilePage() {
         );
     }
 
-    if (error || !data?.clubs_by_pk) {
+    if (!club) {
         return (
             <div className="min-h-screen bg-[#030616] text-white flex flex-col items-center justify-center pt-24 pb-20">
                 <h1 className="text-4xl font-bold mb-4">Club Not Found</h1>
@@ -40,9 +40,9 @@ export default function ClubProfilePage() {
         );
     }
 
-    const club = data.clubs_by_pk;
-    const managers = club.club_members.filter((m: any) => m.role === 'manager');
-    const membersCount = club.club_members.length;
+    // Since useSharedData's Club type is slightly different, we map or use what we have
+    // Note: members count is already in the mapped Club type
+    const membersCount = (club as any).members || 0;
 
     return (
         <div className="min-h-screen bg-[#030616] text-white pt-24 pb-20 selection:bg-cyan-500/30">
@@ -63,8 +63,8 @@ export default function ClubProfilePage() {
                     <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 blur-3xl -z-10 rounded-[3rem]" />
                     
                     <div className="flex flex-col md:flex-row gap-8 items-start md:items-center bg-[#0B1224]/80 backdrop-blur-xl border border-white/5 p-8 rounded-3xl">
-                        {club.logo_url ? (
-                            <img src={club.logo_url} alt={club.name} className="w-32 h-32 md:w-40 md:h-40 rounded-2xl object-cover border-2 border-white/10 shrink-0 shadow-2xl" />
+                        {club.image ? (
+                            <img src={club.image} alt={club.name} className="w-32 h-32 md:w-40 md:h-40 rounded-2xl object-cover border-2 border-white/10 shrink-0 shadow-2xl" />
                         ) : (
                             <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl flex items-center justify-center bg-white/5 border-2 border-white/10 shrink-0 shadow-2xl">
                                 <Users className="w-16 h-16 text-slate-500" />
@@ -88,18 +88,24 @@ export default function ClubProfilePage() {
                             </h1>
                             
                             <div className="flex flex-wrap gap-4 text-sm text-slate-400">
-                                {managers.length > 0 && (
+                                {club.lead && (
                                     <div className="flex items-center gap-2 bg-[#030616] px-3 py-1.5 rounded-full border border-white/5">
                                         <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs font-bold">
-                                            {managers[0].user?.displayName?.charAt(0) || 'M'}
+                                            {club.lead.charAt(0) || 'L'}
                                         </div>
-                                        <span>Led by <span className="text-slate-200 font-medium">{managers[0].user?.displayName || 'Student'}</span></span>
+                                        <span>Led by <span className="text-slate-200 font-medium">{club.lead}</span></span>
                                     </div>
                                 )}
-                                {club.club_email && (
-                                    <a href={`mailto:${club.club_email}`} className="flex items-center gap-2 bg-[#030616] px-3 py-1.5 rounded-full border border-white/5 hover:border-cyan-500/50 hover:text-cyan-400 transition-colors">
+                                {(club as any).club_email && (
+                                    <a href={`mailto:${(club as any).club_email}`} className="flex items-center gap-2 bg-[#030616] px-3 py-1.5 rounded-full border border-white/5 hover:border-cyan-500/50 hover:text-cyan-400 transition-colors">
                                         <Mail className="w-4 h-4" />
-                                        <span>{club.club_email}</span>
+                                        <span>{(club as any).club_email}</span>
+                                    </a>
+                                )}
+                                {club.website && (
+                                    <a href={club.website.startsWith('http') ? club.website : `https://${club.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-[#030616] px-3 py-1.5 rounded-full border border-white/5 hover:border-cyan-500/50 hover:text-cyan-400 transition-colors">
+                                        <Globe className="w-4 h-4" />
+                                        <span>Website</span>
                                     </a>
                                 )}
                             </div>
@@ -183,23 +189,17 @@ export default function ClubProfilePage() {
                                     Leadership
                                 </h3>
                                 
-                                {managers.length > 0 ? (
+                                {club.lead ? (
                                     <div className="space-y-4">
-                                        {managers.map((manager: any) => (
-                                            <div key={manager.id} className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold overflow-hidden border border-white/10">
-                                                    {manager.user?.avatarUrl ? (
-                                                        <img src={manager.user.avatarUrl} alt={manager.user.displayName} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        manager.user?.displayName?.charAt(0) || 'M'
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-bold text-white">{manager.user?.displayName || 'Unknown Manager'}</p>
-                                                    <p className="text-xs text-cyan-400 font-medium">President / Manager</p>
-                                                </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold overflow-hidden border border-white/10">
+                                                {club.lead.charAt(0) || 'L'}
                                             </div>
-                                        ))}
+                                            <div>
+                                                <p className="text-sm font-bold text-white">{club.lead}</p>
+                                                <p className="text-xs text-cyan-400 font-medium">Club Lead</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : (
                                     <p className="text-sm text-slate-500 italic">No listed leadership.</p>

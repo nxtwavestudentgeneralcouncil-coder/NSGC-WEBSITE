@@ -5,9 +5,8 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
 
-        // Ensure we have an ID to update
         if (!body.id) {
-            return NextResponse.json({ message: 'Missing event ID' }, { status: 400 });
+            return NextResponse.json({ message: 'Missing club ID' }, { status: 400 });
         }
 
         const nhost = new NhostClient({
@@ -17,29 +16,34 @@ export async function POST(req: Request) {
         });
 
         const mutation = `
-            mutation UpdateEvent($id: uuid!, $title: String, $description: String, $event_date: timestamptz, $venue: String, $registration_link: String, $added_by_role: String) {
-                update_events_by_pk(pk_columns: {id: $id}, _set: {
-                    title: $title,
+            mutation UpdateClub($id: uuid!, $name: String, $slug: String, $description: String, $logo_url: String, $club_email: String, $category: String, $website: String, $lead: String) {
+                update_clubs_by_pk(pk_columns: {id: $id}, _set: {
+                    name: $name,
+                    slug: $slug,
                     description: $description,
-                    event_date: $event_date,
-                    venue: $venue,
-                    registration_link: $registration_link,
-                    added_by_role: $added_by_role
+                    logo_url: $logo_url,
+                    club_email: $club_email,
+                    category: $category,
+                    website: $website,
+                    lead: $lead
                 }) {
                     id
-                    title
+                    name
+                    slug
                 }
             }
         `;
 
         const { data, error } = await nhost.graphql.request(mutation, {
             id: body.id,
-            title: body.title,
+            name: body.name,
+            slug: body.slug,
             description: body.description,
-            event_date: body.event_date,
-            venue: body.venue,
-            registration_link: body.registration_link,
-            added_by_role: body.added_by_role || 'Council'
+            logo_url: body.logo_url,
+            club_email: body.club_email ? body.club_email.toLowerCase() : null,
+            category: body.category,
+            website: body.website,
+            lead: body.lead
         });
 
         if (error) {

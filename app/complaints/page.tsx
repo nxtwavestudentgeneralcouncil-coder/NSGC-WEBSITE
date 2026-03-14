@@ -8,7 +8,6 @@ import { Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { AlertCircle, CheckCircle2, ChevronDown, CloudUpload, Clock, FileText, Send, Search, Lock, Camera, X, Image as ImageIcon, Upload, Users, Globe, PlusSquare, ThumbsUp } from 'lucide-react';
 import { useTickets, TicketProvider } from '@/lib/ticket-context';
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
@@ -30,7 +29,8 @@ function ComplaintsContent() {
         department: 'General',
         subject: '',
         description: '',
-        isAnonymous: false
+        hostelType: '',
+        roomNumber: ''
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submittedId, setSubmittedId] = useState<string | null>(null);
@@ -69,7 +69,8 @@ function ComplaintsContent() {
                     department: foundTicket.department || '',
                     subject: foundTicket.subject || '',
                     description: foundTicket.description || '',
-                    isAnonymous: foundTicket.studentName === 'Anonymous'
+                    hostelType: '', // Or extract from description if possible, but keeping it empty for now
+                    roomNumber: ''
                 });
                 setImage(foundTicket.image || null);
             }
@@ -112,10 +113,6 @@ function ComplaintsContent() {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData(prev => ({ ...prev, isAnonymous: e.target.checked }));
     };
 
     // Camera & Image Handlers
@@ -182,22 +179,32 @@ function ComplaintsContent() {
 
         try {
             // Basic validation
-            if (!formData.department || !formData.subject || !formData.description) {
+            if (!formData.category || !formData.department || !formData.subject || !formData.description) {
                 alert('Please fill in all required fields'); // Ideally use toast
                 setIsSubmitting(false);
                 return;
             }
 
+            // Hostel specific validation
+            if (formData.category === 'Hostel') {
+                if (!formData.hostelType || !formData.roomNumber) {
+                    alert('Please provide Hostel Type and Room Number');
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+
             if (editId) {
-                // Update existing ticket
                 updateTicketContent(editId, {
-                    studentName: formData.isAnonymous ? 'Anonymous' : (user?.displayName || 'Student'),
-                    email: formData.isAnonymous ? 'anonymous@example.com' : (user?.email || 'student@example.com'),
-                    department: formData.department,
+                    studentName: user?.displayName || 'Student',
+                    email: user?.email || 'student@email.com',
+                    department: formData.category === 'Hostel' ? 'Hostel' : formData.department,
                     type: formData.category,
                     subject: formData.subject,
                     description: formData.description,
-                    image: image || undefined
+                    image: image || undefined,
+                    hostelType: formData.category === 'Hostel' ? formData.hostelType : undefined,
+                    roomNumber: formData.category === 'Hostel' ? formData.roomNumber : undefined
                 });
 
                 // Show success modal
@@ -209,20 +216,23 @@ function ComplaintsContent() {
                     department: 'General',
                     subject: '',
                     description: '',
-                    isAnonymous: false
+                    hostelType: '',
+                    roomNumber: ''
                 });
 
             } else {
                 const newId = createTicket({
-                    studentName: formData.isAnonymous ? 'Anonymous' : (user?.displayName || 'Student'),
-                    email: formData.isAnonymous ? 'anonymous@example.com' : (user?.email || 'student@example.com'),
-                    department: formData.department, // In real app, map to specific enum if needed
+                    studentName: user?.displayName || 'Student',
+                    email: user?.email || 'student@email.com',
+                    department: formData.category === 'Hostel' ? 'Hostel' : formData.department,
                     type: formData.category,
                     subject: formData.subject,
                     description: formData.description,
                     priority: 'Medium', // Default priority
                     proofUrl: '',
-                    image: image || undefined
+                    image: image || undefined,
+                    hostelType: formData.category === 'Hostel' ? formData.hostelType : undefined,
+                    roomNumber: formData.category === 'Hostel' ? formData.roomNumber : undefined
                 });
 
                 // Set submitted ID to show success message
@@ -234,7 +244,8 @@ function ComplaintsContent() {
                     department: 'General',
                     subject: '',
                     description: '',
-                    isAnonymous: false
+                    hostelType: '',
+                    roomNumber: ''
                 });
             }
 
@@ -400,20 +411,6 @@ function ComplaintsContent() {
                                     </motion.div>
                                 ) : (
                                     <form className="space-y-8" onSubmit={handleSubmit}>
-                                        {/* Submit Anonymously Panel */}
-                                        <div className="flex items-center justify-between p-5 rounded-xl bg-[#0d1321] border border-white/5 shadow-xl">
-                                            <div className="space-y-1">
-                                                <h4 className="text-sm font-bold text-white tracking-wide">Submit Anonymously</h4>
-                                                <p className="text-sm text-gray-500">Your identity will be hidden from investigators.</p>
-                                            </div>
-                                            <Switch
-                                                id="anonymous"
-                                                checked={formData.isAnonymous}
-                                                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isAnonymous: checked }))}
-                                                className="data-[state=checked]:bg-cyan-500 scale-125"
-                                            />
-                                        </div>
-
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             <div className="space-y-2">
                                                 <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Complaint Category</label>
@@ -422,6 +419,7 @@ function ComplaintsContent() {
                                                     value={formData.category}
                                                     onChange={handleChange}
                                                     className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
+                                                    required
                                                 >
                                                     <option value="" disabled hidden>Select a category...</option>
                                                     <option value="Academic">Academic</option>
@@ -445,6 +443,41 @@ function ComplaintsContent() {
                                                 />
                                             </div>
                                         </div>
+
+                                        {formData.category === 'Hostel' && (
+                                            <motion.div 
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                className="grid grid-cols-1 md:grid-cols-2 gap-8"
+                                            >
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Hostel Type</label>
+                                                    <select
+                                                        name="hostelType"
+                                                        value={formData.hostelType}
+                                                        onChange={handleChange}
+                                                        className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
+                                                        required
+                                                    >
+                                                        <option value="" disabled hidden>Select hostel type...</option>
+                                                        <option value="Boys Hostel">Boys Hostel</option>
+                                                        <option value="Girls Hostel">Girls Hostel</option>
+                                                    </select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Room Number</label>
+                                                    <input
+                                                        type="text"
+                                                        name="roomNumber"
+                                                        value={formData.roomNumber}
+                                                        onChange={handleChange}
+                                                        className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
+                                                        placeholder="e.g. 101, B-202"
+                                                        required
+                                                    />
+                                                </div>
+                                            </motion.div>
+                                        )}
 
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Detailed Description</label>
@@ -538,7 +571,8 @@ function ComplaintsContent() {
                                                         department: 'General',
                                                         subject: '',
                                                         description: '',
-                                                        isAnonymous: false
+                                                        hostelType: '',
+                                                        roomNumber: ''
                                                     });
                                                 }}
                                                 className="text-[15px] font-bold text-[#6b7280] hover:text-white transition-colors"
@@ -717,7 +751,7 @@ function ComplaintsContent() {
 
                                             <div className="relative pl-8 border-l border-white/10 space-y-8">
                                                 {trackingResult.timeline.map((step: any, index: number) => (
-                                                    <div key={index} className="relative">
+                                                    <div key={step.id || `${trackingResult.id}-step-${index}`} className="relative">
                                                         <div className={`absolute -left-[37px] w-4 h-4 rounded-full border-2 ${step.completed ? 'bg-cyan-500 border-cyan-500' : 'bg-black border-gray-600'}`} />
                                                         <h4 className={`font-medium ${step.completed ? 'text-white' : 'text-gray-500'}`}>{step.status}</h4>
                                                         <p className="text-xs text-gray-500">{step.date}</p>
@@ -855,10 +889,8 @@ function ComplaintsContent() {
 
 export default function ComplaintsPage() {
     return (
-        <TicketProvider>
-            <Suspense fallback={<div className="min-h-screen bg-black text-white flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div></div>}>
-                <ComplaintsContent />
-            </Suspense>
-        </TicketProvider>
+        <Suspense fallback={<div className="min-h-screen bg-black text-white flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div></div>}>
+            <ComplaintsContent />
+        </Suspense>
     );
 }

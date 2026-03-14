@@ -17,23 +17,29 @@ export async function POST(req: Request) {
         });
 
         const mutation = `
-            mutation UpdateAnnouncement($id: uuid!, $title: String, $content: String, $category: String) {
+            mutation UpdateAnnouncement($id: uuid!, $title: String, $content: String, $category: String, $priority: String, $link: String, $added_by_role: String) {
                 update_announcements_by_pk(pk_columns: {id: $id}, _set: {
                     title: $title,
                     content: $content,
-                    category: $category
+                    category: $category,
+                    priority: $priority,
+                    link: $link,
+                    added_by_role: $added_by_role
                 }) {
                     id
                     title
                 }
             }
         `;
-
+ 
         const { data, error } = await nhost.graphql.request(mutation, {
             id: body.id,
             title: body.title,
             content: body.content,
-            category: body.category
+            category: body.category,
+            priority: body.priority,
+            link: body.link,
+            added_by_role: body.added_by_role || 'Council'
         });
 
         if (error) {

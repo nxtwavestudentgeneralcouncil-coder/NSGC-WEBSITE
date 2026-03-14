@@ -6,12 +6,12 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, ShoppingBag, BarChart2, Bell, Clock, Flag, Users, BellOff, Edit2, ListX, ChevronRight, PieChart } from 'lucide-react';
+import { FileText, ShoppingBag, BarChart2, Bell, Clock, Flag, Users, BellOff, Edit2, ListX, ChevronRight, PieChart, TerminalSquare } from 'lucide-react';
 import Link from 'next/link';
-import { useTickets, TicketProvider } from '@/lib/ticket-context';
+import { useTickets } from '@/lib/ticket-context';
 import { useSharedData } from '@/hooks/useSharedData';
-import { useCouncil, CouncilProvider } from '@/lib/council-context';
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
+import { useClubData } from '@/hooks/useClubData';
 
 function StudentDashboardContent() {
     const router = useRouter();
@@ -39,7 +39,7 @@ function StudentDashboardContent() {
             } else if (roles.includes('admin') || defaultRole === 'admin') {
                 router.push('/dashboard/admin');
             } else if (roles.includes('club_head') || defaultRole === 'club_head') {
-                router.push('/dashboard/clubs');
+                router.push('/dashboard/club');
             } else if (roles.includes('council_member') || defaultRole === 'council_member') {
                 router.push('/dashboard/council');
             }
@@ -47,19 +47,32 @@ function StudentDashboardContent() {
     }, [isAuthenticated, isLoading, user, router]);
     const { tickets } = useTickets();
     const { announcements: sharedAnnouncements, events: sharedEvents, clubs, members, isLoaded } = useSharedData();
-    const { announcements: councilAnnouncements, events: councilEvents } = useCouncil();
+    const { myClubByEmail } = useClubData();
 
-    const myTickets = tickets.slice(0, 3); // Just show the recent 3 for dashboard overview
+    // Filter tickets to only show the current student's own complaints
+    const userEmail = user?.email?.toLowerCase() || '';
+    const userName = user?.displayName || '';
+    const myFilteredTickets = tickets.filter(t => {
+        if (t.email && userEmail) return t.email.toLowerCase() === userEmail;
+        if (t.studentName && userName) return t.studentName === userName;
+        return false;
+    });
+    const myTickets = myFilteredTickets.slice(0, 3); // Just show the recent 3 for dashboard overview
 
-    // Merge and sort Announcements (newest first)
-    const allAnnouncements = ([...sharedAnnouncements, ...councilAnnouncements] as any[]).sort((a, b) => {
+    // Debug: Log current user and ticket data to help diagnose per-user filtering
+    console.log('[StudentDashboard] Current user:', { email: user?.email, displayName: user?.displayName, id: user?.id });
+    console.log('[StudentDashboard] Total tickets:', tickets.length, '| My filtered tickets:', myFilteredTickets.length);
+    console.log('[StudentDashboard] Ticket emails:', tickets.map(t => ({ id: t.id, email: t.email, studentName: t.studentName })));
+
+    // Sort Announcements (newest first)
+    const allAnnouncements = ([...sharedAnnouncements] as any[]).sort((a, b) => {
         const dateA = new Date(a.createdAt || a.date).getTime();
         const dateB = new Date(b.createdAt || b.date).getTime();
         return dateB - dateA;
     });
 
-    // Merge and sort Events (upcoming first)
-    const allEvents = [...sharedEvents, ...councilEvents].sort((a, b) => {
+    // Sort Events (upcoming first)
+    const allEvents = [...sharedEvents].sort((a, b) => {
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
         return dateA - dateB;
@@ -78,7 +91,7 @@ function StudentDashboardContent() {
                         <h1 className="text-4xl md:text-5xl font-extrabold mb-3 tracking-tight">Welcome back, {user?.displayName || 'Student'}</h1>
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></div>
-                            <p className="text-[#94a3b8] text-sm">Live feed: Everything that's happening on campus today.</p>
+                            <p className="text-[#94a3b8] text-sm">Logged in as: {user?.email || 'unknown'} • Live feed: Everything that&apos;s happening on campus today.</p>
                         </div>
                     </div>
                     <Button variant="outline" className="border-white/20 text-white bg-transparent hover:bg-white/10 w-full md:w-auto rounded-full px-6 py-5 text-xs font-bold tracking-widest uppercase">
@@ -102,7 +115,7 @@ function StudentDashboardContent() {
                             </div>
                             <div>
                                 <p className="text-[#64748B] text-xs font-bold uppercase tracking-widest mb-1">Complaints Submitted</p>
-                                <h3 className="text-[32px] font-bold leading-none">{tickets.length}</h3>
+                                <h3 className="text-[32px] font-bold leading-none">{myFilteredTickets.length}</h3>
                             </div>
                         </div>
                     </div>
@@ -190,7 +203,7 @@ function StudentDashboardContent() {
                                     </div>
                                     <h2 className="text-[22px] font-bold tracking-tight">Your Recent Complaints</h2>
                                 </div>
-                                {tickets.length > 0 && (
+                                {myFilteredTickets.length > 0 && (
                                     <Link href="/complaints/history" className="text-sm font-bold text-[#0ea5e9] hover:text-[#38bdf8] transition-colors">
                                         View All
                                     </Link>
@@ -239,6 +252,21 @@ function StudentDashboardContent() {
                             </div>
 
                             <div className="p-4 space-y-3">
+                                {/* Club Manager Link (Dynamic) */}
+                                {myClubByEmail && (
+                                    <Link href={`/dashboard/club/${myClubByEmail.slug}`} className="block">
+                                        <div className="group bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 rounded-[16px] p-4 transition-all duration-300 flex items-center gap-5 cursor-pointer">
+                                            <div className="w-12 h-12 rounded-xl bg-cyan-500/15 flex items-center justify-center flex-shrink-0 group-hover:bg-cyan-500/25 transition-colors">
+                                                <TerminalSquare className="w-5 h-5 text-cyan-500" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-white font-bold text-[15px] tracking-wide mb-1">MANAGE {myClubByEmail.name.toUpperCase()}</h4>
+                                                <p className="text-[11px] text-cyan-500/70 font-bold tracking-wider uppercase">Club Dashboard Access</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                )}
+
                                 {/* Action 1 */}
                                 <Link href="/complaints" className="block">
                                     <div className="group bg-[#1A2133] hover:bg-[#1f2937] border border-white/5 rounded-[16px] p-4 transition-all duration-300 flex items-center gap-5 cursor-pointer">
@@ -313,10 +341,6 @@ function StudentDashboardContent() {
 
 export default function StudentDashboard() {
     return (
-        <TicketProvider>
-            <CouncilProvider>
-                <StudentDashboardContent />
-            </CouncilProvider>
-        </TicketProvider>
+        <StudentDashboardContent />
     );
 }

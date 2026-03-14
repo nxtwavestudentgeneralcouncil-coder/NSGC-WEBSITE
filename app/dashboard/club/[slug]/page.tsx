@@ -26,13 +26,18 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
 
     // --- State Management ---
     const {
-        announcements, setAnnouncements, // Keep announcements on local state since it's not in Nhost clubs schema
-        galleryImages, setGalleryImages, // Keep gallery images local too
+        announcements,
+        galleryImages,
+        refetchAnnouncements,
+        refetchEvents,
+        refetchGalleryImages
     } = useSharedData();
 
     const { 
         myClubByEmail, 
         myClubByEmailLoading, 
+        allClubs,
+        isLoaded: clubDataLoaded,
         refetchMyClubByEmail,
         GET_CLUB_BY_SLUG,
         UPDATE_CLUB_PROFILE,
@@ -74,27 +79,23 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
     const defaultRole = user?.defaultRole || '';
     const hasOverrideRole = userRoles.includes('admin') || userRoles.includes('developer') || defaultRole === 'admin' || defaultRole === 'developer';
 
-    const { data: clubBySlugData, loading: clubBySlugLoading } = useQuery(GET_CLUB_BY_SLUG, {
-        variables: { slug: resolvedParams.slug },
-        skip: !resolvedParams.slug || !hasOverrideRole // Only fetch by slug if override role
-    });
+    // Helper to find club by slug in administrative list
+    const clubBySlug = allClubs.find(c => c.slug === resolvedParams.slug);
 
     // Login Access Check
     useEffect(() => {
-        if (!isLoading) {
+        if (!isLoading && clubDataLoaded) {
             if (!isAuthenticated || !user) {
                 router.push('/login');
                 return;
             }
 
             if (hasOverrideRole) {
-                if (!clubBySlugLoading) {
-                    if (!clubBySlugData?.clubs?.[0]) {
-                        router.push('/dashboard/student');
-                        return;
-                    }
-                    setIsAuthorized(true);
+                if (!clubBySlug) {
+                    router.push('/dashboard/student');
+                    return;
                 }
+                setIsAuthorized(true);
             } else {
                 if (!myClubByEmailLoading) {
                     if (!myClubByEmail || myClubByEmail.slug !== resolvedParams.slug) {
@@ -105,9 +106,9 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                 }
             }
         }
-    }, [isAuthenticated, isLoading, user, router, myClubByEmailLoading, myClubByEmail, resolvedParams.slug, hasOverrideRole, clubBySlugLoading, clubBySlugData]);
+    }, [isAuthenticated, isLoading, user, router, myClubByEmailLoading, myClubByEmail, resolvedParams.slug, hasOverrideRole, clubBySlug, clubDataLoaded]);
 
-    const activeClub = hasOverrideRole ? clubBySlugData?.clubs?.[0] : myClubByEmail;
+    const activeClub = hasOverrideRole ? clubBySlug : myClubByEmail;
     const currentClubId = activeClub?.id;
     const currentClubName = activeClub?.name || 'Club';
 
@@ -138,7 +139,7 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
         registrationLink: ''
     })) || [];
 
-    const clubAnnouncements = announcements.filter(a => a.author === currentClubName || !a.author);
+    const clubAnnouncements = announcements.filter(a => a.author === currentClubName || a.addedByRole?.includes(currentClubName));
     const clubGalleryImages = galleryImages.filter(img => img.addedByRole?.includes(currentClubName));
 
     // --- Helpers ---
@@ -178,15 +179,32 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
         try {
             switch (type) {
                 case 'event': 
-                    await deleteClubEvent({ variables: { id } });
+                    await fetch('/api/v1/nhost/delete-event', {
+                        method: 'POST',
+                        body: JSON.stringify({ id })
+                    });
+                    await deleteClubEvent({ variables: { id } }); // Still delete from club_events if it exists
+                    refetchEvents();
                     refetchMyClubByEmail();
                     break;
-                case 'announcement': setAnnouncements((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
+                case 'announcement': 
+                    await fetch('/api/v1/nhost/delete-announcement', {
+                        method: 'POST',
+                        body: JSON.stringify({ id })
+                    });
+                    refetchAnnouncements();
+                    break;
                 case 'member':
                     await deleteClubMember({ variables: { id } });
                     refetchMyClubByEmail();
                     break;
-                case 'gallery': setGalleryImages((prev: any[]) => prev.filter((i: any) => i.id !== id)); break;
+                case 'gallery': 
+                    await fetch('/api/v1/nhost/delete-gallery-image', {
+                        method: 'POST',
+                        body: JSON.stringify({ id })
+                    });
+                    refetchGalleryImages();
+                    break;
             }
         } catch (e) {
             console.error("Error deleting:", e);
@@ -204,19 +222,67 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
             switch (addModalType) {
                 case 'event':
                     if (isEditing) {
-                        await updateClubEvent({ variables: { id: formData.id, title: formData.title, description: formData.description, event_date: formData.event_date, image_url: formData.image_url } });
+                        await fetch('/api/v1/nhost/update-event', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                id: formData.id,
+                                title: formData.name || formData.title,
+                                description: formData.description || '',
+                                event_date: formData.date || formData.event_date,
+                                venue: formData.location || formData.venue || 'TBA',
+                                registration_link: formData.registrationLink || '',
+                                added_by_role: `Club Manager (${currentClubName})`
+                            })
+                        });
+                        await updateClubEvent({ variables: { id: formData.id, title: formData.name || formData.title, description: formData.description, event_date: formData.date || formData.event_date, image_url: formData.image_url } });
                     } else {
-                        await insertClubEvent({ variables: { club_id: currentClubId, title: formData.title || 'New Event', description: formData.description, event_date: formData.event_date || new Date().toISOString(), image_url: formData.image_url } });
+                        await fetch('/api/v1/nhost/insert-event', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                title: formData.name || formData.title || 'New Event',
+                                description: formData.description || '',
+                                event_date: formData.date || formData.event_date || new Date().toISOString(),
+                                venue: formData.location || formData.venue || 'TBA',
+                                registration_link: formData.registrationLink || '',
+                                organizer_type: 'club',
+                                created_by: user?.id,
+                                added_by_role: `Club Manager (${currentClubName})`
+                            })
+                        });
+                        await insertClubEvent({ variables: { club_id: currentClubId, title: formData.name || formData.title || 'New Event', description: formData.description, event_date: formData.date || formData.event_date || new Date().toISOString(), image_url: formData.image_url } });
                     }
+                    refetchEvents();
                     refetchMyClubByEmail();
                     break;
                 case 'announcement':
-                    const itemId = isEditing ? formData.id : Math.random().toString(36).slice(2, 11);
-                    const newData = { ...formData, id: itemId };
-                    setAnnouncements((prev: any[]) => {
-                        if (isEditing) return prev.map((item: any) => item.id === itemId ? { ...item, ...newData } : item);
-                        return [{ ...newData, date: new Date().toISOString().split('T')[0], author: currentClubName, addedByRole: 'Club Manager' }, ...prev];
-                    });
+                    if (isEditing) {
+                        await fetch('/api/v1/nhost/update-announcement', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                id: formData.id,
+                                title: formData.title,
+                                content: formData.content,
+                                category: formData.category || 'General',
+                                added_by_role: `Club Manager (${currentClubName})`
+                            })
+                        });
+                    } else {
+                        await fetch('/api/v1/nhost/insert-announcement', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                title: formData.title,
+                                content: formData.content,
+                                category: formData.category || 'General',
+                                created_by: user?.id,
+                                added_by_role: `Club Manager (${currentClubName})`
+                            })
+                        });
+                    }
+                    refetchAnnouncements();
                     break;
                 case 'member':
                     if (isEditing) {
@@ -228,18 +294,26 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                     break;
                 case 'gallery':
                     if (!formData.src) return alert("Please upload an image before saving.");
-                    const galId = isEditing ? formData.id : Math.random().toString(36).slice(2, 11);
-                    setGalleryImages((prev: any[]) => {
-                        if (isEditing) return prev.map((item: any) => item.id === galId ? { ...item, ...formData } : item);
-                        return [{ ...formData, id: galId, span: formData.span || 'col-span-1 row-span-1', addedByRole: `Club Manager (${currentClubName})`, dateAdded: new Date().toISOString().split('T')[0] }, ...prev];
-                    });
+                    if (!isEditing) {
+                        await fetch('/api/v1/nhost/insert-gallery-image', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                src: formData.src,
+                                alt: formData.alt || `Club Manager (${currentClubName})`,
+                                span: formData.span || 'col-span-1 row-span-1',
+                                added_by_role: `Club Manager (${currentClubName})`,
+                                created_by: user?.id
+                            })
+                        });
+                    }
+                    refetchGalleryImages();
                     break;
                 case 'profile':
                     if (isEditing) {
                         await updateClubProfile({ variables: { id: formData.id, name: formData.name, description: formData.description, logo_url: formData.image } });
                         refetchMyClubByEmail();
                     }
-                    // Ignoring profile creation here because managers can't create clubs, only admins can.
                     break;
             }
         } catch (e) {
@@ -248,7 +322,7 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
         setIsAddModalOpen(false);
     };
 
-    if (!isAuthorized || isLoading || (!hasOverrideRole && myClubByEmailLoading) || (hasOverrideRole && clubBySlugLoading)) {
+    if (!isAuthorized || isLoading || (!hasOverrideRole && myClubByEmailLoading) || (hasOverrideRole && !clubDataLoaded)) {
         return <div className="min-h-screen bg-black flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div>
         </div>;

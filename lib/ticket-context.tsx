@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { useSharedData } from '@/hooks/useSharedData';
 
 export type TicketStatus = 'Pending' | 'In Review' | 'In Progress' | 'Completed' | 'Rejected';
 export type TicketPriority = 'Low' | 'Medium' | 'High';
@@ -30,6 +31,8 @@ export interface Ticket {
     timeline: TimelineEvent[];
     proofUrl?: string; // Mock URL
     image?: string; // Base64 image string
+    hostelType?: string;
+    roomNumber?: string;
     votes: number;
     votedBy: string[]; // Array of user emails/IDs who have voted
 }
@@ -44,6 +47,7 @@ interface TicketContextType {
     addComment: (id: string, comment: string) => void;
     upvoteTicket: (id: string, userId: string) => void;
     getTicketById: (id: string) => Ticket | undefined;
+    refreshTickets: () => void;
 }
 
 const TicketContext = createContext<TicketContextType | undefined>(undefined);
@@ -59,19 +63,23 @@ export const useTickets = () => {
 const STORAGE_KEY = 'nsgc_tickets_v3';
 
 export const TicketProvider = ({ children }: { children: ReactNode }) => {
-    const [tickets, setTickets] = useState<Ticket[]>([]);
-    const [isLoaded, setIsLoaded] = useState(false);
+    const { tickets, refetchTickets } = useSharedData();
+    const [localTickets, setLocalTickets] = useState<Ticket[]>([]);
 
-    // Removed localStorage mock persistence logic
+    // Initially sync localTickets with hook tickets
     useEffect(() => {
-        setTickets([]);
-        setIsLoaded(true);
-    }, []);
+        if (tickets && tickets.length > 0) {
+            setLocalTickets(tickets);
+        }
+    }, [tickets]);
 
     const createTicket = (data: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'status' | 'assignedTo' | 'votes' | 'votedBy'>) => {
+        const tempId = `CMP-PENDING-${Date.now()}`;
+        
+        // Optimistic update
         const newTicket: Ticket = {
             ...data,
-            id: `CMP-2025-${String(tickets.length + 100).padStart(3, '0')}`,
+            id: tempId,
             status: 'Pending',
             assignedTo: null,
             createdAt: new Date().toISOString(),
@@ -87,12 +95,28 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
             votes: 0,
             votedBy: []
         };
-        setTickets(prev => [newTicket, ...prev]);
-        return newTicket.id;
+        
+        setLocalTickets(prev => [newTicket, ...prev]);
+
+        // Backend call
+        fetch('/api/v1/nhost/insert-ticket', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).then(res => res.json())
+          .then(resData => {
+            if (resData.success) {
+                refetchTickets();
+            }
+          })
+          .catch(err => console.error("Failed to save ticket:", err));
+
+        return tempId;
     };
 
     const updateTicketStatus = (id: string, status: TicketStatus, note?: string) => {
-        setTickets(prev => prev.map(ticket => {
+        let updatedTimeline: TimelineEvent[] = [];
+        setLocalTickets(prev => prev.map(ticket => {
             if (ticket.id === id) {
                 const newTimelineItem: TimelineEvent = {
                     status: status,
@@ -100,19 +124,37 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
                     completed: true,
                     description: note || `Status updated to ${status}`
                 };
+                updatedTimeline = [...ticket.timeline, newTimelineItem];
                 return {
                     ...ticket,
                     status,
                     updatedAt: new Date().toISOString(),
-                    timeline: [...ticket.timeline, newTimelineItem]
+                    timeline: updatedTimeline
                 };
             }
             return ticket;
         }));
+
+        // Persist to backend
+        console.log(`[TicketContext] Updating ticket ${id} to status: ${status}`);
+        fetch('/api/v1/nhost/update-ticket', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, status, timeline: updatedTimeline })
+        }).then(res => res.json())
+          .then(data => {
+            if (data.success) {
+                console.log(`[TicketContext] Status update persisted for ticket ${id}`);
+                refetchTickets();
+            } else {
+                console.error(`[TicketContext] Failed to persist status update:`, data);
+            }
+          })
+          .catch(err => console.error("[TicketContext] Failed to update status:", err));
     };
 
     const updateTicketContent = (id: string, updates: Partial<Ticket>) => {
-        setTickets(prev => prev.map(ticket => {
+        setLocalTickets(prev => prev.map(ticket => {
             if (ticket.id === id) {
                 return {
                     ...ticket,
@@ -125,32 +167,49 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const deleteTicket = (id: string) => {
-        setTickets(prev => prev.filter(ticket => ticket.id !== id));
+        setLocalTickets(prev => prev.filter(ticket => ticket.id !== id));
     };
 
     const assignTicket = (id: string, adminName: string) => {
-        setTickets(prev => prev.map(ticket => {
+        let updatedTimeline: TimelineEvent[] = [];
+        let updatedStatus: TicketStatus = 'In Review';
+        
+        setLocalTickets(prev => prev.map(ticket => {
             if (ticket.id === id) {
+                updatedStatus = ticket.status === 'Pending' ? 'In Review' : ticket.status;
+                const newTimelineItem = {
+                    status: 'Assigned',
+                    date: new Date().toLocaleString(),
+                    completed: true,
+                    description: `Assigned to ${adminName}`
+                };
+                updatedTimeline = [...ticket.timeline, newTimelineItem];
                 return {
                     ...ticket,
                     assignedTo: adminName,
-                    status: ticket.status === 'Pending' ? 'In Review' : ticket.status,
+                    status: updatedStatus,
                     updatedAt: new Date().toISOString(),
-                    timeline: [...ticket.timeline, {
-                        status: 'Assigned',
-                        date: new Date().toLocaleString(),
-                        completed: true,
-                        description: `Assigned to ${adminName}`
-                    }]
+                    timeline: updatedTimeline
                 };
             }
             return ticket;
         }));
+
+        // Persist to backend
+        fetch('/api/v1/nhost/update-ticket', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, assigned_to: adminName, status: updatedStatus, timeline: updatedTimeline })
+        }).then(res => res.json())
+          .then(data => {
+            if (data.success) refetchTickets();
+          })
+          .catch(err => console.error("Failed to assign ticket:", err));
     };
 
     const addComment = (id: string, comment: string) => {
         // In a real app, comments might be a separate array. Here we'll just log it in the timeline/update time
-        setTickets(prev => prev.map(ticket => {
+        setLocalTickets(prev => prev.map(ticket => {
             if (ticket.id === id) {
                 return {
                     ...ticket,
@@ -168,7 +227,7 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const upvoteTicket = (id: string, userId: string) => {
-        setTickets(prev => prev.map(ticket => {
+        setLocalTickets(prev => prev.map(ticket => {
             if (ticket.id === id) {
                 // Ensure votedBy exists
                 const currentVotedBy = ticket.votedBy || [];
@@ -195,11 +254,11 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
         }));
     };
 
-    const getTicketById = (id: string) => tickets.find(t => t.id === id);
+    const getTicketById = (id: string) => localTickets.find(t => t.id === id);
 
     return (
         <TicketContext.Provider value={{
-            tickets,
+            tickets: localTickets,
             createTicket,
             updateTicketStatus,
             updateTicketContent,
@@ -207,7 +266,8 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
             assignTicket,
             addComment,
             upvoteTicket,
-            getTicketById
+            getTicketById,
+            refreshTickets: refetchTickets
         }}>
             {children}
         </TicketContext.Provider>

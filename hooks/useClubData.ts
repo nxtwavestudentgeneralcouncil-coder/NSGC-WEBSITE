@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, gql } from '@apollo/client';
 import { useUserData } from '@nhost/react';
+import { useSharedData } from './useSharedData';
 
 // --- GraphQL Queries ---
 export const GET_CLUBS = gql`
@@ -13,6 +14,9 @@ export const GET_CLUBS = gql`
       category
       description
       logo_url
+      club_email
+      lead
+      website
       club_members {
         id
       }
@@ -28,6 +32,9 @@ export const GET_CLUB_DETAILS = gql`
       category
       description
       logo_url
+      club_email
+      lead
+      website
       club_members {
         id
         role
@@ -57,6 +64,8 @@ export const GET_MY_MANAGED_CLUBS = gql`
         category
         description
         logo_url
+        lead
+        website
         club_members {
           id
           role
@@ -122,6 +131,8 @@ export const GET_CLUB_BY_EMAIL = gql`
       logo_url
       banner_url
       club_email
+      lead
+      website
     }
   }
 `;
@@ -137,6 +148,8 @@ export const GET_CLUB_BY_SLUG = gql`
       logo_url
       banner_url
       club_email
+      lead
+      website
       club_members {
         id
         role
@@ -263,22 +276,32 @@ export const DELETE_CLUB_MEMBER = gql`
 export function useClubData() {
     const user = useUserData();
     const userId = user?.id;
-    const userEmail = user?.email;
+    // Normalize user email: trim and lowercase
+    const userEmail = user?.email?.trim().toLowerCase();
+    
+    // Get centrally fetched data from useSharedData (uses admin secret, bypassing RLS)
+    const sharedData = useSharedData();
+    const allClubs = sharedData.clubs || [];
 
-    // Get basic list of all clubs
+    // Get basic list of all clubs (might still be used by some components for basic UI)
     const { data: clubsData, loading: clubsLoading, error: clubsError, refetch: refetchClubs } = useQuery(GET_CLUBS);
 
-    // Get clubs managed by the current user
+    // Get clubs managed by the current user (explicit membership)
     const { data: managedClubsData, loading: managedClubsLoading, refetch: refetchManagedClubs } = useQuery(GET_MY_MANAGED_CLUBS, {
         variables: { userId },
         skip: !userId
     });
 
-    // Get club managed by current user email
-    const { data: myClubByEmailData, loading: myClubByEmailLoading, refetch: refetchMyClubByEmail } = useQuery(GET_CLUB_BY_EMAIL, {
-        variables: { email: userEmail },
-        skip: !userEmail
-    });
+    // We no longer rely PURELY on direct GraphQL query for myClubByEmail 
+    // because permissions might block it for student role.
+    // Instead, we find it in the already-fetched clubs list.
+    // Robust match: trim and lowercase both ends
+    const myClubByEmail = userEmail ? allClubs.find(c => {
+        const cEmail = c.clubEmail?.trim().toLowerCase();
+        return cEmail === userEmail;
+    }) : null;
+
+    const myClubByEmailLoading = !sharedData.isLoaded;
 
     return {
         clubs: clubsData?.clubs || [],
@@ -286,15 +309,17 @@ export function useClubData() {
         clubsError,
         refetchClubs,
         
+        allClubs, // Expose the full list for admin lookups
+        isLoaded: sharedData.isLoaded,
         managedClubs: managedClubsData?.club_members?.map((cm: any) => cm.club) || [],
         managedClubsLoading,
         refetchManagedClubs,
 
-        myClubByEmail: myClubByEmailData?.clubs?.[0] || null,
-        myClubByEmailLoading,
-        refetchMyClubByEmail,
+        myClubByEmail: myClubByEmail,
+        myClubByEmailLoading: myClubByEmailLoading,
+        refetchMyClubByEmail: sharedData.refetchClubs,
         
-        // Export mutation definitions to be used by components directly to manage their own loading/error states
+        // Export mutation definitions
         GET_CLUB_BY_SLUG,
         INSERT_CLUB,
         UPDATE_CLUB_PROFILE,

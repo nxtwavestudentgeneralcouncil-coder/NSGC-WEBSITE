@@ -57,7 +57,7 @@ export default function TextReveal({
         >
             {items.map((item, index) => (
                 <motion.span
-                    key={index}
+                    key={`${type}-${index}-${item}`}
                     variants={childVariants}
                     className="inline-block mr-[0.2em] last:mr-0"
                 >

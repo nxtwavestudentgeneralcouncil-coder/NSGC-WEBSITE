@@ -12,12 +12,10 @@ import { GlassModal } from '@/components/ui/glass-modal';
 import {
     Megaphone, Calendar, CheckCircle, XCircle, AlertTriangle, LogOut, ThumbsUp, Plus, Trash2, Star, Menu, MessageSquare, FileText, Users, Eye, ExternalLink, Camera, Upload, X, Trophy, BellOff
 } from 'lucide-react';
-import { useTickets, TicketProvider } from '@/lib/ticket-context';
-import { useCouncil, CouncilProvider } from '@/lib/council-context';
+import { useTickets } from '@/lib/ticket-context';
 import Link from 'next/link';
-import { useSharedData, Announcement, Achievement, GalleryImage, INSERT_ANNOUNCEMENT, INSERT_EVENT } from '@/hooks/useSharedData';
+import { useSharedData, Announcement, Achievement, GalleryImage } from '@/hooks/useSharedData';
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
-import { useMutation } from '@apollo/client';
 
 function CouncilDashboardContent() {
     const router = useRouter();
@@ -26,8 +24,6 @@ function CouncilDashboardContent() {
     // Contexts
     const { tickets, updateTicketStatus } = useTickets();
     const { announcements, setAnnouncements, events, setEvents, achievements, setAchievements, galleryImages, setGalleryImages, members, refetchAnnouncements, refetchEvents } = useSharedData();
-    const [insertAnnouncement] = useMutation(INSERT_ANNOUNCEMENT);
-    const [insertEvent] = useMutation(INSERT_EVENT);
     // UI States
     const [activeTab, setActiveTab] = useState('announcements');
     const [selectedTicket, setSelectedTicket] = useState<any>(null); // For viewing full complaint details
@@ -72,6 +68,11 @@ function CouncilDashboardContent() {
     if (!isAuthorized) {
         return <div className="min-h-screen bg-black" />;
     }
+
+    const filteredAnnouncements = announcements.filter(item => item.createdBy === user?.id && item.addedByRole !== 'President');
+    const filteredEvents = events.filter(event => event.createdBy === user?.id && event.addedByRole !== 'President');
+    const filteredAchievements = achievements.filter(item => item.createdBy === user?.id && item.addedByRole !== 'President');
+    const filteredGallery = galleryImages.filter(image => image.createdBy === user?.id && image.addedByRole !== 'President');
 
     const pendingCount = tickets.filter(t => t.status === 'Pending').length;
     const inProgressCount = tickets.filter(t => t.status === 'In Progress').length;
@@ -165,15 +166,24 @@ function CouncilDashboardContent() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         const isEditing = !!formData.id;
-        const itemId = isEditing ? formData.id : Math.random().toString(36).slice(2, 11);
-        const newData = { ...formData, id: itemId };
 
         try {
             if (addModalType === 'announcement') {
                 if (isEditing) {
-                    // Assuming no update mutation for now, falling back to local state only for edits if preferred, or alerting.
-                    alert("Edit functionality for announcements is not fully hooked up to the DB yet. Simulating locally.");
-                    setAnnouncements(prev => prev.map(a => a.id === formData.id ? { ...a, ...newData } as Announcement : a));
+                    const res = await fetch('/api/v1/nhost/update-announcement', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: formData.id,
+                            title: formData.title,
+                            content: formData.content,
+                            category: formData.category,
+                            added_by_role: 'Council'
+                        })
+                    });
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.message || 'Failed to update announcement');
+                    refetchAnnouncements();
                 } else {
                     const res = await fetch('/api/v1/nhost/insert-announcement', {
                         method: 'POST',
@@ -181,16 +191,33 @@ function CouncilDashboardContent() {
                         body: JSON.stringify({
                             title: formData.title || 'Untitled',
                             content: formData.content || '',
-                            category: formData.category || 'General'
+                            category: formData.category || 'General',
+                            created_by: user?.id,
+                            added_by_role: 'Council'
                         })
                     });
-                    await res.json();
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.message || 'Failed to insert announcement');
                     refetchAnnouncements();
                 }
             } else if (addModalType === 'event') {
                 if (isEditing) {
-                    alert("Edit functionality for events is not fully hooked up to the DB yet. Simulating locally.");
-                    setEvents(prev => prev.map(ev => ev.id === formData.id ? { ...ev, ...newData } as any : ev));
+                    const res = await fetch('/api/v1/nhost/update-event', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: formData.id,
+                            title: formData.name,
+                            description: formData.description,
+                            event_date: formData.date ? new Date(formData.date).toISOString() : undefined,
+                            venue: formData.location,
+                            registration_link: formData.registrationLink,
+                            added_by_role: 'Council'
+                        })
+                    });
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.message || 'Failed to update event');
+                    refetchEvents();
                 } else {
                     const res = await fetch('/api/v1/nhost/insert-event', {
                         method: 'POST',
@@ -200,39 +227,71 @@ function CouncilDashboardContent() {
                             description: formData.description || 'No description provided',
                             event_date: new Date(formData.date || new Date()).toISOString(),
                             venue: formData.location || 'TBA',
-                            organizer_type: 'council'
+                            organizer_type: 'council',
+                            registration_link: formData.registrationLink,
+                            created_by: user?.id,
+                            added_by_role: 'Council'
                         })
                     });
-                    await res.json();
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.message || 'Failed to insert event');
                     refetchEvents();
                 }
             } else if (addModalType === 'achievement') {
-                setAchievements(prev => {
-                    const updated = isEditing
-                        ? prev.map(item => item.id === itemId ? { ...item, ...newData } as Achievement : item)
-                        : [...prev, { ...newData, image: formData.image || '', addedByRole: 'Council' } as Achievement];
-                    return updated;
-                });
+                if (isEditing) {
+                    // Falls back to local state if no update API exists yet, but alerting the limitation
+                    console.warn("Edit functionality for achievements is using local simulation as update API is not yet available.");
+                    setAchievements(prev => prev.map(item => item.id === formData.id ? { ...item, ...formData } as Achievement : item));
+                } else {
+                    const res = await fetch('/api/v1/nhost/insert-achievement', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: formData.title || 'Untitled',
+                            category: formData.category || 'General',
+                            date: formData.date || new Date().toISOString().split('T')[0],
+                            description: formData.description || '',
+                            image: formData.image || null,
+                            student_id: formData.student_id || null,
+                            tier: formData.tier || 'Bronze',
+                            created_by: user?.id,
+                            added_by_role: 'Council'
+                        })
+                    });
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.message || 'Failed to insert achievement');
+                    // Refetch all to get new achievement
+                    refetchAnnouncements(); 
+                }
             } else if (addModalType === 'gallery') {
-                if (!formData.src) {
+                if (!formData.src && !isEditing) {
                     alert("Please upload an image before saving.");
                     return;
                 }
-                setGalleryImages(prev => {
-                    const updated = isEditing
-                        ? prev.map(item => item.id === itemId ? { ...item, ...newData } as GalleryImage : item)
-                        : [...prev, {
-                            ...newData,
+                
+                if (isEditing) {
+                    alert("Edit functionality for gallery images is not available. Try deleting and re-uploading.");
+                } else {
+                    const res = await fetch('/api/v1/nhost/insert-gallery-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
                             src: formData.src,
+                            alt: formData.alt || '',
                             span: formData.span || 'col-span-1 row-span-1',
-                            addedByRole: 'Council',
-                            dateAdded: formData.dateAdded || new Date().toISOString().split('T')[0]
-                        } as GalleryImage];
-                    return updated;
-                });
+                            added_by_role: 'Council',
+                            date_added: new Date().toISOString().split('T')[0],
+                            created_by: user?.id
+                        })
+                    });
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.message || 'Failed to insert gallery image');
+                    refetchAnnouncements();
+                }
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error("Error saving data:", e);
+            alert(e.message || "An error occurred while saving.");
         }
         setIsAddModalOpen(false);
     };
@@ -279,7 +338,7 @@ function CouncilDashboardContent() {
                         <CardContent className="p-6 flex justify-between items-end pb-8 pt-8">
                             <div>
                                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-3">Active Events</p>
-                                <h3 className="text-4xl font-bold text-white leading-none">{events.length.toString().padStart(2, '0')}</h3>
+                                <h3 className="text-4xl font-bold text-white leading-none">{filteredEvents.length.toString().padStart(2, '0')}</h3>
                             </div>
                             <Calendar className="w-8 h-8 text-slate-600 mb-1" />
                         </CardContent>
@@ -291,7 +350,7 @@ function CouncilDashboardContent() {
                         <CardContent className="p-6 flex justify-between items-end relative pb-8 pt-8">
                             <div>
                                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-3">Total Announcements</p>
-                                <h3 className="text-4xl font-bold text-white leading-none">{announcements.length.toString().padStart(2, '0')}</h3>
+                                <h3 className="text-4xl font-bold text-white leading-none">{filteredAnnouncements.length.toString().padStart(2, '0')}</h3>
                             </div>
                             <Megaphone className="w-8 h-8 text-slate-600 mb-1" />
                         </CardContent>
@@ -302,7 +361,7 @@ function CouncilDashboardContent() {
                         <CardContent className="p-6 flex justify-between items-end pb-8 pt-8">
                             <div>
                                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-3">Total Achievements</p>
-                                <h3 className="text-4xl font-bold text-white leading-none">{achievements.length.toString().padStart(2, '0')}</h3>
+                                <h3 className="text-4xl font-bold text-white leading-none">{filteredAchievements.length.toString().padStart(2, '0')}</h3>
                             </div>
                             <Trophy className="w-8 h-8 text-slate-600 mb-1" />
                         </CardContent>
@@ -343,7 +402,7 @@ function CouncilDashboardContent() {
                                 </Button>
                             </div>
                             <div className="grid gap-4">
-                                {announcements.map((item) => (
+                                {filteredAnnouncements.map((item) => (
                                     <Card key={item.id} className="bg-white/5 border-white/10 hover:border-blue-500/50 transition-colors">
                                         <div className="p-6 flex flex-col md:flex-row justify-between gap-4">
                                             <div>
@@ -373,7 +432,7 @@ function CouncilDashboardContent() {
                                         </div>
                                     </Card>
                                 ))}
-                                {announcements.length === 0 && (
+                                {filteredAnnouncements.length === 0 && (
                                     <div className="flex flex-col items-center justify-center text-center mt-8 min-h-[400px]">
                                         <div className="w-16 h-16 rounded-full bg-slate-800/50 flex items-center justify-center mb-6">
                                             <BellOff className="w-8 h-8 text-slate-500" />
@@ -404,7 +463,7 @@ function CouncilDashboardContent() {
                                 </Button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {events.map((event) => (
+                                {filteredEvents.map((event) => (
                                     <Card key={event.id} className="bg-white/5 border-white/10 group relative overflow-hidden">
                                         {event.image ? (
                                             <div className="h-32 w-full relative">
@@ -450,7 +509,7 @@ function CouncilDashboardContent() {
                                         </CardContent>
                                     </Card>
                                 ))}
-                                {events.length === 0 && (
+                                {filteredEvents.length === 0 && (
                                     <div className="flex flex-col items-center justify-center text-center mt-8 min-h-[400px] col-span-1 md:col-span-2">
                                         <div className="w-16 h-16 rounded-full bg-slate-800/50 flex items-center justify-center mb-6">
                                             <Calendar className="w-8 h-8 text-slate-500" />
@@ -481,7 +540,7 @@ function CouncilDashboardContent() {
                                 </Button>
                             </div>
                             <div className="grid gap-4 md:grid-cols-2">
-                                {achievements.map((item) => (
+                                {filteredAchievements.map((item) => (
                                     <Card key={item.id} className="bg-white/5 border-white/10 hover:border-yellow-500/50 transition-colors">
                                         {item.image && (
                                             <div className="h-48 w-full overflow-hidden rounded-t-lg">
@@ -490,7 +549,22 @@ function CouncilDashboardContent() {
                                         )}
                                         <CardContent className="p-6">
                                             <div className="flex justify-between items-start mb-4">
-                                                <Badge variant="outline" className="border-white/20 text-yellow-400">{item.category}</Badge>
+                                                <div className="flex flex-col gap-2">
+                                                    <Badge variant="outline" className="border-white/20 text-yellow-400 w-fit">{item.category}</Badge>
+                                                    {item.tier && (
+                                                        <Badge 
+                                                            variant="secondary" 
+                                                            className={`w-fit text-[10px] font-bold uppercase tracking-wider ${
+                                                                item.tier === 'Gold' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50' :
+                                                                item.tier === 'Silver' ? 'bg-slate-300/20 text-slate-300 border-slate-300/50' :
+                                                                item.tier === 'Bronze' ? 'bg-orange-400/20 text-orange-400 border-orange-400/50' :
+                                                                'bg-cyan-500/20 text-cyan-500 border-cyan-500/50'
+                                                            }`}
+                                                        >
+                                                            {item.tier}
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                                 <div className="flex items-center gap-1 -mt-2 -mr-2 ml-auto z-10 relative">
                                                     <Button variant="ghost" size="sm" onClick={() => openAddModal('achievement', item)} className="text-gray-300 hover:text-white h-8 px-2">
                                                         Edit
@@ -515,7 +589,7 @@ function CouncilDashboardContent() {
                                         </CardContent>
                                     </Card>
                                 ))}
-                                {achievements.length === 0 && (
+                                {filteredAchievements.length === 0 && (
                                     <div className="flex flex-col items-center justify-center text-center mt-8 min-h-[400px] col-span-1 md:col-span-2">
                                         <div className="w-16 h-16 rounded-full bg-slate-800/50 flex items-center justify-center mb-6">
                                             <Trophy className="w-8 h-8 text-slate-500" />
@@ -710,7 +784,7 @@ function CouncilDashboardContent() {
                                 </Button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {galleryImages.map((image) => (
+                                {filteredGallery.map((image) => (
                                     <Card key={image.id} className="bg-white/5 border-white/10 overflow-hidden group">
                                         <div className="relative h-64 overflow-hidden">
                                             <img
@@ -740,7 +814,7 @@ function CouncilDashboardContent() {
                                         </div>
                                     </Card>
                                 ))}
-                                {galleryImages.length === 0 && (
+                                {filteredGallery.length === 0 && (
                                     <div className="flex flex-col items-center justify-center text-center mt-8 min-h-[400px] col-span-full">
                                         <div className="w-16 h-16 rounded-full bg-slate-800/50 flex items-center justify-center mb-6">
                                             <Camera className="w-8 h-8 text-slate-500" />
@@ -854,6 +928,15 @@ function CouncilDashboardContent() {
                                             <option value="Sports">Sports</option>
                                             <option value="Research">Research</option>
                                             <option value="Cultural">Cultural</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-gray-300">Tier</label>
+                                        <select value={formData.tier || 'Bronze'} onChange={e => setFormData({ ...formData, tier: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded-md p-2 text-white focus:border-yellow-500/50 outline-none">
+                                            <option value="Gold">Gold</option>
+                                            <option value="Silver">Silver</option>
+                                            <option value="Bronze">Bronze</option>
+                                            <option value="Finalist">Finalist</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">
@@ -1134,10 +1217,6 @@ function CouncilDashboardContent() {
 
 export default function CouncilDashboard() {
     return (
-        <TicketProvider>
-            <CouncilProvider>
-                <CouncilDashboardContent />
-            </CouncilProvider>
-        </TicketProvider>
+        <CouncilDashboardContent />
     );
 }

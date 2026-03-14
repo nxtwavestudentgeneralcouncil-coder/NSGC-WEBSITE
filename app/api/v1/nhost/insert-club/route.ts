@@ -12,13 +12,18 @@ export async function POST(req: Request) {
         });
 
         const mutation = `
-            mutation InsertClub($name: String!, $slug: String!, $description: String, $logo_url: String, $club_email: String) {
+            mutation InsertClub($name: String!, $slug: String!, $description: String, $logo_url: String, $club_email: String, $category: String, $website: String, $lead: String, $added_by_role: String, $created_by: uuid) {
                 insert_clubs_one(object: {
                     name: $name,
                     slug: $slug,
                     description: $description,
                     logo_url: $logo_url,
-                    club_email: $club_email
+                    club_email: $club_email,
+                    category: $category,
+                    website: $website,
+                    lead: $lead,
+                    added_by_role: $added_by_role,
+                    created_by: $created_by
                 }) {
                     id
                     name
@@ -32,7 +37,12 @@ export async function POST(req: Request) {
             slug: body.slug || body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
             description: body.description || '',
             logo_url: body.logo_url || null,
-            club_email: body.club_email || null
+            club_email: body.club_email ? body.club_email.toLowerCase() : null,
+            category: body.category || 'General',
+            website: body.website || null,
+            lead: body.lead || null,
+            added_by_role: body.added_by_role || 'President',
+            created_by: body.created_by || null
         });
 
         if (error) {

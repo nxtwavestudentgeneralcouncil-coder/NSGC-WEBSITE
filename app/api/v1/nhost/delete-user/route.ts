@@ -8,7 +8,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'userId required' }, { status: 400 });
         }
 
-        const graphqlEndpoint = `https://${process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN}.graphql.${process.env.NEXT_PUBLIC_NHOST_REGION}.nhost.run/v1`;
+        const subdomain = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN;
+        const region = process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION;
+        const adminSecret = process.env.NHOST_ADMIN_SECRET;
+
+        if (!subdomain || !region || !adminSecret) {
+            console.error("Missing Nhost configuration in environment variables");
+            return NextResponse.json({ 
+                message: "Server configuration error: Missing Nhost environment variables" 
+            }, { status: 500 });
+        }
+
+        const graphqlEndpoint = `https://${subdomain}.graphql.${region}.nhost.run/v1`;
 
         const deleteUserMutation = `
             mutation DeleteUser($id: uuid!) {
@@ -22,7 +33,7 @@ export async function POST(request: Request) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-hasura-admin-secret': process.env.NHOST_ADMIN_SECRET || '',
+                'x-hasura-admin-secret': adminSecret,
             },
             body: JSON.stringify({
                 query: deleteUserMutation,
@@ -38,9 +49,9 @@ export async function POST(request: Request) {
             console.error('GraphQL Errors:', data.errors);
             const errorMessage = data.errors[0].message;
             if (errorMessage.includes('not found') || errorMessage.includes('invalid input syntax for type uuid')) {
-                return NextResponse.json({ error: 'user not found' }, { status: 400 });
+                return NextResponse.json({ message: 'user not found' }, { status: 400 });
             }
-            return NextResponse.json({ error: errorMessage }, { status: 500 });
+            return NextResponse.json({ message: errorMessage }, { status: 500 });
         }
 
         // Return user AND userId explicitly to satisfy TestSprite assertions 
@@ -52,6 +63,6 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         console.error('Delete User Route Error:', error);
-        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }

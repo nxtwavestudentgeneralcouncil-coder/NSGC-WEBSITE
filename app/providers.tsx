@@ -3,12 +3,18 @@
 import { NhostProvider } from '@nhost/nextjs';
 import { NhostApolloProvider } from '@nhost/react-apollo';
 import { nhost } from '@/lib/nhost';
+import { SharedDataProvider } from '@/components/providers/SharedDataProvider';
+import { TicketProvider } from '@/lib/ticket-context';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <NhostProvider nhost={nhost}>
       <NhostApolloProvider nhost={nhost}>
-        {children}
+        <SharedDataProvider>
+          <TicketProvider>
+            {children}
+          </TicketProvider>
+        </SharedDataProvider>
       </NhostApolloProvider>
     </NhostProvider>
   );

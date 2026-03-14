@@ -12,13 +12,14 @@ export async function POST(req: Request) {
         });
 
         const mutation = `
-            mutation InsertGalleryImage($src: String!, $alt: String!, $span: String!, $added_by_role: String!, $date_added: date!) {
+            mutation InsertGalleryImage($src: String!, $alt: String!, $span: String!, $added_by_role: String!, $date_added: date!, $created_by: uuid) {
                 insert_gallery_images_one(object: {
                     src: $src,
                     alt: $alt,
                     span: $span,
                     added_by_role: $added_by_role,
-                    date_added: $date_added
+                    date_added: $date_added,
+                    created_by: $created_by
                 }) {
                     id
                 }
@@ -30,7 +31,8 @@ export async function POST(req: Request) {
             alt: body.alt || '',
             span: body.span || 'col-span-1 row-span-1',
             added_by_role: body.added_by_role || 'President',
-            date_added: body.date_added || new Date().toISOString().split('T')[0]
+            date_added: body.date_added || new Date().toISOString().split('T')[0],
+            created_by: body.created_by || null
         });
 
         if (error) {

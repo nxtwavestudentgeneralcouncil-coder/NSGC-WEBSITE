@@ -8,17 +8,28 @@ import { Badge } from '@/components/ui/badge';
 import { GlassModal } from '@/components/ui/glass-modal';
 import { Vote, CheckCircle, Shield, Clock, Users, ArrowRight, User, Info } from 'lucide-react';
 import { useSharedData, Election } from '@/hooks/useSharedData';
-function getRemainingTime(dateString?: string, timeString?: string) {
-    if (!dateString) return 'TBD';
-    const targetDate = new Date(`${dateString}T${timeString || '23:59:59'}`);
+function getRemainingTime(election: Election) {
     const now = new Date();
+    let targetDate: Date;
+
+    if (election.status === 'Upcoming') {
+        const start = election.startDate || election.date;
+        if (!start) return 'TBD';
+        targetDate = new Date(`${start}T${election.startTime || '00:00'}`);
+    } else if (election.status === 'Ongoing') {
+        const end = election.endDate || election.date;
+        if (!end) return 'TBD';
+        targetDate = new Date(`${end}T${election.endTime || '23:59'}`);
+    } else {
+        return 'ENDED';
+    }
+
     const diff = targetDate.getTime() - now.getTime();
-    
-    if (diff <= 0) return 'ENDED';
-    
+    if (diff <= 0) return election.status === 'Upcoming' ? 'STARTING...' : 'ENDING...';
+
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (hours > 48) {
         return `${Math.floor(hours / 24)} DAYS`;
     }
@@ -27,37 +38,55 @@ function getRemainingTime(dateString?: string, timeString?: string) {
 }
 
 export default function ElectionsPage() {
-    const { elections, setElections } = useSharedData();
+    const { elections, setElections, refetchElections } = useSharedData();
     const [userVotes, setUserVotes] = useState<string[]>([]);
     const [selectedElection, setSelectedElection] = useState<Election | null>(null);
     const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null);
+    const [isVoting, setIsVoting] = useState(false);
 
     useEffect(() => {
-        // Nhost voting integration pending
+        const savedVotes = localStorage.getItem('nsgc_user_votes');
+        if (savedVotes) {
+            try {
+                setUserVotes(JSON.parse(savedVotes));
+            } catch (e) {
+                console.error("Failed to parse saved votes", e);
+            }
+        }
     }, []);
 
-    const handleVote = () => {
-        if (!selectedElection || !selectedCandidate) return;
+    const handleVote = async () => {
+        if (!selectedElection || !selectedCandidate || isVoting) return;
 
-        // update election votes
-        setElections(prev => prev.map(e => {
-            if (e.id === selectedElection.id) {
-                return {
-                    ...e,
-                    candidates: e.candidates.map(c =>
-                        c.id === selectedCandidate ? { ...c, votes: (c.votes || 0) + 1 } : c
-                    )
-                };
+        setIsVoting(true);
+        try {
+            const res = await fetch('/api/v1/nhost/cast-vote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ candidateId: selectedCandidate })
+            });
+
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.message || 'Failed to cast vote');
             }
-            return e;
-        }));
 
-        // save user vote locally in state until Nhost Mutation is built
-        const newVotes = [...userVotes, selectedElection.id];
-        setUserVotes(newVotes);
+            // Save user vote locally
+            const newVotes = [...userVotes, selectedElection.id];
+            setUserVotes(newVotes);
+            localStorage.setItem('nsgc_user_votes', JSON.stringify(newVotes));
 
-        setSelectedElection(null);
-        setSelectedCandidate(null);
+            // Refetch data to get updated counts
+            await refetchElections();
+
+            setSelectedElection(null);
+            setSelectedCandidate(null);
+        } catch (err) {
+            console.error("Voting error:", err);
+            alert("Failed to cast vote. Please try again.");
+        } finally {
+            setIsVoting(false);
+        }
     };
 
     return (
@@ -103,9 +132,18 @@ export default function ElectionsPage() {
                                             <Badge className="bg-cyan-500/10 text-cyan-400 border-none px-2.5 py-1 text-[10px] font-bold tracking-widest rounded-md uppercase">
                                                 {election.title}
                                             </Badge>
-                                            <div className="flex items-center gap-1.5 animate-pulse">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                                                <span className="text-[10px] font-bold text-red-500/80 tracking-widest uppercase">LIVE</span>
+                                            <div className="flex items-center gap-1.5">
+                                                <div className={`w-1.5 h-1.5 rounded-full ${
+                                                    election.status === 'Ongoing' ? 'bg-red-500 animate-pulse' : 
+                                                    election.status === 'Upcoming' ? 'bg-cyan-500' : 'bg-slate-500'
+                                                }`} />
+                                                <span className={`text-[10px] font-bold tracking-widest uppercase ${
+                                                    election.status === 'Ongoing' ? 'text-red-500/80 animate-pulse' : 
+                                                    election.status === 'Upcoming' ? 'text-cyan-500/80' : 'text-slate-500/80'
+                                                }`}>
+                                                    {election.status === 'Ongoing' ? 'LIVE' : 
+                                                     election.status === 'Upcoming' ? 'UPCOMING' : 'ENDED'}
+                                                </span>
                                             </div>
                                         </div>
 
@@ -120,7 +158,7 @@ export default function ElectionsPage() {
                                             <div className="flex -space-x-4 overflow-hidden">
                                                 {election.candidates.map((candidate, i) => (
                                                     <div 
-                                                        key={candidate.id} 
+                                                        key={candidate.id || `preview-${i}`} 
                                                         className="inline-block h-10 w-10 rounded-full ring-2 ring-[#0B1224] bg-slate-800 overflow-hidden relative"
                                                         style={{ zIndex: 10 - i }}
                                                     >
@@ -146,33 +184,77 @@ export default function ElectionsPage() {
                                             <div className="flex justify-between items-center text-[10px] font-bold tracking-widest uppercase">
                                                 <span className="text-slate-500">
                                                     {election.status === 'Upcoming' ? 'VOTING BEGINS IN' :
-                                                     election.status === 'Ongoing' ? 'VOTING ENDS IN' : 'ELECTION'}
+                                                     election.status === 'Ongoing' ? (hasVoted ? 'LIVE RESULTS' : 'VOTING ENDS IN') : 'ELECTION ENDED'}
                                                 </span>
                                                 <span className="text-cyan-400">
-                                                    {election.status === 'Upcoming' ? getRemainingTime(election.startDate, election.startTime) :
-                                                     election.status === 'Ongoing' ? getRemainingTime(election.endDate, election.endTime) : 'ENDED'}
+                                                    {hasVoted && election.status === 'Ongoing' ? (
+                                                        (() => {
+                                                            const totalVotes = election.candidates.reduce((sum: number, c: any) => sum + (c.votes || 0), 0);
+                                                            return `${totalVotes} VOTES CAST`;
+                                                        })()
+                                                    ) : (election.status === 'Completed' || election.status === 'Upcoming') ? '' : getRemainingTime(election)}
                                                 </span>
                                             </div>
                                             <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                                                <motion.div 
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: index === 0 ? '75%' : index === 1 ? '45%' : '85%' }}
-                                                    className="h-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
-                                                />
+                                                {(() => {
+                                                    const totalVotes = election.candidates.reduce((sum: number, c: any) => sum + (c.votes || 0), 0);
+                                                    const leadingCandidate = [...election.candidates].sort((a, b) => (b.votes || 0) - (a.votes || 0))[0];
+                                                    const leadPercentage = totalVotes > 0 ? Math.round(((leadingCandidate?.votes || 0) / totalVotes) * 100) : 0;
+                                                    
+                                                    return (
+                                                        <motion.div 
+                                                            initial={{ width: 0 }}
+                                                            animate={{ width: `${leadPercentage || 10}%` }}
+                                                            className="h-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+                                                        />
+                                                    );
+                                                })()}
                                             </div>
+                                            {(hasVoted && election.status === 'Ongoing') && (
+                                                <div className="flex justify-between items-center text-[9px] font-bold text-slate-500 mt-1 uppercase tracking-tighter">
+                                                    <span>LEAD PERFORMANCE</span>
+                                                    <span className="text-cyan-500/80">
+                                                        {(() => {
+                                                            const totalVotes = election.candidates.reduce((sum: number, c: any) => sum + (c.votes || 0), 0);
+                                                            const leadingCandidate = [...election.candidates].sort((a, b) => (b.votes || 0) - (a.votes || 0))[0];
+                                                            const leadPercentage = totalVotes > 0 ? Math.round(((leadingCandidate?.votes || 0) / totalVotes) * 100) : 0;
+                                                            return `${leadPercentage}% STAKE`;
+                                                        })()}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Action Button */}
                                         <Button 
-                                            onClick={() => setSelectedElection(election)}
+                                            onClick={() => {
+                                                if (election.status !== 'Completed') {
+                                                    setSelectedElection(election);
+                                                }
+                                            }}
+                                            disabled={election.status === 'Completed' && !hasVoted}
                                             className={`w-full font-bold h-12 shadow-[0_0_20px_rgba(6,182,212,0.2)] transition-all flex items-center justify-center gap-2 group/btn ${
-                                                hasVoted 
+                                                election.status === 'Completed'
+                                                ? hasVoted 
+                                                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 cursor-default'
+                                                    : 'bg-black text-slate-600 border border-white/5 opacity-50 cursor-not-allowed'
+                                                : hasVoted 
                                                 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20' 
+                                                : election.status === 'Upcoming'
+                                                ? 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20 hover:bg-cyan-500/20'
                                                 : 'bg-cyan-500 hover:bg-cyan-400 text-black'
                                             }`}
                                         >
-                                            {hasVoted ? (
+                                            {election.status === 'Completed' ? (
+                                                hasVoted ? (
+                                                    <><CheckCircle className="w-4 h-4" /> VOTED</>
+                                                ) : (
+                                                    <><Vote className="w-4 h-4" /> VOTE</>
+                                                )
+                                            ) : hasVoted ? (
                                                 <><CheckCircle className="w-4 h-4" /> VOTED</>
+                                            ) : election.status === 'Upcoming' ? (
+                                                <><Info className="w-4 h-4" /> VIEW DETAILS</>
                                             ) : (
                                                 <><Vote className="w-4 h-4 group-hover/btn:scale-110 transition-transform" /> VOTE NOW</>
                                             )}
@@ -225,10 +307,14 @@ export default function ElectionsPage() {
                             {selectedElection?.status === 'Ongoing' && !userVotes.includes(selectedElection.id) && (
                                 <Button
                                     onClick={handleVote}
-                                    disabled={!selectedCandidate}
+                                    disabled={!selectedCandidate || isVoting}
                                     className="bg-cyan-500 text-black hover:bg-cyan-400 font-bold h-11 px-8 shadow-[0_0_15px_rgba(6,182,212,0.3)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                 >
-                                    <Vote className="w-4 h-4 mr-2" /> CONFIRM VOTE
+                                    {isVoting ? (
+                                        <><div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin mr-2" /> VOTING...</>
+                                    ) : (
+                                        <><Vote className="w-4 h-4 mr-2" /> CONFIRM VOTE</>
+                                    )}
                                 </Button>
                             )}
                         </div>
@@ -244,13 +330,17 @@ export default function ElectionsPage() {
                             </div>
                         ) : (
                             <p className="text-slate-400 text-sm italic">
-                                {selectedElection?.status === 'Upcoming' ? "Voting hasn't started yet. View candidate profiles below." : "Election cycle concluded. Review the results below."}
+                                {selectedElection?.status === 'Upcoming' 
+                                    ? "Voting hasn't started yet. View candidate profiles below." 
+                                    : userVotes.includes(selectedElection?.id || '') 
+                                        ? "You have already cast your vote. Review the live results below."
+                                        : "Election cycle concluded. Review the results below."}
                             </p>
                         )}
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {selectedElection?.candidates && selectedElection.candidates.length > 0 ? (
-                                selectedElection?.candidates.map((candidate) => {
+                                selectedElection?.candidates.map((candidate, idx) => {
                                     const totalVotes = selectedElection.candidates.reduce((sum, c) => sum + (c.votes || 0), 0);
                                     const percentage = totalVotes > 0 ? Math.round(((candidate.votes || 0) / totalVotes) * 100) : 0;
                                     const showResults = userVotes.includes(selectedElection.id) || selectedElection.status === 'Completed';
@@ -259,7 +349,7 @@ export default function ElectionsPage() {
 
                                     return (
                                         <div
-                                            key={candidate.id}
+                                            key={candidate.id || `modal-${idx}`}
                                             onClick={() => { if (canVote) setSelectedCandidate(candidate.id); }}
                                             className={`flex flex-col items-center text-center p-8 rounded-2xl border transition-all relative overflow-hidden group ${canVote ? 'cursor-pointer' : ''} ${isSelected
                                                 ? 'bg-cyan-500/10 border-cyan-500/40 shadow-[0_0_25px_rgba(6,182,212,0.15)]'

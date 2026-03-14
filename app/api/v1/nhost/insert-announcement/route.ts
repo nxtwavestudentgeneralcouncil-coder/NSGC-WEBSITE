@@ -12,12 +12,16 @@ export async function POST(req: Request) {
         });
 
         const mutation = `
-            mutation InsertAnnouncement($title: String!, $content: String!, $category: String!) {
+            mutation InsertAnnouncement($title: String!, $content: String!, $category: String!, $priority: String, $link: String, $created_by: uuid, $added_by_role: String) {
                 insert_announcements_one(object: {
                     title: $title,
                     content: $content,
                     category: $category,
-                    is_active: true
+                    priority: $priority,
+                    link: $link,
+                    is_active: true,
+                    created_by: $created_by,
+                    added_by_role: $added_by_role
                 }) {
                     id
                     title
@@ -28,7 +32,11 @@ export async function POST(req: Request) {
         const { data, error } = await nhost.graphql.request(mutation, {
             title: body.title,
             content: body.content,
-            category: body.category || 'General'
+            category: body.category || 'General',
+            priority: body.priority || 'Low',
+            link: body.link || null,
+            created_by: body.created_by || null,
+            added_by_role: body.added_by_role || 'Council'
         });
 
         if (error) {
