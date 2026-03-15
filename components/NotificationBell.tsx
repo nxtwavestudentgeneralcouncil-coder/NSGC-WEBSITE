@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSubscription, useMutation, gql } from '@apollo/client';
 import { useUserData } from '@nhost/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -47,39 +47,66 @@ function NotificationBellContent() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Subscriptions & Mutations
-  const { data, loading, error } = useSubscription(GET_NOTIFICATIONS_SUB, {
-    variables: { userId: user?.id },
-    skip: !user?.id,
-  });
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/v1/nhost/get-notifications?userId=${user.id}`);
+      if (!res.ok) throw new Error('Failed to fetch notifications');
+      const data = await res.json();
+      setNotifications(data);
+      setError(null);
+    } catch (err: any) {
+      console.error('[NotificationBell] Error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchNotifications();
+    // Poll every 30 seconds as a simpler alternative to subscriptions since they are restricted
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
   const [markAsRead] = useMutation(MARK_AS_READ_MUTATION);
 
-  const rawRecipients = data?.notification_recipients || [];
-  const unreadCount = rawRecipients.filter((n: any) => !n.is_read).length;
+  const unreadCount = notifications.filter((n: any) => !n.is_read).length;
 
   const handleNotificationClick = async (recipient: any) => {
     if (!recipient.is_read) {
       try {
         await markAsRead({ variables: { id: recipient.id } });
+        // Optimistically update local state
+        setNotifications(prev => prev.map(n => n.id === recipient.id ? { ...n, is_read: true } : n));
       } catch (err) {
         console.error("Failed to mark notification as read", err);
       }
     }
     
     setIsOpen(false);
-    if (recipient.notifications?.link) {
-      router.push(recipient.notifications.link);
+    if (recipient.notification?.link) {
+      router.push(recipient.notification.link);
     }
   };
 
   if (!user) return null;
 
   return (
-    <div className="relative z-50">
+    <div className="relative" style={{ zIndex: 9999 }}>
       {/* Bell Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={(e) => {
+          e.stopPropagation();
+          console.log('[NotificationBell] Toggling dropdown. Current state:', !isOpen);
+          setIsOpen(!isOpen);
+        }}
         className="relative p-2 rounded-full hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500"
       >
         <Bell className="w-6 h-6 text-gray-300" />
@@ -95,25 +122,31 @@ function NotificationBellContent() {
       {/* Dropdown Menu */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div 
-            key="notification-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40" 
-            onClick={() => setIsOpen(false)} 
-          />
-        )}
-        {isOpen && (
-          <motion.div
-            key="notification-dropdown"
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="absolute right-0 mt-2 w-80 sm:w-96 bg-gray-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 text-white"
-          >
+          <>
+            <motion.div 
+              key="notification-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-transparent cursor-default" 
+              style={{ zIndex: 9998 }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('[NotificationBell] Closing via backdrop click');
+                setIsOpen(false);
+              }} 
+            />
+            <motion.div
+              key="notification-dropdown"
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="absolute bottom-full left-0 mb-4 w-80 sm:w-96 bg-gray-900 border border-white/10 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden text-white"
+              style={{ zIndex: 9999 }}
+            >
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-gray-800/80">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   Notifications
@@ -139,15 +172,15 @@ function NotificationBellContent() {
                   </div>
                 )}
 
-                {!loading && !error && rawRecipients.length === 0 && (
+                {!loading && !error && notifications.length === 0 && (
                   <div className="p-8 text-center text-gray-400">
                     <Bell className="w-10 h-10 mx-auto text-gray-600 mb-3" />
                     <p className="text-sm">You have no notifications yet.</p>
                   </div>
                 )}
 
-                {!loading && !error && rawRecipients.map((recipient: any) => {
-                  const notification = recipient.notifications;
+                {!loading && !error && notifications.map((recipient: any) => {
+                  const notification = recipient.notification;
                   if (!notification) return null; // Fallback if data is missing
 
                   return (
@@ -186,6 +219,7 @@ function NotificationBellContent() {
                 })}
               </div>
             </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

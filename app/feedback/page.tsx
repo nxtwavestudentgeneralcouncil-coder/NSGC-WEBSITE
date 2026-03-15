@@ -83,7 +83,7 @@ export default function FeedbackPage() {
                                                         {poll.question}
                                                     </h3>
                                                     <Badge className="bg-cyan-500/20 text-cyan-400 border-none px-2 py-0.5 text-[10px] font-bold tracking-wider rounded">
-                                                        {poll.status.toUpperCase()}
+                                                        {poll.status?.toUpperCase() || 'UNKNOWN'}
                                                     </Badge>
                                                 </div>
                                                 <div className="space-y-3">
@@ -161,8 +161,8 @@ export default function FeedbackPage() {
                                                             {survey.description}
                                                         </p>
                                                         <div className="flex items-center gap-4 pt-2">
-                                                            <Badge className="bg-slate-800 text-slate-400 border-none px-2 py-0 text-[10px] font-bold tracking-wider rounded h-5">
-                                                                {survey.status.toUpperCase()}
+                                                            <Badge className="bg-slate-800 text-slate-400 border-none px-2 py-0.5 text-[10px] font-bold tracking-wider rounded h-5">
+                                                                {survey.status?.toUpperCase() || 'UNKNOWN'}
                                                             </Badge>
                                                             {survey.link && (
                                                                 <button 
