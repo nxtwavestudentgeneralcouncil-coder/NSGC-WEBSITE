@@ -36,14 +36,18 @@ export default function HostelComplaintsDashboard() {
             const roles = (user as any).roles || [];
             const defaultRole = user.defaultRole || '';
             
-            // Authorization for hostel-complaints role, plus admin/president
+            // Authorization for hostel-complaints / hostel_complaints role, plus admin/president
             if (
                 roles.includes('hostel-complaints') || 
+                roles.includes('hostel_complaints') || 
                 defaultRole === 'hostel-complaints' || 
+                defaultRole === 'hostel_complaints' || 
                 roles.includes('admin') || 
                 roles.includes('president') || 
+                roles.includes('developer') ||
                 defaultRole === 'admin' || 
-                defaultRole === 'president'
+                defaultRole === 'president' ||
+                defaultRole === 'developer'
             ) {
                 setIsAuthorized(true);
             } else {

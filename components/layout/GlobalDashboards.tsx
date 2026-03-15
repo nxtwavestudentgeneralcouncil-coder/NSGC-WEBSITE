@@ -37,7 +37,7 @@ export function GlobalDashboards() {
     const isCouncilMember = hasRole('admin') || hasRole('developer') || members.some(m => m.email && user?.email && m.email.toLowerCase() === user.email.toLowerCase());
     const isPresident = hasRole('president') || hasRole('admin') || hasRole('developer');
     const isAdminOrDev = hasRole('admin') || hasRole('developer');
-    const isHostelWarden = hasRole('hostel-complaints') || hasRole('admin') || hasRole('developer') || hasRole('president');
+    const isHostelWarden = hasRole('hostel-complaints') || hasRole('hostel_complaints') || hasRole('admin') || hasRole('developer') || hasRole('president');
 
     return (
         <div className="fixed top-4 right-4 md:top-6 md:right-6 z-[9999] flex items-center gap-2 pointer-events-auto">

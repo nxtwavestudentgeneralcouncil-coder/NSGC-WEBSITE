@@ -24,7 +24,8 @@ const AVAILABLE_ROLES = [
     { id: 'admin', label: 'Admin' },
     { id: 'president', label: 'President' },
     { id: 'council_member', label: 'Council' },
-    { id: 'club_head', label: 'Club Manager' }
+    { id: 'club_head', label: 'Club Manager' },
+    { id: 'hostel_complaints', label: 'Hostel Warden' }
 ];
 
 export default function AdminDashboard() {
@@ -206,6 +207,7 @@ export default function AdminDashboard() {
                                  : formData.roles.includes('president') ? 'president' 
                                  : formData.roles.includes('council_member') ? 'council_member'
                                  : formData.roles.includes('club_head') ? 'club_head'
+                                 : formData.roles.includes('hostel_complaints') ? 'hostel_complaints'
                                  : 'student';
 
             // We proxy this through our internal Next.js API to bypass complex Hasura user-table rules securely
