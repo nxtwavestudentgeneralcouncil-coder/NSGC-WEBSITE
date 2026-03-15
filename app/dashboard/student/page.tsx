@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, ShoppingBag, BarChart2, Bell, Clock, Flag, Users, BellOff, Edit2, ListX, ChevronRight, PieChart, TerminalSquare } from 'lucide-react';
+import { FileText, ShoppingBag, BarChart2, Bell, Clock, Flag, Users, BellOff, Edit2, ListX, ChevronRight, PieChart, TerminalSquare, UtensilsCrossed, X, ChevronDown, Send, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useTickets } from '@/lib/ticket-context';
 import { useSharedData } from '@/hooks/useSharedData';
@@ -16,7 +16,103 @@ import { useClubData } from '@/hooks/useClubData';
 function StudentDashboardContent() {
     const router = useRouter();
     const [isAuthorized, setIsAuthorized] = useState(false);
-    
+    const [messMenuOpen, setMessMenuOpen] = useState(false);
+    const [messMenuData, setMessMenuData] = useState<{day: string; meals: Record<string, string>}[]>([]);
+    const [messMenuLoading, setMessMenuLoading] = useState(false);
+    const [changeRequestOpen, setChangeRequestOpen] = useState(false);
+    const [changeRequestDay, setChangeRequestDay] = useState('');
+    const [changeRequestMeal, setChangeRequestMeal] = useState('');
+    const [changeRequestSuggestion, setChangeRequestSuggestion] = useState('');
+    const [changeRequestSubmitted, setChangeRequestSubmitted] = useState(false);
+    const [changeRequestSubmitting, setChangeRequestSubmitting] = useState(false);
+    const [myMenuRequests, setMyMenuRequests] = useState<any[]>([]);
+    const [menuRequestsLoading, setMenuRequestsLoading] = useState(false);
+
+    // Fetch mess menu from DB
+    const fetchMessMenu = async () => {
+        setMessMenuLoading(true);
+        try {
+            const res = await fetch('/api/v1/nhost/get-mess-menu');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                // Transform flat DB rows into grouped day format
+                const dayMap: Record<string, Record<string, string>> = {};
+                data.forEach((item: any) => {
+                    if (!dayMap[item.day]) dayMap[item.day] = {};
+                    dayMap[item.day][item.meal_type] = item.items;
+                });
+                const DAYS_ORDER = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                setMessMenuData(DAYS_ORDER.filter(d => dayMap[d]).map(d => ({ day: d, meals: dayMap[d] })));
+            }
+        } catch (err) {
+            console.error('Failed to fetch mess menu:', err);
+        } finally {
+            setMessMenuLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (messMenuOpen) fetchMessMenu();
+    }, [messMenuOpen]);
+
+    const getExistingItem = () => {
+        if (!changeRequestDay || !changeRequestMeal) return '';
+        const dayData = messMenuData.find(d => d.day === changeRequestDay);
+        if (!dayData) return '';
+        return dayData.meals[changeRequestMeal] || '';
+    };
+
+    const handleChangeRequestSubmit = async () => {
+        if (!changeRequestDay || !changeRequestMeal || !changeRequestSuggestion.trim()) return;
+        setChangeRequestSubmitting(true);
+        try {
+            await fetch('/api/v1/nhost/insert-mess-change-request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    student_id: user?.id,
+                    student_name: user?.displayName,
+                    student_email: user?.email,
+                    day: changeRequestDay,
+                    meal_type: changeRequestMeal,
+                    current_item: getExistingItem(),
+                    suggested_item: changeRequestSuggestion.trim()
+                })
+            });
+            setChangeRequestSubmitted(true);
+            fetchMyMenuRequests(); // Refresh the requests list
+            setTimeout(() => {
+                setChangeRequestSubmitted(false);
+                setChangeRequestOpen(false);
+                setChangeRequestDay('');
+                setChangeRequestMeal('');
+                setChangeRequestSuggestion('');
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to submit change request:', err);
+        } finally {
+            setChangeRequestSubmitting(false);
+        }
+    };
+
+    // Fetch student's own menu change requests
+    const fetchMyMenuRequests = async () => {
+        if (!user?.email) return;
+        setMenuRequestsLoading(true);
+        try {
+            const res = await fetch('/api/v1/nhost/get-mess-change-requests');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setMyMenuRequests(data.filter((r: any) => r.student_email === user.email));
+            }
+        } catch (err) {
+            console.error('Failed to fetch menu requests:', err);
+        } finally {
+            setMenuRequestsLoading(false);
+        }
+    };
+
+
     // Nhost Integration
     const { isAuthenticated, isLoading } = useAuthenticationStatus();
     const user = useUserData();
@@ -34,6 +130,7 @@ function StudentDashboardContent() {
             
             if (roles.includes('student') || defaultRole === 'student' || (!roles.includes('president') && !roles.includes('admin') && !roles.includes('council_member') && !roles.includes('club_head'))) {
                 setIsAuthorized(true);
+                fetchMyMenuRequests();
             } else if (roles.includes('president') || defaultRole === 'president') {
                 router.push('/dashboard/president');
             } else if (roles.includes('admin') || defaultRole === 'admin') {
@@ -240,6 +337,58 @@ function StudentDashboardContent() {
                             </div>
                         </div>
 
+                        {/* 3. Your Menu Change Requests */}
+                        <div>
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <UtensilsCrossed className="w-6 h-6 text-[#10b981]" />
+                                    <h2 className="text-[22px] font-bold tracking-tight">Your Menu Requests</h2>
+                                </div>
+                            </div>
+
+                            <div className={`min-h-[160px] rounded-[24px] overflow-hidden ${myMenuRequests.length > 0 ? 'bg-[#111625]' : 'bg-[#111625]/50 border-2 border-dashed border-white/5 flex flex-col items-center justify-center p-8'}`}>
+                                {menuRequestsLoading ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <div className="w-5 h-5 border-2 border-[#10b981] border-t-transparent rounded-full animate-spin" />
+                                        <span className="ml-3 text-sm text-slate-400">Loading...</span>
+                                    </div>
+                                ) : myMenuRequests.length > 0 ? (
+                                    <div className="p-6 space-y-4">
+                                        {myMenuRequests.slice(0, 5).map((req: any) => (
+                                            <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-xl bg-[#1A2133] hover:bg-[#1f2937] transition-colors border border-white/5 gap-4">
+                                                <div>
+                                                    <h4 className="font-bold text-[15px] text-white leading-tight mb-1">
+                                                        {req.day} — <span className="capitalize">{req.meal_type}</span>
+                                                    </h4>
+                                                    <div className="text-xs text-[#94a3b8] mb-1">
+                                                        <span className="text-[#64748B]">Current:</span> {req.current_item || '—'}
+                                                    </div>
+                                                    <div className="text-xs text-white">
+                                                        <span className="text-[#10b981] font-bold">Suggested:</span> {req.suggested_item}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-[11px] text-[#64748B] font-mono mt-1.5">
+                                                        <span>{new Date(req.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                                    </div>
+                                                </div>
+                                                <Badge variant="outline" className={`rounded-full px-3 py-1 font-bold tracking-widest text-[10px] uppercase border flex-shrink-0 ${
+                                                    req.status === 'approved' ? 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/30' :
+                                                    req.status === 'rejected' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
+                                                    'bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/30'
+                                                }`}>
+                                                    {req.status}
+                                                </Badge>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-[#64748B] space-y-3">
+                                        <UtensilsCrossed className="w-8 h-8 mx-auto opacity-50" />
+                                        <p className="italic text-[15px]">No menu change requests submitted yet.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                     </div>
 
                     {/* Right Column: Quick Actions & Links (takes 4 cols) */}
@@ -305,6 +454,19 @@ function StudentDashboardContent() {
                                         </div>
                                     </div>
                                 </Link>
+
+                                {/* Action 4: Mess Menu */}
+                                <div onClick={() => setMessMenuOpen(true)} className="block cursor-pointer">
+                                    <div className="group bg-[#1A2133] hover:bg-[#1f2937] border border-white/5 rounded-[16px] p-4 transition-all duration-300 flex items-center gap-5">
+                                        <div className="w-12 h-12 rounded-xl bg-[#10b981]/15 flex items-center justify-center flex-shrink-0 group-hover:bg-[#10b981]/25 transition-colors">
+                                            <UtensilsCrossed className="w-5 h-5 text-[#10b981]" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-white font-bold text-[15px] tracking-wide mb-1">MESS MENU</h4>
+                                            <p className="text-[11px] text-[#64748B] font-bold tracking-wider uppercase">Weekly meal schedule</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -335,6 +497,190 @@ function StudentDashboardContent() {
                 </div>
 
             </div>
+
+            {/* Mess Menu Modal */}
+            {messMenuOpen && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setMessMenuOpen(false)}>
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="bg-[#0F172A] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden shadow-2xl"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-white/10">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-[#10b981]/15 flex items-center justify-center">
+                                    <UtensilsCrossed className="w-5 h-5 text-[#10b981]" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold text-white tracking-tight">Weekly Mess Menu</h2>
+                                    <p className="text-xs text-[#64748B] font-mono uppercase tracking-widest">Sunday — Saturday</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => { setChangeRequestOpen(!changeRequestOpen); setChangeRequestSubmitted(false); }}
+                                    className="px-3 py-2 rounded-lg bg-[#f59e0b]/10 hover:bg-[#f59e0b]/20 border border-[#f59e0b]/20 text-[#f59e0b] text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5"
+                                >
+                                    <Edit2 className="w-3 h-3" />
+                                    Request Change
+                                </button>
+                                <button onClick={() => setMessMenuOpen(false)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                                    <X className="w-4 h-4 text-gray-400" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Change Request Form */}
+                        {changeRequestOpen && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className="border-b border-white/10 overflow-hidden"
+                            >
+                                {changeRequestSubmitted ? (
+                                    <div className="p-6 flex flex-col items-center gap-3">
+                                        <div className="w-12 h-12 rounded-full bg-[#10b981]/15 flex items-center justify-center">
+                                            <CheckCircle2 className="w-6 h-6 text-[#10b981]" />
+                                        </div>
+                                        <p className="text-sm font-bold text-[#10b981]">Request Submitted Successfully!</p>
+                                        <p className="text-xs text-[#64748B]">Your suggestion has been sent to the mess committee.</p>
+                                    </div>
+                                ) : (
+                                    <div className="p-6 space-y-4">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Edit2 className="w-4 h-4 text-[#f59e0b]" />
+                                            <h3 className="text-sm font-bold text-white uppercase tracking-wide">Request Menu Change</h3>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {/* Day Dropdown */}
+                                            <div>
+                                                <label className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest mb-2 block">Select Day</label>
+                                                <div className="relative">
+                                                    <select
+                                                        value={changeRequestDay}
+                                                        onChange={e => { setChangeRequestDay(e.target.value); setChangeRequestMeal(''); }}
+                                                        className="w-full bg-[#1A2133] border border-white/10 rounded-xl px-4 py-3 text-sm text-white appearance-none cursor-pointer focus:outline-none focus:border-[#f59e0b]/50 focus:ring-1 focus:ring-[#f59e0b]/20 transition-all"
+                                                    >
+                                                        <option value="" className="bg-[#1A2133]">— Choose a day —</option>
+                                                        {messMenuData.map((d: {day: string; meals: Record<string, string>}) => (
+                                                            <option key={d.day} value={d.day} className="bg-[#1A2133]">{d.day}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B] pointer-events-none" />
+                                                </div>
+                                            </div>
+
+                                            {/* Meal Type Dropdown */}
+                                            <div>
+                                                <label className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest mb-2 block">Select Meal</label>
+                                                <div className="relative">
+                                                    <select
+                                                        value={changeRequestMeal}
+                                                        onChange={e => setChangeRequestMeal(e.target.value)}
+                                                        disabled={!changeRequestDay}
+                                                        className="w-full bg-[#1A2133] border border-white/10 rounded-xl px-4 py-3 text-sm text-white appearance-none cursor-pointer focus:outline-none focus:border-[#f59e0b]/50 focus:ring-1 focus:ring-[#f59e0b]/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                                    >
+                                                        <option value="" className="bg-[#1A2133]">— Choose meal type —</option>
+                                                        <option value="breakfast" className="bg-[#1A2133]">Breakfast</option>
+                                                        <option value="lunch" className="bg-[#1A2133]">Lunch</option>
+                                                        <option value="snacks" className="bg-[#1A2133]">Snacks</option>
+                                                        <option value="dinner" className="bg-[#1A2133]">Dinner</option>
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B] pointer-events-none" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Existing Item Display */}
+                                        {changeRequestDay && changeRequestMeal && (
+                                            <div className="bg-black/30 rounded-xl p-4 border border-white/5">
+                                                <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest mb-1.5">Current Item — {changeRequestDay}, {changeRequestMeal}</p>
+                                                <p className="text-sm text-[#94a3b8]">{getExistingItem()}</p>
+                                            </div>
+                                        )}
+
+                                        {/* Suggested Item Input */}
+                                        {changeRequestDay && changeRequestMeal && (
+                                            <div>
+                                                <label className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest mb-2 block">Your Suggested Item</label>
+                                                <textarea
+                                                    value={changeRequestSuggestion}
+                                                    onChange={e => setChangeRequestSuggestion(e.target.value)}
+                                                    placeholder="E.g., Replace Poori with Paratha..."
+                                                    rows={2}
+                                                    className="w-full bg-[#1A2133] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#475569] focus:outline-none focus:border-[#f59e0b]/50 focus:ring-1 focus:ring-[#f59e0b]/20 transition-all resize-none"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* Submit Button */}
+                                        {changeRequestDay && changeRequestMeal && (
+                                            <button
+                                                onClick={handleChangeRequestSubmit}
+                                                disabled={!changeRequestSuggestion.trim()}
+                                                className="w-full bg-[#f59e0b] hover:bg-[#f59e0b]/90 disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold text-xs uppercase tracking-widest py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                                            >
+                                                <Send className="w-3.5 h-3.5" />
+                                                Submit Request
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+
+                        {/* Menu Content */}
+                        <div className="overflow-y-auto max-h-[calc(85vh-80px)] p-6">
+                            {messMenuLoading ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <div className="w-6 h-6 border-2 border-[#10b981] border-t-transparent rounded-full animate-spin" />
+                                    <span className="ml-3 text-sm text-slate-400">Loading menu...</span>
+                                </div>
+                            ) : messMenuData.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <UtensilsCrossed className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+                                    <p className="text-sm text-slate-400">No menu available yet</p>
+                                    <p className="text-xs text-[#475569] mt-1">The mess admin has not added the menu to the system.</p>
+                                </div>
+                            ) : (
+                            <div className="space-y-4">
+                                {messMenuData.map((item: {day: string; meals: Record<string, string>}) => {
+                                    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+                                    const isToday = item.day === today;
+                                    return (
+                                        <div key={item.day} className={`rounded-xl border transition-all ${isToday ? 'bg-[#10b981]/10 border-[#10b981]/30 ring-1 ring-[#10b981]/20' : 'bg-[#1A2133] border-white/5 hover:border-white/10'}`}>
+                                            <div className="p-4">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <h3 className={`font-bold text-sm tracking-wide uppercase ${isToday ? 'text-[#10b981]' : 'text-white'}`}>{item.day}</h3>
+                                                    {isToday && <Badge className="bg-[#10b981] text-black text-[9px] font-bold px-2 py-0.5 rounded-full">TODAY</Badge>}
+                                                </div>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                    {Object.entries(item.meals).map(([mealType, mealDesc]) => (
+                                                        <div key={mealType} className="bg-black/30 rounded-lg p-3">
+                                                            <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest mb-1.5">{mealType}</p>
+                                                            <p className="text-xs text-[#94a3b8] leading-relaxed">{mealDesc}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            )}
+
+                            <p className="text-center text-[10px] text-[#475569] font-mono mt-6 tracking-widest uppercase">
+                                Menu subject to change without prior notice
+                            </p>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 }

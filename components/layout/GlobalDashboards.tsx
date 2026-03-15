@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Crown, Users, Flag, LayoutDashboard, Shield, ChevronDown, Home } from 'lucide-react';
+import { Crown, Users, Flag, LayoutDashboard, Shield, ChevronDown, Home, UtensilsCrossed } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -38,6 +38,7 @@ export function GlobalDashboards() {
     const isPresident = hasRole('president') || hasRole('admin') || hasRole('developer');
     const isAdminOrDev = hasRole('admin') || hasRole('developer');
     const isHostelWarden = hasRole('hostel-complaints') || hasRole('hostel_complaints') || hasRole('admin') || hasRole('developer') || hasRole('president');
+    const isMessAdmin = hasRole('mess_admin') || hasRole('admin') || hasRole('developer') || hasRole('president');
 
     return (
         <div className="fixed top-4 right-4 md:top-6 md:right-6 z-[9999] flex items-center gap-2 pointer-events-auto">
@@ -62,23 +63,62 @@ export function GlobalDashboards() {
             )}
             
             {isCouncilMember && (
-                <>
-                    <Button 
-                        variant="ghost" 
-                        className="hidden sm:flex gap-2 rounded-sm text-[10px] md:text-xs font-mono uppercase tracking-widest text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 border border-blue-500/20 bg-black/50 backdrop-blur-md shadow-[0_0_15px_rgba(59,130,246,0.1)]"
-                        asChild
-                    >
-                        <Link href="/dashboard/council">
-                            <Users className="w-3.5 h-3.5" />
-                            <span>Council</span>
-                        </Link>
-                    </Button>
-                    <div className="flex sm:hidden flex-col gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-sm text-blue-400 border border-blue-500/20 bg-black/80 backdrop-blur-md" asChild>
-                            <Link href="/dashboard/council"><Users className="w-3.5 h-3.5" /></Link>
+                isAdminOrDev ? (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button 
+                                variant="ghost" 
+                                className="hidden sm:flex gap-2 rounded-sm text-[10px] md:text-xs font-mono uppercase tracking-widest text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 border border-blue-500/20 bg-black/50 backdrop-blur-md shadow-[0_0_15px_rgba(59,130,246,0.1)]"
+                            >
+                                <Users className="w-3.5 h-3.5" />
+                                <span>Council</span>
+                                <ChevronDown className="w-3.5 h-3.5 opacity-50 ml-1" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56 bg-black/90 border-white/10 backdrop-blur-xl text-white">
+                            <DropdownMenuLabel className="font-mono text-xs text-blue-400 uppercase tracking-widest">Council Members</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="bg-white/10" />
+                            <DropdownMenuItem className="hover:bg-white/5 focus:bg-white/5 cursor-pointer">
+                                <Link href="/dashboard/council" className="w-full flex items-center gap-2">
+                                    <Users className="w-3.5 h-3.5 text-blue-400" />
+                                    All — My Dashboard
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-white/10" />
+                            {members.length > 0 ? members.map((member) => (
+                                <DropdownMenuItem key={member.id} className="hover:bg-white/5 focus:bg-white/5 cursor-pointer">
+                                    <Link href={`/dashboard/council?member=${encodeURIComponent(member.email)}`} className="w-full flex items-center gap-2">
+                                        <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 text-[9px] font-bold flex-shrink-0">
+                                            {member.name?.charAt(0)?.toUpperCase() || '?'}
+                                        </div>
+                                        <span className="truncate">{member.name}</span>
+                                        <span className="text-[10px] text-gray-500 ml-auto">{member.role}</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                            )) : (
+                                <DropdownMenuItem disabled className="text-gray-500 italic">No members found</DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                ) : (
+                    <>
+                        <Button 
+                            variant="ghost" 
+                            className="hidden sm:flex gap-2 rounded-sm text-[10px] md:text-xs font-mono uppercase tracking-widest text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 border border-blue-500/20 bg-black/50 backdrop-blur-md shadow-[0_0_15px_rgba(59,130,246,0.1)]"
+                            asChild
+                        >
+                            <Link href="/dashboard/council">
+                                <Users className="w-3.5 h-3.5" />
+                                <span>Council</span>
+                            </Link>
                         </Button>
-                    </div>
-                </>
+                        <div className="flex sm:hidden flex-col gap-2">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-sm text-blue-400 border border-blue-500/20 bg-black/80 backdrop-blur-md" asChild>
+                                <Link href="/dashboard/council"><Users className="w-3.5 h-3.5" /></Link>
+                            </Button>
+                        </div>
+                    </>
+                )
             )}
 
             {isHostelWarden && (
@@ -96,6 +136,26 @@ export function GlobalDashboards() {
                     <div className="flex sm:hidden flex-col gap-2">
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-sm text-orange-400 border border-orange-500/20 bg-black/80 backdrop-blur-md" asChild>
                             <Link href="/dashboard/hostel-complaints"><Home className="w-3.5 h-3.5" /></Link>
+                        </Button>
+                    </div>
+                </>
+            )}
+
+            {isMessAdmin && (
+                <>
+                    <Button 
+                        variant="ghost" 
+                        className="hidden sm:flex gap-2 rounded-sm text-[10px] md:text-xs font-mono uppercase tracking-widest text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/20 bg-black/50 backdrop-blur-md shadow-[0_0_15px_rgba(52,211,153,0.1)]"
+                        asChild
+                    >
+                        <Link href="/dashboard/mess-admin">
+                            <UtensilsCrossed className="w-3.5 h-3.5" />
+                            <span>Mess</span>
+                        </Link>
+                    </Button>
+                    <div className="flex sm:hidden flex-col gap-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-sm text-emerald-400 border border-emerald-500/20 bg-black/80 backdrop-blur-md" asChild>
+                            <Link href="/dashboard/mess-admin"><UtensilsCrossed className="w-3.5 h-3.5" /></Link>
                         </Button>
                     </div>
                 </>

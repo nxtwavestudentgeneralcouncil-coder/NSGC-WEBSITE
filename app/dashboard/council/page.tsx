@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,8 @@ import { useAuthenticationStatus, useUserData } from '@nhost/react';
 
 function CouncilDashboardContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const memberIdParam = searchParams.get('member');
     const [isAuthorized, setIsAuthorized] = useState(false);
 
     // Contexts
@@ -69,10 +71,24 @@ function CouncilDashboardContent() {
         return <div className="min-h-screen bg-black" />;
     }
 
-    const filteredAnnouncements = announcements.filter(item => item.createdBy === user?.id && item.addedByRole !== 'President');
-    const filteredEvents = events.filter(event => event.createdBy === user?.id && event.addedByRole !== 'President');
-    const filteredAchievements = achievements.filter(item => item.createdBy === user?.id && item.addedByRole !== 'President');
-    const filteredGallery = galleryImages.filter(image => image.createdBy === user?.id && image.addedByRole !== 'President');
+    // Determine whose content to show: the selected member (for admin) or the logged-in user
+    const viewingMember = memberIdParam ? members.find(m => m.email.toLowerCase() === decodeURIComponent(memberIdParam).toLowerCase()) : null;
+    const isViewingOther = !!viewingMember;
+
+    // When viewing a specific member, show all Council-submitted content
+    // When viewing own dashboard, show only own content
+    const filteredAnnouncements = isViewingOther
+        ? announcements.filter(item => item.addedByRole === 'Council')
+        : announcements.filter(item => item.createdBy === user?.id && item.addedByRole !== 'President');
+    const filteredEvents = isViewingOther
+        ? events.filter(event => event.addedByRole === 'Council')
+        : events.filter(event => event.createdBy === user?.id && event.addedByRole !== 'President');
+    const filteredAchievements = isViewingOther
+        ? achievements.filter(item => item.addedByRole === 'Council')
+        : achievements.filter(item => item.createdBy === user?.id && item.addedByRole !== 'President');
+    const filteredGallery = isViewingOther
+        ? galleryImages.filter(image => image.addedByRole === 'Council')
+        : galleryImages.filter(image => image.createdBy === user?.id && image.addedByRole !== 'President');
 
     const pendingCount = tickets.filter(t => t.status === 'Pending').length;
     const inProgressCount = tickets.filter(t => t.status === 'In Progress').length;
@@ -307,6 +323,11 @@ function CouncilDashboardContent() {
                             <h1 className="text-3xl md:text-[40px] font-extrabold tracking-widest uppercase leading-none font-mono">
                                 <span className="text-white">Council</span> <span className="text-[#0ea5e9]">Dashboard</span>
                             </h1>
+                        {isViewingOther && (
+                            <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs">
+                                Viewing: {viewingMember?.name} ({viewingMember?.role})
+                            </Badge>
+                        )}
                         </div>
                         <div className="flex items-center gap-4 mt-2">
                             <p className="text-[#64748B] text-[10px] tracking-[0.2em] font-mono uppercase">System.Access.Level_04</p>
@@ -1217,6 +1238,8 @@ function CouncilDashboardContent() {
 
 export default function CouncilDashboard() {
     return (
-        <CouncilDashboardContent />
+        <Suspense fallback={<div className="min-h-screen bg-black" />}>
+            <CouncilDashboardContent />
+        </Suspense>
     );
 }

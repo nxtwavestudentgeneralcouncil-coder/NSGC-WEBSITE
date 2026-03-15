@@ -11,7 +11,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Missing required body parameters.' }, { status: 400 });
         }
 
-        const validRoles = ['user', 'me', 'student', 'admin', 'council', 'president', 'council_member', 'club_head', 'club_manager', 'member', 'developer', 'hostel_complaints'];
+        const validRoles = ['user', 'me', 'student', 'admin', 'council', 'president', 'council_member', 'club_head', 'club_manager', 'member', 'developer', 'hostel_complaints', 'mess_admin'];
         
         if (!validRoles.includes(defaultRole)) {
             return NextResponse.json({ message: 'invalid role: ' + defaultRole }, { status: 400 });

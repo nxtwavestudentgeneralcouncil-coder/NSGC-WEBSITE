@@ -1,0 +1,599 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+    UtensilsCrossed, Save, Edit2, X, CheckCircle2, XCircle, 
+    Calendar, Users, RotateCcw, Plus, Trash2, Loader2,
+    MessageSquare, Clock, Check
+} from 'lucide-react';
+import { useAuthenticationStatus, useUserData } from '@nhost/react';
+
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MEAL_TYPES = ['breakfast', 'lunch', 'snacks', 'dinner'];
+
+interface MenuItem {
+    id: string;
+    day: string;
+    meal_type: string;
+    items: string;
+    updated_at: string;
+}
+
+interface ChangeRequest {
+    id: string;
+    student_name: string;
+    student_email: string;
+    day: string;
+    meal_type: string;
+    current_item: string;
+    suggested_item: string;
+    status: string;
+    admin_notes: string;
+    created_at: string;
+    updated_at: string;
+}
+
+function MessAdminContent() {
+    const router = useRouter();
+    const [isAuthorized, setIsAuthorized] = useState(false);
+    const { isAuthenticated, isLoading } = useAuthenticationStatus();
+    const user = useUserData();
+
+    // Menu state
+    const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+    const [loadingMenu, setLoadingMenu] = useState(true);
+    const [editingDay, setEditingDay] = useState<string | null>(null);
+    const [editBuffer, setEditBuffer] = useState<Record<string, string>>({});
+    const [saving, setSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+    const [selectedDay, setSelectedDay] = useState<string>(
+        new Date().toLocaleDateString('en-US', { weekday: 'long' })
+    );
+
+    // Change requests
+    const [changeRequests, setChangeRequests] = useState<ChangeRequest[]>([]);
+    const [loadingRequests, setLoadingRequests] = useState(true);
+    const [updatingRequestId, setUpdatingRequestId] = useState<string | null>(null);
+
+    // Add new item
+    const [addingNew, setAddingNew] = useState(false);
+    const [newDay, setNewDay] = useState('');
+    const [newMealType, setNewMealType] = useState('');
+    const [newItems, setNewItems] = useState('');
+
+    useEffect(() => {
+        if (!isLoading) {
+            if (!isAuthenticated || !user) {
+                router.push('/login');
+                return;
+            }
+            const roles = (user as any).roles || [];
+            const defaultRole = user.defaultRole || '';
+            if (
+                roles.includes('mess_admin') || roles.includes('admin') ||
+                roles.includes('developer') || roles.includes('president') ||
+                defaultRole === 'mess_admin' || defaultRole === 'admin' ||
+                defaultRole === 'developer' || defaultRole === 'president'
+            ) {
+                setIsAuthorized(true);
+            } else {
+                router.push('/dashboard/student');
+            }
+        }
+    }, [isAuthenticated, isLoading, user, router]);
+
+    const fetchMenu = useCallback(async () => {
+        try {
+            setLoadingMenu(true);
+            const res = await fetch('/api/v1/nhost/get-mess-menu');
+            const data = await res.json();
+            if (Array.isArray(data)) setMenuItems(data);
+        } catch (err) {
+            console.error('Failed to fetch menu:', err);
+        } finally {
+            setLoadingMenu(false);
+        }
+    }, []);
+
+    const fetchChangeRequests = useCallback(async () => {
+        try {
+            setLoadingRequests(true);
+            const res = await fetch('/api/v1/nhost/get-mess-change-requests');
+            const data = await res.json();
+            if (Array.isArray(data)) setChangeRequests(data);
+        } catch (err) {
+            console.error('Failed to fetch change requests:', err);
+        } finally {
+            setLoadingRequests(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (isAuthorized) {
+            fetchMenu();
+            fetchChangeRequests();
+        }
+    }, [isAuthorized, fetchMenu, fetchChangeRequests]);
+
+    // Helper: get menu item for a day + meal
+    const getMenuItem = (day: string, meal: string) => {
+        return menuItems.find(m => m.day === day && m.meal_type === meal);
+    };
+
+    // Build a map for edit mode
+    const getMenuForDay = (day: string): Record<string, string> => {
+        const result: Record<string, string> = {};
+        MEAL_TYPES.forEach(meal => {
+            const item = getMenuItem(day, meal);
+            result[meal] = item?.items || '';
+        });
+        return result;
+    };
+
+    const startEditing = (day: string) => {
+        setEditingDay(day);
+        setEditBuffer(getMenuForDay(day));
+    };
+
+    const cancelEditing = () => {
+        setEditingDay(null);
+        setEditBuffer({});
+    };
+
+    const saveEditing = async () => {
+        if (!editingDay) return;
+        setSaving(true);
+        try {
+            for (const meal of MEAL_TYPES) {
+                if (editBuffer[meal]?.trim()) {
+                    await fetch('/api/v1/nhost/upsert-mess-menu', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            day: editingDay,
+                            meal_type: meal,
+                            items: editBuffer[meal].trim(),
+                            updated_by: user?.id
+                        })
+                    });
+                }
+            }
+            setEditingDay(null);
+            setEditBuffer({});
+            setSaveSuccess('Menu updated successfully!');
+            setTimeout(() => setSaveSuccess(null), 2500);
+            await fetchMenu();
+        } catch (err) {
+            console.error('Save failed:', err);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const deleteMenuItem = async (id: string) => {
+        try {
+            await fetch('/api/v1/nhost/delete-mess-menu', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            setSaveSuccess('Item deleted!');
+            setTimeout(() => setSaveSuccess(null), 2000);
+            await fetchMenu();
+        } catch (err) {
+            console.error('Delete failed:', err);
+        }
+    };
+
+    const addNewItem = async () => {
+        if (!newDay || !newMealType || !newItems.trim()) return;
+        setSaving(true);
+        try {
+            await fetch('/api/v1/nhost/upsert-mess-menu', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    day: newDay,
+                    meal_type: newMealType,
+                    items: newItems.trim(),
+                    updated_by: user?.id
+                })
+            });
+            setAddingNew(false);
+            setNewDay('');
+            setNewMealType('');
+            setNewItems('');
+            setSaveSuccess('New item added!');
+            setTimeout(() => setSaveSuccess(null), 2000);
+            await fetchMenu();
+        } catch (err) {
+            console.error('Add failed:', err);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const updateRequestStatus = async (id: string, status: string) => {
+        setUpdatingRequestId(id);
+        try {
+            await fetch('/api/v1/nhost/update-mess-change-request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, status })
+            });
+            await fetchChangeRequests();
+        } catch (err) {
+            console.error('Update request failed:', err);
+        } finally {
+            setUpdatingRequestId(null);
+        }
+    };
+
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    const pendingRequests = changeRequests.filter(r => r.status === 'pending');
+    const dayMealCount = menuItems.length;
+
+    if (!isAuthorized) {
+        return <div className="min-h-screen bg-black" />;
+    }
+
+    return (
+        <div className="min-h-screen bg-[#0B1120] text-white pt-24 md:pt-16 pb-20 font-sans">
+            <div className="container mx-auto px-4 lg:px-8 max-w-[1400px]">
+
+                {/* Header */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 border-b border-white/5 pb-6">
+                    <div>
+                        <h1 className="text-3xl md:text-[40px] font-extrabold tracking-widest uppercase leading-none font-mono">
+                            <span className="text-white">Mess</span> <span className="text-[#10b981]">Admin</span>
+                        </h1>
+                        <div className="flex items-center gap-4 mt-2">
+                            <p className="text-[#64748B] text-[10px] tracking-[0.2em] font-mono uppercase">Mess.Management.Console</p>
+                            <Badge variant="outline" className="border-[#10b981]/30 bg-[#10b981]/5 text-[#10b981] rounded-full px-3 py-0.5 text-[8px] font-bold tracking-[0.2em] uppercase flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" /> Active
+                            </Badge>
+                        </div>
+                    </div>
+                    <Button
+                        onClick={() => setAddingNew(true)}
+                        className="bg-[#10b981] hover:bg-[#10b981]/90 text-black font-bold text-xs gap-2 uppercase tracking-widest"
+                    >
+                        <Plus className="w-3.5 h-3.5" /> Add Menu Item
+                    </Button>
+                </div>
+
+                {/* Toast */}
+                {saveSuccess && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6 bg-[#10b981]/10 border border-[#10b981]/30 rounded-xl p-4 flex items-center gap-3"
+                    >
+                        <CheckCircle2 className="w-5 h-5 text-[#10b981]" />
+                        <p className="text-sm font-bold text-[#10b981]">{saveSuccess}</p>
+                    </motion.div>
+                )}
+
+                {/* Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                    <Card className="bg-[#0F172A] border-none rounded-xl relative overflow-hidden shadow-lg">
+                        <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-[#10b981] shadow-[0_0_10px_#10b981]" />
+                        <CardContent className="p-6 flex justify-between items-end relative pb-8 pt-8">
+                            <div>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-3">Menu Items in DB</p>
+                                <h3 className="text-4xl font-bold text-white leading-none">{dayMealCount}</h3>
+                            </div>
+                            <UtensilsCrossed className="w-8 h-8 text-slate-600 mb-1" />
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-[#0F172A] border-none rounded-xl shadow-lg">
+                        <CardContent className="p-6 flex justify-between items-end pb-8 pt-8">
+                            <div>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-3">Pending Requests</p>
+                                <h3 className="text-4xl font-bold text-white leading-none">{pendingRequests.length}</h3>
+                            </div>
+                            <MessageSquare className="w-8 h-8 text-slate-600 mb-1" />
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-[#0F172A] border-none rounded-xl shadow-lg">
+                        <CardContent className="p-6 flex justify-between items-end pb-8 pt-8">
+                            <div>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-3">Today</p>
+                                <h3 className="text-4xl font-bold text-white leading-none">{today.slice(0, 3).toUpperCase()}</h3>
+                            </div>
+                            <Calendar className="w-8 h-8 text-slate-600 mb-1" />
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Add New Item Modal */}
+                {addingNew && (
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setAddingNew(false)}>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-[#0F172A] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between p-6 border-b border-white/10">
+                                <h2 className="text-lg font-bold text-white">Add / Update Menu Item</h2>
+                                <button onClick={() => setAddingNew(false)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center">
+                                    <X className="w-4 h-4 text-gray-400" />
+                                </button>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div>
+                                    <label className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest mb-2 block">Day</label>
+                                    <select value={newDay} onChange={e => setNewDay(e.target.value)} className="w-full bg-[#1A2133] border border-white/10 rounded-xl px-4 py-3 text-sm text-white appearance-none focus:outline-none focus:border-[#10b981]/50">
+                                        <option value="" className="bg-[#1A2133]">— Select Day —</option>
+                                        {DAYS.map(d => <option key={d} value={d} className="bg-[#1A2133]">{d}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest mb-2 block">Meal Type</label>
+                                    <select value={newMealType} onChange={e => setNewMealType(e.target.value)} className="w-full bg-[#1A2133] border border-white/10 rounded-xl px-4 py-3 text-sm text-white appearance-none focus:outline-none focus:border-[#10b981]/50">
+                                        <option value="" className="bg-[#1A2133]">— Select Meal —</option>
+                                        {MEAL_TYPES.map(m => <option key={m} value={m} className="bg-[#1A2133] capitalize">{m.charAt(0).toUpperCase() + m.slice(1)}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest mb-2 block">Items</label>
+                                    <textarea value={newItems} onChange={e => setNewItems(e.target.value)} placeholder="E.g., Idli, Sambar, Chutney" rows={3} className="w-full bg-[#1A2133] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#475569] focus:outline-none focus:border-[#10b981]/50 resize-none" />
+                                </div>
+                                <Button onClick={addNewItem} disabled={!newDay || !newMealType || !newItems.trim() || saving} className="w-full bg-[#10b981] hover:bg-[#10b981]/90 text-black font-bold text-xs uppercase tracking-widest gap-2">
+                                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                                    {saving ? 'Saving...' : 'Add Item'}
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+
+                <Tabs defaultValue="menu" className="space-y-6">
+                    <TabsList className="bg-[#0F172A] border border-slate-800 rounded-xl p-1">
+                        <TabsTrigger value="menu" className="data-[state=active]:bg-[#10b981]/15 data-[state=active]:text-[#10b981] text-xs font-bold uppercase tracking-widest rounded-lg px-4">
+                            <UtensilsCrossed className="w-3.5 h-3.5 mr-2" /> Menu Editor
+                        </TabsTrigger>
+                        <TabsTrigger value="requests" className="data-[state=active]:bg-[#f59e0b]/15 data-[state=active]:text-[#f59e0b] text-xs font-bold uppercase tracking-widest rounded-lg px-4">
+                            <MessageSquare className="w-3.5 h-3.5 mr-2" /> Requests
+                            {pendingRequests.length > 0 && (
+                                <Badge className="ml-2 bg-[#f59e0b] text-black text-[9px] px-1.5 py-0 rounded-full">{pendingRequests.length}</Badge>
+                            )}
+                        </TabsTrigger>
+                    </TabsList>
+
+                    {/* ===== MENU EDITOR TAB ===== */}
+                    <TabsContent value="menu">
+                        <div className="bg-[#0F172A] rounded-xl border border-slate-800 overflow-hidden">
+                            {/* Day Tabs */}
+                            <div className="border-b border-slate-800 px-4 overflow-x-auto">
+                                <div className="flex items-center gap-1 min-w-max py-2">
+                                    {DAYS.map(day => {
+                                        const hasMeals = menuItems.some(m => m.day === day);
+                                        return (
+                                            <button
+                                                key={day}
+                                                onClick={() => setSelectedDay(day)}
+                                                className={`px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                                                    selectedDay === day
+                                                        ? 'bg-[#10b981]/15 text-[#10b981] border border-[#10b981]/30'
+                                                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                                } ${day === today ? 'ring-1 ring-[#10b981]/20' : ''}`}
+                                            >
+                                                {day.slice(0, 3)}
+                                                {day === today && <span className="ml-1.5 text-[8px]">●</span>}
+                                                {!hasMeals && <span className="ml-1 text-red-400 text-[8px]">○</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {loadingMenu ? (
+                                <div className="p-12 flex items-center justify-center">
+                                    <Loader2 className="w-6 h-6 text-[#10b981] animate-spin" />
+                                    <span className="ml-3 text-sm text-slate-400">Loading menu...</span>
+                                </div>
+                            ) : (
+                                <div className="p-6">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div className="flex items-center gap-3">
+                                            <h2 className="text-xl font-bold text-white">{selectedDay}</h2>
+                                            {selectedDay === today && (
+                                                <Badge className="bg-[#10b981] text-black text-[9px] font-bold px-2 py-0.5 rounded-full">TODAY</Badge>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {editingDay === selectedDay ? (
+                                                <>
+                                                    <Button size="sm" variant="outline" onClick={cancelEditing} className="border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs gap-1.5">
+                                                        <X className="w-3 h-3" /> Cancel
+                                                    </Button>
+                                                    <Button size="sm" onClick={saveEditing} disabled={saving} className="bg-[#10b981] hover:bg-[#10b981]/90 text-black font-bold text-xs gap-1.5">
+                                                        {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                                                        {saving ? 'Saving...' : 'Save Changes'}
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <Button size="sm" onClick={() => startEditing(selectedDay)} className="bg-[#f59e0b] hover:bg-[#f59e0b]/90 text-black font-bold text-xs gap-1.5">
+                                                    <Edit2 className="w-3 h-3" /> Edit Menu
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {MEAL_TYPES.map(meal => {
+                                            const item = getMenuItem(selectedDay, meal);
+                                            return (
+                                                <div key={meal} className={`rounded-xl border p-5 transition-all ${editingDay === selectedDay ? 'bg-[#1A2133] border-[#f59e0b]/20' : 'bg-[#1A2133] border-white/5 hover:border-white/10'}`}>
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`w-2 h-2 rounded-full ${meal === 'breakfast' ? 'bg-amber-400' : meal === 'lunch' ? 'bg-orange-500' : meal === 'snacks' ? 'bg-cyan-400' : 'bg-indigo-400'}`} />
+                                                            <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest">{meal}</p>
+                                                        </div>
+                                                        {item && editingDay !== selectedDay && (
+                                                            <button onClick={() => deleteMenuItem(item.id)} className="text-red-400/50 hover:text-red-400 transition-colors" title="Delete">
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    {editingDay === selectedDay ? (
+                                                        <textarea
+                                                            value={editBuffer[meal] || ''}
+                                                            onChange={e => setEditBuffer(prev => ({ ...prev, [meal]: e.target.value }))}
+                                                            rows={3}
+                                                            className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#475569] focus:outline-none focus:border-[#f59e0b]/50 transition-all resize-none"
+                                                        />
+                                                    ) : (
+                                                        <p className="text-sm text-[#94a3b8] leading-relaxed">{item?.items || <span className="italic text-[#475569]">No menu set</span>}</p>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Full Week Overview */}
+                            <div className="border-t border-slate-800">
+                                <div className="p-6 border-b border-slate-800">
+                                    <h2 className="text-lg font-bold text-white tracking-tight">Full Week Overview</h2>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full min-w-[700px]">
+                                        <thead>
+                                            <tr className="border-b border-slate-800">
+                                                <th className="text-left p-4 text-[10px] text-[#64748B] font-bold uppercase tracking-widest">Day</th>
+                                                {MEAL_TYPES.map(meal => (
+                                                    <th key={meal} className="text-left p-4 text-[10px] text-[#64748B] font-bold uppercase tracking-widest">{meal}</th>
+                                                ))}
+                                                <th className="text-center p-4 text-[10px] text-[#64748B] font-bold uppercase tracking-widest">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {DAYS.map(day => (
+                                                <tr key={day} className={`border-b border-slate-800/50 hover:bg-white/[0.02] transition-colors ${day === today ? 'bg-[#10b981]/5' : ''}`}>
+                                                    <td className="p-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`text-sm font-bold ${day === today ? 'text-[#10b981]' : 'text-white'}`}>{day.slice(0, 3)}</span>
+                                                            {day === today && <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />}
+                                                        </div>
+                                                    </td>
+                                                    {MEAL_TYPES.map(meal => {
+                                                        const item = getMenuItem(day, meal);
+                                                        return (
+                                                            <td key={meal} className="p-4">
+                                                                <p className="text-xs text-[#94a3b8] leading-relaxed max-w-[200px]">{item?.items || <span className="italic text-[#475569]">—</span>}</p>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                    <td className="p-4 text-center">
+                                                        <button onClick={() => { setSelectedDay(day); startEditing(day); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-[10px] text-[#f59e0b] hover:text-[#f59e0b]/80 font-bold uppercase tracking-widest transition-colors">
+                                                            Edit
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    {/* ===== CHANGE REQUESTS TAB ===== */}
+                    <TabsContent value="requests">
+                        <div className="bg-[#0F172A] rounded-xl border border-slate-800 overflow-hidden">
+                            <div className="p-6 border-b border-slate-800">
+                                <h2 className="text-lg font-bold text-white tracking-tight">Student Change Requests</h2>
+                                <p className="text-xs text-[#64748B] mt-1">Review and manage menu change suggestions from students</p>
+                            </div>
+
+                            {loadingRequests ? (
+                                <div className="p-12 flex items-center justify-center">
+                                    <Loader2 className="w-6 h-6 text-[#f59e0b] animate-spin" />
+                                    <span className="ml-3 text-sm text-slate-400">Loading requests...</span>
+                                </div>
+                            ) : changeRequests.length === 0 ? (
+                                <div className="p-12 text-center">
+                                    <MessageSquare className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+                                    <p className="text-sm text-slate-400">No change requests yet</p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-800/50">
+                                    {changeRequests.map(req => (
+                                        <div key={req.id} className="p-5 hover:bg-white/[0.02] transition-colors">
+                                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <Badge className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                                                            req.status === 'pending' ? 'bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/30' :
+                                                            req.status === 'approved' ? 'bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/30' :
+                                                            'bg-red-500/10 text-red-400 border border-red-500/30'
+                                                        }`}>
+                                                            {req.status}
+                                                        </Badge>
+                                                        <span className="text-[10px] text-[#64748B] font-mono">{req.day} • {req.meal_type}</span>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <div>
+                                                            <span className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest">Current: </span>
+                                                            <span className="text-xs text-[#94a3b8]">{req.current_item || '—'}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-[10px] text-[#10b981] font-bold uppercase tracking-widest">Suggested: </span>
+                                                            <span className="text-xs text-white font-medium">{req.suggested_item}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 mt-2 text-[10px] text-[#475569]">
+                                                        <span>{req.student_name || req.student_email || 'Anonymous'}</span>
+                                                        <span>•</span>
+                                                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(req.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                {req.status === 'pending' && (
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => updateRequestStatus(req.id, 'approved')}
+                                                            disabled={updatingRequestId === req.id}
+                                                            className="bg-[#10b981] hover:bg-[#10b981]/90 text-black font-bold text-[10px] gap-1 h-8"
+                                                        >
+                                                            {updatingRequestId === req.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Approve
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => updateRequestStatus(req.id, 'rejected')}
+                                                            disabled={updatingRequestId === req.id}
+                                                            className="border-red-500/30 text-red-400 hover:bg-red-500/10 font-bold text-[10px] gap-1 h-8"
+                                                        >
+                                                            <XCircle className="w-3 h-3" /> Reject
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </TabsContent>
+                </Tabs>
+
+            </div>
+        </div>
+    );
+}
+
+export default function MessAdminDashboard() {
+    return <MessAdminContent />;
+}
