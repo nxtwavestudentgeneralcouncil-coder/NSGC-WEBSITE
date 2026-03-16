@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { NhostClient } from '@nhost/nhost-js';
+import { sendPushNotifications } from '@/lib/notifications';
 
 export async function POST(req: Request) {
     try {
@@ -61,12 +62,29 @@ export async function POST(req: Request) {
                 if (fallbackResult.error) {
                     return NextResponse.json({ message: Array.isArray(fallbackResult.error) ? fallbackResult.error[0]?.message : (fallbackResult.error as any).message }, { status: 400 });
                 }
+
+                // Send notification on fallback success
+                sendPushNotifications({
+                    title: `🎫 New Complaint Filed`,
+                    message: `"${body.subject || body.title}" — ${body.department || 'General'}`,
+                    type: 'complaint',
+                    link: '/complaints',
+                }).catch(err => console.error('[insert-ticket] Notification error:', err));
+
                 return NextResponse.json({ success: true, data: fallbackResult.data }, { status: 200 });
             }
 
             console.error("GraphQL Error:", error);
             return NextResponse.json({ message: errorMessage }, { status: 400 });
         }
+
+        // Send push notification for new complaint
+        sendPushNotifications({
+            title: `🎫 New Complaint Filed`,
+            message: `"${body.subject || body.title}" — ${body.department || 'General'}`,
+            type: 'complaint',
+            link: '/complaints',
+        }).catch(err => console.error('[insert-ticket] Notification error:', err));
 
         return NextResponse.json({ success: true, data }, { status: 200 });
     } catch (err: any) {

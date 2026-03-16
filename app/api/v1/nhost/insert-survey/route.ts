@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { NhostClient } from '@nhost/nhost-js';
+import { sendPushNotifications } from '@/lib/notifications';
 
 export async function POST(req: Request) {
     try {
@@ -28,9 +29,16 @@ export async function POST(req: Request) {
 
         if (error) {
             console.error("GraphQL Error:", error);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return NextResponse.json({ message: Array.isArray(error) ? error[0]?.message : (error as any).message }, { status: 400 });
         }
+
+        // Send push notifications for new feedback/survey
+        sendPushNotifications({
+            title: `📝 New Feedback Survey: ${body.title}`,
+            message: body.description?.substring(0, 120) || 'A new feedback survey has been posted. Share your thoughts!',
+            type: 'feedback',
+            link: '/feedback',
+        }).catch(err => console.error('[insert-survey] Notification error:', err));
 
         return NextResponse.json({ success: true, data }, { status: 200 });
     } catch (err: any) {

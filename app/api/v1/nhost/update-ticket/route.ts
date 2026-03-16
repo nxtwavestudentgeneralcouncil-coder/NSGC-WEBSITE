@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { NhostClient } from '@nhost/nhost-js';
+import { sendPushNotifications } from '@/lib/notifications';
 
 export async function POST(request: Request) {
     try {
@@ -35,9 +36,12 @@ export async function POST(request: Request) {
                 ) {
                     id
                     status
+                    title
                     timeline
                     assigned_to
                     updated_at
+                    submitted_by
+                    submitted_by_email
                 }
             }
         `;
@@ -82,6 +86,7 @@ export async function POST(request: Request) {
                     ) {
                         id
                         status
+                        title
                     }
                 }
             `;
@@ -105,8 +110,32 @@ export async function POST(request: Request) {
                 return NextResponse.json({ success: false, errors: fallbackResult.errors }, { status: 500 });
             }
 
+            // Send notification on fallback success too
+            if (status) {
+                const ticketTitle = fallbackResult.data?.update_tickets_by_pk?.title || 'Your complaint';
+                sendPushNotifications({
+                    title: `🔔 Complaint Update`,
+                    message: `"${ticketTitle}" status changed to ${status}`,
+                    type: 'complaint',
+                    link: '/complaints',
+                }).catch(err => console.error('[update-ticket] Notification error:', err));
+            }
+
             console.log('[update-ticket] Fallback succeeded for ticket:', id);
             return NextResponse.json({ success: true, data: fallbackResult.data?.update_tickets_by_pk });
+        }
+
+        // Send push notification for status changes
+        if (status) {
+            const ticketData = (data as any)?.update_tickets_by_pk;
+            const ticketTitle = ticketData?.title || 'Your complaint';
+            
+            sendPushNotifications({
+                title: `🔔 Complaint Update`,
+                message: `"${ticketTitle}" status changed to ${status}`,
+                type: 'complaint',
+                link: '/complaints',
+            }).catch(err => console.error('[update-ticket] Notification error:', err));
         }
 
         console.log('[update-ticket] Updated ticket:', id, 'to status:', status);

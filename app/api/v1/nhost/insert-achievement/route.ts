@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { NhostClient } from '@nhost/nhost-js';
+import { sendPushNotifications } from '@/lib/notifications';
 
 export async function POST(req: Request) {
     try {
@@ -45,6 +46,14 @@ export async function POST(req: Request) {
             console.error("GraphQL Error:", error);
             return NextResponse.json({ message: Array.isArray(error) ? error[0]?.message : (error as any).message }, { status: 400 });
         }
+
+        // Send push notifications
+        sendPushNotifications({
+            title: `🏆 New Achievement: ${body.title}`,
+            message: body.description?.substring(0, 120) || 'A new achievement has been added!',
+            type: 'achievement',
+            link: '/achievements',
+        }).catch(err => console.error('[insert-achievement] Notification error:', err));
 
         return NextResponse.json({ success: true, data }, { status: 200 });
     } catch (err: any) {

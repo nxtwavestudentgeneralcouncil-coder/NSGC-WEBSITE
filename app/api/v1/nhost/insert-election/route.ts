@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { NhostClient } from '@nhost/nhost-js';
+import { sendPushNotifications } from '@/lib/notifications';
 
 export async function POST(req: Request) {
     try {
@@ -10,9 +11,6 @@ export async function POST(req: Request) {
             region: process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '',
             adminSecret: process.env.NHOST_ADMIN_SECRET || ''
         });
-
-        const fs = require('fs');
-        fs.appendFileSync('C:/Users/vuppa/OneDrive/Desktop/Project/NSGC/payload.log', 'INSERT PAYLOAD: ' + JSON.stringify(body) + '\n');
 
         // Build candidates data array for nested insert
         const candidatesData = (body.candidates || []).map((c: any) => ({
@@ -52,6 +50,14 @@ export async function POST(req: Request) {
             console.error("GraphQL Error:", error);
             return NextResponse.json({ message: Array.isArray(error) ? error[0]?.message : (error as any).message }, { status: 400 });
         }
+
+        // Send push notifications
+        sendPushNotifications({
+            title: `🗳️ New Election: ${body.title}`,
+            message: body.description?.substring(0, 120) || 'A new election has been announced. Cast your vote!',
+            type: 'election',
+            link: '/elections',
+        }).catch(err => console.error('[insert-election] Notification error:', err));
 
         return NextResponse.json({ success: true, data }, { status: 200 });
     } catch (err: any) {
