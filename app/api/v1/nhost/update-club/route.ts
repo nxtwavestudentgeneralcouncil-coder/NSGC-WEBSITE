@@ -9,10 +9,15 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Missing club ID' }, { status: 400 });
         }
 
+        const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        if (!isValidUUID(body.id)) {
+            return NextResponse.json({ message: `Invalid club ID format: ${body.id}` }, { status: 400 });
+        }
+
         const nhost = new NhostClient({
-            subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '',
-            region: process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '',
-            adminSecret: process.env.NHOST_ADMIN_SECRET || ''
+            subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
+            region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
+            adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
         });
 
         const mutation = `

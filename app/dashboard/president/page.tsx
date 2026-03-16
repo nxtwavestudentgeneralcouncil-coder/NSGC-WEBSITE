@@ -17,11 +17,13 @@ import { useTickets, TicketProvider, TicketStatus } from '@/lib/ticket-context';
 import Link from 'next/link';
 
 // --- Types ---
-import { useSharedData, Announcement, CouncilMember, Club, Event, Election, Achievement, User, GalleryImage, INSERT_ANNOUNCEMENT, INSERT_EVENT } from '@/hooks/useSharedData';
+import { useSharedData, Announcement, CouncilMember, Club, Event, Election, Achievement, User, GalleryImage } from '@/hooks/useSharedData';
 import { ImageCropper } from '@/components/ui/image-cropper';
 import { useAuthenticationStatus, useUserData, useSignOut } from '@nhost/react';
-import { useMutation } from '@apollo/client';
-import { INSERT_CLUB, useClubData } from '@/hooks/useClubData';
+import { useClubData } from '@/hooks/useClubData';
+import { v4 as uuidv4 } from 'uuid';
+
+const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 function PresidentDashboardContent() {
     const router = useRouter();
@@ -45,12 +47,12 @@ function PresidentDashboardContent() {
         refetchAnnouncements,
         refetchEvents,
         refetchMembers,
-        refetchClubs
+        refetchClubs,
+        refetchAchievements,
+        refetchPolls,
+        refetchSurveys,
+        refetchElections
     } = useSharedData();
-
-    const [insertClub] = useMutation(INSERT_CLUB);
-    const [insertAnnouncement] = useMutation(INSERT_ANNOUNCEMENT);
-    const [insertEvent] = useMutation(INSERT_EVENT);
 
     const { tickets, updateTicketStatus } = useTickets();
 
@@ -271,8 +273,9 @@ function PresidentDashboardContent() {
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
-        const isEditing = !!formData.id;
-        const itemId = isEditing ? formData.id : Math.random().toString(36).slice(2, 11);
+        // Use editingItem to determine if we are editing, or formData.id if available
+        const isEditing = !!formData.id && isValidUUID(formData.id);
+        const itemId = isEditing ? formData.id : uuidv4();
         const newData = { ...formData, id: itemId };
 
         // Helper to update or add
@@ -281,6 +284,16 @@ function PresidentDashboardContent() {
                 return prev.map((item: any) => item.id === itemId ? { ...item, ...newItem } : item);
             }
             return [...prev, newItem];
+        };
+
+        const handleResponse = async (res: Response, successMsg: string, refetchFn: () => void) => {
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.message || data.error || `Failed: ${res.status}`);
+            }
+            refetchFn();
+            setIsAddModalOpen(false);
+            console.log(successMsg);
         };
 
         switch (addModalType) {
@@ -298,15 +311,24 @@ function PresidentDashboardContent() {
                             link: formData.link || null,
                             added_by_role: 'President'
                         })
-                    }).then(res => res.json()).then(() => {
-                        refetchAnnouncements();
-                    }).catch(e => {
-                        console.error("Failed to update announcement:", e);
-                    });
+                    }).then(res => handleResponse(res, "Announcement updated", refetchAnnouncements))
+                      .catch(e => {
+                          console.error("Failed to update announcement:", e);
+                          alert(`Update failed: ${e.message}`);
+                      });
                     
                     // Optimistic update locally
                     setAnnouncements((prev: any[]) => updateState(prev, { ...newData, addedByRole: 'President', date: (newData as Announcement).date || new Date().toISOString().split('T')[0] }));
                 } else {
+                    const optimisticItem = {
+                        ...newData,
+                        addedByRole: 'President',
+                        date: new Date().toISOString().split('T')[0]
+                    };
+                    
+                    // Optimistic update
+                    setAnnouncements((prev: any[]) => [...prev, optimisticItem]);
+
                     fetch('/api/v1/nhost/insert-announcement', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -316,14 +338,16 @@ function PresidentDashboardContent() {
                             category: formData.category || 'General',
                             priority: formData.priority || 'Low',
                             link: formData.link || null,
-                            created_by: user?.id,
+                            created_by: user?.id || null,
                             added_by_role: 'President'
                         })
-                    }).then(res => res.json()).then(() => {
-                        refetchAnnouncements();
-                    }).catch(e => {
-                        console.error("Failed to insert announcement:", e);
-                    });
+                    }).then(res => handleResponse(res, "Announcement inserted", refetchAnnouncements))
+                      .catch(e => {
+                          console.error("Failed to insert announcement:", e);
+                          // Revert optimistic update on failure
+                          setAnnouncements((prev: any[]) => prev.filter(a => a.id !== itemId));
+                          alert(`Insertion failed: ${e.message}`);
+                      });
                 }
                 break;
             case 'member':
@@ -339,16 +363,11 @@ function PresidentDashboardContent() {
                             status: formData.status || 'Active',
                             image: formData.image
                         })
-                    }).then(async res => {
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.message || 'Failed to update member');
-                        return data;
-                    }).then(() => {
-                        refetchMembers();
-                    }).catch(e => {
-                        console.error("Failed to update council member:", e);
-                        alert(`Update failed: ${e.message}`);
-                    });
+                    }).then(res => handleResponse(res, "Member updated", refetchMembers))
+                      .catch(e => {
+                          console.error("Failed to update council member:", e);
+                          alert(`Update failed: ${e.message}`);
+                      });
                 } else {
                     fetch('/api/v1/nhost/insert-council-member', {
                         method: 'POST',
@@ -360,16 +379,11 @@ function PresidentDashboardContent() {
                             status: formData.status || 'Active',
                             image: formData.image
                         })
-                    }).then(async res => {
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.message || 'Failed to insert member');
-                        return data;
-                    }).then(() => {
-                        refetchMembers();
-                    }).catch(e => {
-                        console.error("Failed to insert council member:", e);
-                        alert(`Insertion failed: ${e.message}`);
-                    });
+                    }).then(res => handleResponse(res, "Member inserted", refetchMembers))
+                      .catch(e => {
+                          console.error("Failed to insert council member:", e);
+                          alert(`Insertion failed: ${e.message}`);
+                      });
                 }
                 setMembers((prev: any[]) => updateState(prev, { ...newData, status: (newData as CouncilMember).status || 'Active' }));
                 break;
@@ -390,16 +404,11 @@ function PresidentDashboardContent() {
                             website: formData.website,
                             category: formData.category || 'General'
                         })
-                    }).then(async res => {
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.message || 'Failed to update club');
-                        return data;
-                    }).then(() => {
-                        refetchClubs();
-                    }).catch(e => {
-                        console.error("Failed to update club:", e);
-                        alert(`Update failed: ${e.message}`);
-                    });
+                    }).then(res => handleResponse(res, "Club updated", refetchClubs))
+                      .catch(e => {
+                          console.error("Failed to update club:", e);
+                          alert(`Update failed: ${e.message}`);
+                      });
                 } else {
                     fetch('/api/v1/nhost/insert-club', {
                         method: 'POST',
@@ -414,16 +423,11 @@ function PresidentDashboardContent() {
                             website: formData.website,
                             category: formData.category || 'General'
                         })
-                    }).then(async res => {
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.message || 'Failed to insert club');
-                        return data;
-                    }).then(() => {
-                        refetchClubs();
-                    }).catch(e => {
-                        console.error("Failed to insert club in DB:", e);
-                        alert(`Database insertion failed for club. Error: ${e.message || 'Unknown error'}`);
-                    });
+                    }).then(res => handleResponse(res, "Club inserted", refetchClubs))
+                      .catch(e => {
+                          console.error("Failed to insert club:", e);
+                          alert(`Insertion failed: ${e.message}`);
+                      });
                 }
                 setClubs((prev: any[]) => updateState(prev, { ...newData, slug: clubSlug, members: (newData as Club).members || 0 }));
                 break;
@@ -441,15 +445,23 @@ function PresidentDashboardContent() {
                             registration_link: formData.registrationLink || null,
                             added_by_role: 'President'
                         })
-                    }).then(res => res.json()).then(() => {
-                        refetchEvents();
-                    }).catch(e => {
-                        console.error("Failed to update event:", e);
-                    });
+                    }).then(res => handleResponse(res, "Event updated", refetchEvents))
+                      .catch(e => {
+                          console.error("Failed to update event:", e);
+                          alert(`Update failed: ${e.message}`);
+                      });
                     
                     // Optimistic update locally
                     setEvents((prev: any[]) => updateState(prev, { ...newData, addedByRole: 'President', event_date: new Date(formData.date || new Date()).toISOString(), registration_link: formData.registrationLink || null }));
                 } else {
+                    const optimisticItem = {
+                        ...newData,
+                        addedByRole: 'President',
+                        event_date: new Date(formData.date || new Date()).toISOString(),
+                        venue: formData.location || 'TBA'
+                    };
+                    setEvents((prev: any[]) => [...prev, optimisticItem]);
+
                     fetch('/api/v1/nhost/insert-event', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -460,12 +472,15 @@ function PresidentDashboardContent() {
                             venue: formData.location || 'TBA',
                             organizer_type: 'council',
                             registration_link: formData.registrationLink || null,
-                            created_by: user?.id,
+                            created_by: user?.id || null,
                             added_by_role: 'President'
                         })
-                    }).then(res => res.json()).then(() => {
-                        refetchEvents();
-                    }).catch(e => console.error("Failed to insert event:", e));
+                    }).then(res => handleResponse(res, "Event inserted", refetchEvents))
+                      .catch(e => {
+                          console.error("Failed to insert event:", e);
+                          setEvents((prev: any[]) => prev.filter(ev => ev.id !== itemId));
+                          alert(`Insertion failed: ${e.message}`);
+                      });
                 }
                 break;
             case 'election':
@@ -489,15 +504,15 @@ function PresidentDashboardContent() {
                                 ...(formData.candidates || []),
                                 ...(tempCandidateName.trim() ? [{ name: tempCandidateName.trim(), image: tempCandidateImage || null }] : [])
                             ].map((c: any) => ({
+                                id: c.id || uuidv4(),
                                 name: c.name,
                                 image: c.image || null
                             })),
-                            created_by: user?.id,
+                            created_by: user?.id || null,
                             added_by_role: 'President'
                         })
-                    }).then(res => res.json()).then(data => {
-                        refetchAnnouncements(); // triggers fetchDashboardData which loads elections too
-                    }).catch(console.error);
+                    }).then(res => handleResponse(res, "Election inserted", refetchElections))
+                      .catch(e => alert(`Insert failed: ${e.message}`));
                 } else {
                     fetch('/api/v1/nhost/update-election', {
                         method: 'POST',
@@ -511,20 +526,27 @@ function PresidentDashboardContent() {
                                 ...(formData.candidates || []),
                                 ...(tempCandidateName.trim() ? [{ name: tempCandidateName.trim(), image: tempCandidateImage || null, votes: 0 }] : [])
                             ].map((c: any) => ({
+                                id: c.id || uuidv4(),
                                 name: c.name,
                                 image: c.image || null,
                                 votes: c.votes || 0
                             })),
                             added_by_role: 'President'
                         })
-                    }).then(res => res.json()).then(() => {
-                        refetchAnnouncements(); // refresh all dashboard data
-                    }).catch(console.error);
+                    }).then(res => handleResponse(res, "Election updated", refetchAnnouncements))
+                      .catch(e => alert(`Update failed: ${e.message}`));
                 }
                 setElections((prev: any[]) => updateState(prev, { ...newData, candidates: (newData as any).candidates || [] }));
                 break;
             case 'achievement':
                 if (!isEditing) {
+                    const optimisticItem = {
+                        ...newData,
+                        addedByRole: 'President',
+                        date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString()
+                    };
+                    setAchievements((prev: any[]) => [...prev, optimisticItem]);
+
                     fetch('/api/v1/nhost/insert-achievement', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -536,12 +558,42 @@ function PresidentDashboardContent() {
                             description: formData.description || 'No description',
                             image: formData.image,
                             tier: formData.tier || '',
-                            created_by: user?.id,
+                            created_by: user?.id || null,
                             added_by_role: 'President'
                         })
-                    }).then(res => res.json()).then(data => {
-                        window.location.reload();
-                    }).catch(console.error);
+                    }).then(async res => {
+                        const data = await res.json();
+                        if (!res.ok) {
+                            setAchievements((prev: any[]) => prev.filter(a => a.id !== itemId));
+                            throw new Error(data.message || 'Failed to insert achievement');
+                        }
+                        refetchAchievements();
+                        setIsAddModalOpen(false);
+                        console.log("Achievement inserted");
+                    }).catch(e => {
+                        setAchievements((prev: any[]) => prev.filter(a => a.id !== itemId));
+                        alert(`Insert failed: ${e.message}`);
+                    });
+                } else {
+                    // Optimistic update for editing
+                    setAchievements((prev: any[]) => updateState(prev, { ...newData, image: (newData as any).image || '', tier: formData.tier || '', addedByRole: 'President' }));
+
+                    fetch('/api/v1/nhost/update-achievement', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: itemId,
+                            student: formData.student || formData.name,
+                            title: formData.title || formData.achievement,
+                            category: formData.category || 'General',
+                            date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
+                            description: formData.description || 'No description',
+                            image: formData.image,
+                            tier: formData.tier || '',
+                            added_by_role: 'President'
+                        })
+                    }).then(res => handleResponse(res, "Achievement updated", refetchAchievements))
+                      .catch(e => alert(`Update failed: ${e.message}`));
                 }
                 setAchievements((prev: any[]) => updateState(prev, { ...newData, image: (newData as any).image || '', tier: formData.tier || '', addedByRole: 'President' }));
                 break;
@@ -553,17 +605,30 @@ function PresidentDashboardContent() {
                     }
                     return prev;
                 });
+                break;
             case 'poll':
                 if (!isEditing) {
                     fetch('/api/v1/nhost/insert-poll', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            question: formData.question || formData.title
+                            question: formData.question || formData.title,
+                            created_by: user?.id || null,
+                            added_by_role: 'President'
                         })
-                    }).then(res => res.json()).then(() => {
-                        window.location.reload();
-                    }).catch(console.error);
+                    }).then(res => handleResponse(res, "Poll inserted", refetchPolls))
+                      .catch(e => alert(`Insert failed: ${e.message}`));
+                } else {
+                    fetch('/api/v1/nhost/update-poll', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: itemId,
+                            question: formData.question || formData.title,
+                            added_by_role: 'President'
+                        })
+                    }).then(res => handleResponse(res, "Poll updated", refetchPolls))
+                      .catch(e => alert(`Update failed: ${e.message}`));
                 }
                 setPolls((prev: any[]) => updateState(prev, { ...newData, options: (newData as any).options || [], votes: 0, status: (newData as any).status || 'Active' }));
                 break;
@@ -576,41 +641,49 @@ function PresidentDashboardContent() {
                             title: formData.title,
                             description: formData.description || 'No description',
                             time: formData.time || formData.estimatedTime || '5 mins',
-                            link: formData.link
+                            link: formData.link,
+                            created_by: user?.id || null,
+                            added_by_role: 'President'
                         })
-                    }).then(res => res.json()).then(() => {
-                        window.location.reload();
-                    }).catch(console.error);
+                    }).then(res => handleResponse(res, "Survey inserted", refetchSurveys))
+                      .catch(e => alert(`Insert failed: ${e.message}`));
+                } else {
+                    fetch('/api/v1/nhost/update-survey', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: itemId,
+                            title: formData.title,
+                            description: formData.description || 'No description',
+                            time: formData.time || formData.estimatedTime || '5 mins',
+                            link: formData.link,
+                            added_by_role: 'President'
+                        })
+                    }).then(res => handleResponse(res, "Survey updated", refetchSurveys))
+                      .catch(e => alert(`Update failed: ${e.message}`));
                 }
                 setSurveys((prev: any[]) => updateState(prev, { ...newData, status: (newData as any).status || 'Active' }));
                 break;
             case 'gallery':
-                if (!(newData as any).src) {
-                    alert("Please upload an image before saving.");
-                    return;
-                }
                 if (!isEditing) {
+                    if (!(newData as any).image) {
+                        alert("Please upload an image first.");
+                        return;
+                    }
                     fetch('/api/v1/nhost/insert-gallery-image', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            src: formData.src,
-                            alt: formData.alt || formData.title || 'Gallery image',
+                            src: formData.image,
+                            alt: formData.alt || 'Gallery Image',
                             span: formData.span || 'col-span-1 row-span-1',
-                            added_by_role: 'President',
-                            created_by: user?.id
+                            created_by: user?.id || null,
+                            added_by_role: 'President'
                         })
-                    }).then(res => res.json()).then(() => {
-                        window.location.reload();
-                    }).catch(console.error);
+                    }).then(res => handleResponse(res, "Gallery image inserted", refetchAnnouncements)) // Gallery images are also fetched in shared data
+                      .catch(e => alert(`Insert failed: ${e.message}`));
                 }
-                setGalleryImages((prev: any[]) => updateState(prev, {
-                    ...newData,
-                    src: (newData as GalleryImage).src,
-                    span: (newData as GalleryImage).span || 'col-span-1 row-span-1',
-                    addedByRole: 'President',
-                    dateAdded: (newData as GalleryImage).dateAdded || new Date().toISOString().split('T')[0]
-                }));
+                setGalleryImages((prev: any[]) => updateState(prev, { ...newData, src: formData.image }));
                 break;
         }
         setIsAddModalOpen(false);
@@ -987,7 +1060,7 @@ function PresidentDashboardContent() {
                                                                 // Percentage based on total votes cast in this election
                                                                 const percentage = totalVotes > 0 ? Math.round(((candidate.votes || 0) / totalVotes) * 100) : 0;
                                                                 return (
-                                                                    <div key={candidate.id} className="space-y-1">
+                                                                    <div key={candidate.id || candidate.name} className="space-y-1">
                                                                         <div className="flex justify-between text-sm">
                                                                             <span className="text-gray-300">{candidate.name}</span>
                                                                             <span className="font-mono text-cyan-500">{candidate.votes || 0} votes ({percentage}%)</span>
@@ -1471,17 +1544,17 @@ function PresidentDashboardContent() {
                 <GlassModal
                     isOpen={isAddModalOpen}
                     onClose={() => setIsAddModalOpen(false)}
-                    title={`Add New ${addModalType}`}
+                    title={formData.id ? `Edit ${addModalType}` : `Add New ${addModalType}`}
                     footer={
                         <>
                             <Button variant="outline" onClick={() => setIsAddModalOpen(false)} className="border-white/20 hover:bg-white/10 hover:text-white">Cancel</Button>
-                            <Button onClick={handleSave} className="bg-cyan-500 text-black hover:bg-cyan-400 font-bold">
-                                <CheckCircle className="w-4 h-4 mr-2" /> Save Item
+                            <Button type="submit" form="add-form" className="bg-cyan-500 text-black hover:bg-cyan-400 font-bold border-none">
+                                {formData.id ? 'UPDATE ITEM' : 'SAVE ITEM'}
                             </Button>
                         </>
                     }
                 >
-                    <form id="add-form" className="space-y-4" onSubmit={handleSave}>
+                    <form id="add-form" onSubmit={handleSave} className="space-y-4">
                         {addModalType === 'announcement' && (
                             <>
                                 <div className="space-y-2">

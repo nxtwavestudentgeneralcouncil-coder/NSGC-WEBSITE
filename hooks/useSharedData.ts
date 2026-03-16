@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, gql } from '@apollo/client';
+import { useQuery, gql } from '@apollo/client';
 import { useUserData } from '@nhost/react';
 import { useSharedContext } from '../components/providers/SharedDataProvider';
 // --- Types ---

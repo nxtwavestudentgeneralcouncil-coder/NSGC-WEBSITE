@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSubscription, useMutation, gql } from '@apollo/client';
+import { gql } from '@apollo/client';
 import { useUserData } from '@nhost/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Check, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 
-// GraphQL Queries
+// Note: Subscriptions are kept but not currently used to avoid restricted access
 const GET_NOTIFICATIONS_SUB = gql`
   subscription GetNotifications($userId: uuid!) {
     notification_recipients(
@@ -31,17 +31,6 @@ const GET_NOTIFICATIONS_SUB = gql`
   }
 `;
 
-const MARK_AS_READ_MUTATION = gql`
-  mutation MarkNotificationRead($id: uuid!) {
-    update_notification_recipients_by_pk(
-      pk_columns: { id: $id }
-      _set: { is_read: true }
-    ) {
-      id
-    }
-  }
-`;
-
 function NotificationBellContent() {
   const user = useUserData();
   const router = useRouter();
@@ -52,11 +41,15 @@ function NotificationBellContent() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchNotifications = useCallback(async () => {
-    if (!user?.id) return;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!user?.id || !uuidRegex.test(user.id)) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/v1/nhost/get-notifications?userId=${user.id}`);
-      if (!res.ok) throw new Error('Failed to fetch notifications');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch notifications: ${res.status}`);
+      }
       const data = await res.json();
       setNotifications(data);
       setError(null);
@@ -75,14 +68,19 @@ function NotificationBellContent() {
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  const [markAsRead] = useMutation(MARK_AS_READ_MUTATION);
-
   const unreadCount = notifications.filter((n: any) => !n.is_read).length;
 
   const handleNotificationClick = async (recipient: any) => {
     if (!recipient.is_read) {
       try {
-        await markAsRead({ variables: { id: recipient.id } });
+        const res = await fetch('/api/v1/nhost/mark-notification-read', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: recipient.id })
+        });
+        
+        if (!res.ok) throw new Error('Failed to mark as read');
+        
         // Optimistically update local state
         setNotifications(prev => prev.map(n => n.id === recipient.id ? { ...n, is_read: true } : n));
       } catch (err) {

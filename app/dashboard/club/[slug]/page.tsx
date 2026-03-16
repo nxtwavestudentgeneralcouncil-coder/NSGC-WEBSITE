@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
 import { useSharedData, Announcement, Event, ClubTeamMember, GalleryImage } from '@/hooks/useSharedData';
-import { useMutation, useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client';
 import { useClubData } from '@/hooks/useClubData';
 import { use } from 'react';
 
@@ -48,14 +48,6 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
         UPDATE_CLUB_MEMBER_ROLE,
         DELETE_CLUB_MEMBER
     } = useClubData();
-
-    const [updateClubProfile] = useMutation(UPDATE_CLUB_PROFILE);
-    const [insertClubEvent] = useMutation(INSERT_CLUB_EVENT);
-    const [updateClubEvent] = useMutation(UPDATE_CLUB_EVENT);
-    const [deleteClubEvent] = useMutation(DELETE_CLUB_EVENT);
-    const [insertClubMember] = useMutation(INSERT_CLUB_MEMBER);
-    const [updateClubMemberRole] = useMutation(UPDATE_CLUB_MEMBER_ROLE);
-    const [deleteClubMember] = useMutation(DELETE_CLUB_MEMBER);
 
     // UI States
     const [activeTab, setActiveTab] = useState('events');
@@ -183,7 +175,6 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                         method: 'POST',
                         body: JSON.stringify({ id })
                     });
-                    await deleteClubEvent({ variables: { id } }); // Still delete from club_events if it exists
                     refetchEvents();
                     refetchMyClubByEmail();
                     break;
@@ -195,7 +186,10 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                     refetchAnnouncements();
                     break;
                 case 'member':
-                    await deleteClubMember({ variables: { id } });
+                    await fetch('/api/v1/nhost/delete-club-member', {
+                        method: 'POST',
+                        body: JSON.stringify({ id })
+                    });
                     refetchMyClubByEmail();
                     break;
                 case 'gallery': 
@@ -235,7 +229,6 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                 added_by_role: `Club Manager (${currentClubName})`
                             })
                         });
-                        await updateClubEvent({ variables: { id: formData.id, title: formData.name || formData.title, description: formData.description, event_date: formData.date || formData.event_date, image_url: formData.image_url } });
                     } else {
                         await fetch('/api/v1/nhost/insert-event', {
                             method: 'POST',
@@ -247,11 +240,9 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                 venue: formData.location || formData.venue || 'TBA',
                                 registration_link: formData.registrationLink || '',
                                 organizer_type: 'club',
-                                created_by: user?.id,
                                 added_by_role: `Club Manager (${currentClubName})`
                             })
                         });
-                        await insertClubEvent({ variables: { club_id: currentClubId, title: formData.name || formData.title || 'New Event', description: formData.description, event_date: formData.date || formData.event_date || new Date().toISOString(), image_url: formData.image_url } });
                     }
                     refetchEvents();
                     refetchMyClubByEmail();
@@ -277,7 +268,6 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                 title: formData.title,
                                 content: formData.content,
                                 category: formData.category || 'General',
-                                created_by: user?.id,
                                 added_by_role: `Club Manager (${currentClubName})`
                             })
                         });
@@ -286,9 +276,15 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                     break;
                 case 'member':
                     if (isEditing) {
-                        await updateClubMemberRole({ variables: { id: formData.id, role: formData.role || 'member' } });
+                        await fetch('/api/v1/nhost/update-club-member', {
+                            method: 'POST',
+                            body: JSON.stringify({ id: formData.id, role: formData.role || 'member' })
+                        });
                     } else {
-                        await insertClubMember({ variables: { club_id: currentClubId, user_id: formData.user_id, role: formData.role || 'member' } });
+                        await fetch('/api/v1/nhost/insert-club-member', {
+                            method: 'POST',
+                            body: JSON.stringify({ club_id: currentClubId, user_id: formData.user_id, role: formData.role || 'member' })
+                        });
                     }
                     refetchMyClubByEmail();
                     break;
@@ -302,8 +298,7 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                 src: formData.src,
                                 alt: formData.alt || `Club Manager (${currentClubName})`,
                                 span: formData.span || 'col-span-1 row-span-1',
-                                added_by_role: `Club Manager (${currentClubName})`,
-                                created_by: user?.id
+                                added_by_role: `Club Manager (${currentClubName})`
                             })
                         });
                     }
@@ -311,7 +306,10 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                     break;
                 case 'profile':
                     if (isEditing) {
-                        await updateClubProfile({ variables: { id: formData.id, name: formData.name, description: formData.description, logo_url: formData.image } });
+                        await fetch('/api/v1/nhost/update-club', {
+                            method: 'POST',
+                            body: JSON.stringify({ id: formData.id, name: formData.name, description: formData.description, logo_url: formData.logo_url || formData.image })
+                        });
                         refetchMyClubByEmail();
                     }
                     break;

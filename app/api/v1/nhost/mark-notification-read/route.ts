@@ -4,6 +4,11 @@ import { NhostClient } from '@nhost/nhost-js';
 export async function POST(req: Request) {
     try {
         const body = await req.json();
+        const { id } = body;
+
+        if (!id) {
+            return NextResponse.json({ message: 'Missing notification recipient ID' }, { status: 400 });
+        }
 
         const nhost = new NhostClient({
             subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
@@ -12,30 +17,26 @@ export async function POST(req: Request) {
         });
 
         const mutation = `
-            mutation InsertPoll($question: String!, $options: jsonb!, $is_active: Boolean) {
-                insert_polls_one(object: {
-                    question: $question,
-                    options: $options,
-                    is_active: $is_active
-                }) {
+            mutation MarkNotificationRead($id: uuid!) {
+                update_notification_recipients_by_pk(
+                    pk_columns: { id: $id }
+                    _set: { is_read: true }
+                ) {
                     id
                 }
             }
         `;
 
-        const { data, error } = await nhost.graphql.request(mutation, {
-            question: body.question || body.title,
-            options: body.options || [],
-            is_active: body.is_active !== undefined ? body.is_active : true
-        });
+        const { data, error } = await nhost.graphql.request(mutation, { id });
 
         if (error) {
-            console.error("GraphQL Error:", error);
+            console.error("[mark-notification-read] GraphQL Error:", error);
             return NextResponse.json({ message: Array.isArray(error) ? error[0]?.message : (error as any).message }, { status: 400 });
         }
 
         return NextResponse.json({ success: true, data }, { status: 200 });
     } catch (err: any) {
+        console.error("[mark-notification-read] Server error:", err);
         return NextResponse.json({ message: err.message || 'Server error' }, { status: 500 });
     }
 }

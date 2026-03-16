@@ -28,15 +28,18 @@ const NOTIFICATIONS_QUERY = `
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
-
-    if (!userId) {
-        return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    // The uuidRegex variable is removed, and the regex is inlined.
+    // The console.warn message is slightly modified to include quotes around userId.
+    // The error message in the NextResponse.json is changed.
+    if (!userId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+        console.warn(`[get-notifications] Invalid or missing userId: "${userId}"`);
+        return NextResponse.json({ message: 'Invalid or missing user ID' }, { status: 400 });
     }
 
     const nhost = new NhostClient({
-        subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '',
-        region: process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '',
-        adminSecret: process.env.NHOST_ADMIN_SECRET || ''
+        subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
+        region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
+        adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
     });
 
     try {

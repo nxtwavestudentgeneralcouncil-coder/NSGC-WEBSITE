@@ -77,18 +77,27 @@ function CouncilDashboardContent() {
 
     // When viewing a specific member, show all Council-submitted content
     // When viewing own dashboard, show only own content
-    const filteredAnnouncements = isViewingOther
-        ? announcements.filter(item => item.addedByRole === 'Council')
-        : announcements.filter(item => item.createdBy === user?.id && item.addedByRole !== 'President');
-    const filteredEvents = isViewingOther
-        ? events.filter(event => event.addedByRole === 'Council')
-        : events.filter(event => event.createdBy === user?.id && event.addedByRole !== 'President');
-    const filteredAchievements = isViewingOther
-        ? achievements.filter(item => item.addedByRole === 'Council')
-        : achievements.filter(item => item.createdBy === user?.id && item.addedByRole !== 'President');
-    const filteredGallery = isViewingOther
-        ? galleryImages.filter(image => image.addedByRole === 'Council')
-        : galleryImages.filter(image => image.createdBy === user?.id && image.addedByRole !== 'President');
+    // Show all Council and President content by default
+    const filteredAnnouncements = announcements.filter(item => 
+        item.addedByRole === 'Council' || 
+        item.addedByRole === 'President' || 
+        item.createdBy === user?.id
+    );
+    const filteredEvents = events.filter(event => 
+        event.addedByRole === 'Council' || 
+        event.addedByRole === 'President' || 
+        event.createdBy === user?.id
+    );
+    const filteredAchievements = achievements.filter(item => 
+        item.addedByRole === 'Council' || 
+        item.addedByRole === 'President' || 
+        item.createdBy === user?.id
+    );
+    const filteredGallery = galleryImages.filter(image => 
+        image.addedByRole === 'Council' || 
+        image.addedByRole === 'President' || 
+        image.createdBy === user?.id
+    );
 
     const pendingCount = tickets.filter(t => t.status === 'Pending').length;
     const inProgressCount = tickets.filter(t => t.status === 'In Progress').length;
@@ -105,17 +114,43 @@ function CouncilDashboardContent() {
         setIsDeleteModalOpen(true);
     };
 
-    const executeDelete = () => {
-        if (itemToDelete?.type === 'achievement') {
-            setAchievements(prev => prev.filter(a => a.id !== itemToDelete.id));
-        } else if (itemToDelete?.type === 'gallery') {
-            setGalleryImages(prev => prev.filter(a => a.id !== itemToDelete.id));
-        } else {
-            // Existing logic or alert for other types
-            alert(`Deletion for ${itemToDelete?.type} with id ${itemToDelete?.id} would happen here`);
+    const executeDelete = async () => {
+        if (!itemToDelete) return;
+        
+        try {
+            const apiMap: Record<string, string> = {
+                'announcement': '/api/v1/nhost/delete-announcement',
+                'event': '/api/v1/nhost/delete-event',
+                'achievement': '/api/v1/nhost/delete-achievement',
+                'gallery': '/api/v1/nhost/delete-gallery-image'
+            };
+            
+            const endpoint = apiMap[itemToDelete.type];
+            if (!endpoint) {
+                alert(`Deletion for ${itemToDelete.type} is not implemented`);
+                return;
+            }
+
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: itemToDelete.id })
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.message || 'Failed to delete item');
+            }
+
+            // Refresh data via useSharedData refetch (aliased to any of these)
+            refetchAnnouncements();
+        } catch (e: any) {
+            console.error("Error deleting:", e);
+            alert(e.message || "An error occurred while deleting.");
+        } finally {
+            setIsDeleteModalOpen(false);
+            setItemToDelete(null);
         }
-        setIsDeleteModalOpen(false);
-        setItemToDelete(null);
     };
 
     // Camera Handlers
@@ -255,9 +290,7 @@ function CouncilDashboardContent() {
                 }
             } else if (addModalType === 'achievement') {
                 if (isEditing) {
-                    // Falls back to local state if no update API exists yet, but alerting the limitation
-                    console.warn("Edit functionality for achievements is using local simulation as update API is not yet available.");
-                    setAchievements(prev => prev.map(item => item.id === formData.id ? { ...item, ...formData } as Achievement : item));
+                    alert("Edit functionality for achievements is not available via API yet. Try deleting and re-uploading.");
                 } else {
                     const res = await fetch('/api/v1/nhost/insert-achievement', {
                         method: 'POST',
@@ -276,7 +309,6 @@ function CouncilDashboardContent() {
                     });
                     const result = await res.json();
                     if (!res.ok) throw new Error(result.message || 'Failed to insert achievement');
-                    // Refetch all to get new achievement
                     refetchAnnouncements(); 
                 }
             } else if (addModalType === 'gallery') {
@@ -286,7 +318,7 @@ function CouncilDashboardContent() {
                 }
                 
                 if (isEditing) {
-                    alert("Edit functionality for gallery images is not available. Try deleting and re-uploading.");
+                    alert("Edit functionality for gallery images is not available via API. Try deleting and re-uploading.");
                 } else {
                     const res = await fetch('/api/v1/nhost/insert-gallery-image', {
                         method: 'POST',

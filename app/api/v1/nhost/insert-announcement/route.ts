@@ -7,9 +7,9 @@ export async function POST(req: Request) {
         const body = await req.json();
 
         const nhost = new NhostClient({
-            subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '',
-            region: process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '',
-            adminSecret: process.env.NHOST_ADMIN_SECRET || ''
+            subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
+            region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
+            adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
         });
 
         const mutation = `
@@ -30,19 +30,38 @@ export async function POST(req: Request) {
             }
         `;
 
-        const { data, error } = await nhost.graphql.request(mutation, {
+        const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        const payload = {
             title: body.title,
             content: body.content,
             category: body.category || 'General',
             priority: body.priority || 'Low',
             link: body.link || null,
-            created_by: body.created_by || null,
+            created_by: (body.created_by && isValidUUID(body.created_by)) ? body.created_by : null,
             added_by_role: body.added_by_role || 'Council'
-        });
+        };
+
+        console.log("[insert-announcement] Payload:", payload);
+
+        let { data, error } = await nhost.graphql.request(mutation, payload);
+
+        // Resiliency: If Foreign Key Violation occurs (often due to user id sync issues),
+        // retry once with created_by = null to ensure the data is at least added.
+        if (error && payload.created_by !== null) {
+            const errorMsg = Array.isArray(error) ? error[0]?.message : (error as any).message;
+            if (errorMsg?.toLowerCase().includes('foreign key violation') || errorMsg?.toLowerCase().includes('violates foreign key constraint')) {
+                console.warn("[insert-announcement] Foreign key violation for created_by. Retrying with null...");
+                const fallbackPayload = { ...payload, created_by: null };
+                const retry = await nhost.graphql.request(mutation, fallbackPayload);
+                data = retry.data;
+                error = retry.error;
+            }
+        }
 
         if (error) {
-            console.error("GraphQL Error:", error);
-            return NextResponse.json({ message: Array.isArray(error) ? error[0]?.message : (error as any).message }, { status: 400 });
+            console.error("[insert-announcement] GraphQL Error:", error);
+            const errMsg = Array.isArray(error) ? error[0]?.message : (error as any).message;
+            return NextResponse.json({ message: errMsg, error: error }, { status: 400 });
         }
 
         // Send push notifications

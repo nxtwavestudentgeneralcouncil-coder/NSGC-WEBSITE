@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useMutation, gql } from '@apollo/client';
+import { useQuery, gql } from '@apollo/client';
 import { useUserData } from '@nhost/react';
 import { useSharedData } from './useSharedData';
 
