@@ -2089,11 +2089,10 @@ function PresidentDashboardContent() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-300">Category</label>
-                                    <select value={formData.category || 'Academic'} onChange={e => setFormData({ ...formData, category: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded-md p-2 text-white focus:border-cyan-500/50 outline-none">
-                                        <option value="Academic">Academic</option>
-                                        <option value="Sports">Sports</option>
-                                        <option value="Research">Research</option>
-                                        <option value="Cultural">Cultural</option>
+                                    <select value={formData.category || 'academic'} onChange={e => setFormData({ ...formData, category: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded-md p-2 text-white focus:border-cyan-500/50 outline-none">
+                                        <option value="academic">Academic</option>
+                                        <option value="sports">Sports</option>
+                                        <option value="cultural">Cultural</option>
                                     </select>
                                 </div>
                                 <div className="space-y-2">

@@ -32,11 +32,11 @@ export async function POST(req: Request) {
  
         const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
         const payload = {
-            title: body.title,
-            category: (body.category || 'general').toLowerCase(),
+            title: body.student || body.title || 'Anonymous',
+            category: (body.category || 'academic').toLowerCase(),
             tier: body.tier || null,
             achievement_date: body.date || new Date().toISOString().split('T')[0],
-            description: body.description || '',
+            description: body.description || body.title || '',
             image_url: body.image || null,
             student_id: (body.student_id && isValidUUID(body.student_id)) ? body.student_id : null,
             created_by: (body.created_by && isValidUUID(body.created_by)) ? body.created_by : null,

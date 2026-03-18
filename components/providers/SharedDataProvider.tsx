@@ -200,13 +200,20 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
                 })),
                 achievements: (data.achievements || []).map((a: any) => ({
                     ...a,
-                    student: a.student || a.user?.displayName || 'Student',
-                    date: a.achievement_date || a.date
+                    student: a.title || a.student || a.user?.displayName || 'Student',
+                    date: a.achievement_date || a.date,
+                    addedByRole: a.added_by_role,
+                    createdBy: a.created_by
                 })),
                 users: data.users || [],
                 polls: data.polls || [],
                 surveys: data.surveys || [],
-                galleryImages: data.gallery_images || [],
+                galleryImages: (data.gallery_images || []).map((img: any) => ({
+                    ...img,
+                    addedByRole: img.added_by_role,
+                    createdBy: img.created_by,
+                    dateAdded: img.date_added
+                })),
                 tickets: (data.tickets || []).map((t: any) => ({
                     id: t.id,
                     studentName: t.submitted_by,

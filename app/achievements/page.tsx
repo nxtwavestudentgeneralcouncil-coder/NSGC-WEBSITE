@@ -84,10 +84,18 @@ export default function AchievementsPage() {
                                                 </div>
                                             )}
                                         </div>
-                                        {/* Gold Tier Badge */}
-                                        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-black px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase shadow-lg border-2 border-[#0b1324] whitespace-nowrap">
-                                            Gold Tier
-                                        </div>
+                                        {/* Tier Badge */}
+                                        {item.tier && (
+                                            <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[9px] font-black tracking-widest uppercase shadow-lg border-2 border-[#0b1324] whitespace-nowrap ${
+                                                item.tier === 'Gold' ? 'bg-yellow-400 text-black' :
+                                                item.tier === 'Silver' ? 'bg-slate-300 text-black' :
+                                                item.tier === 'Bronze' ? 'bg-orange-600 text-white' :
+                                                item.tier === 'Finalist' ? 'bg-cyan-500 text-white' :
+                                                'bg-slate-500 text-white'
+                                            }`}>
+                                                {item.tier} Tier
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Text Content */}

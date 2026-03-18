@@ -25,7 +25,7 @@ function CouncilDashboardContent() {
 
     // Contexts
     const { tickets, updateTicketStatus } = useTickets();
-    const { announcements, setAnnouncements, events, setEvents, achievements, setAchievements, galleryImages, setGalleryImages, members, refetchAnnouncements, refetchEvents } = useSharedData();
+    const { announcements, setAnnouncements, events, setEvents, achievements, setAchievements, galleryImages, setGalleryImages, members, refetchAnnouncements, refetchEvents, refetchAchievements, refetchGalleryImages } = useSharedData();
     // UI States
     const [activeTab, setActiveTab] = useState('announcements');
     const [selectedTicket, setSelectedTicket] = useState<any>(null); // For viewing full complaint details
@@ -142,8 +142,12 @@ function CouncilDashboardContent() {
                 throw new Error(err.message || 'Failed to delete item');
             }
 
-            // Refresh data via useSharedData refetch (aliased to any of these)
-            refetchAnnouncements();
+            // Refresh data via useSharedData refetch
+            if (itemToDelete.type === 'announcement') refetchAnnouncements();
+            else if (itemToDelete.type === 'event') refetchEvents();
+            else if (itemToDelete.type === 'achievement') refetchAchievements();
+            else if (itemToDelete.type === 'gallery') refetchGalleryImages();
+            else refetchAnnouncements(); // Fallback
         } catch (e: any) {
             console.error("Error deleting:", e);
             alert(e.message || "An error occurred while deleting.");
@@ -290,14 +294,32 @@ function CouncilDashboardContent() {
                 }
             } else if (addModalType === 'achievement') {
                 if (isEditing) {
-                    alert("Edit functionality for achievements is not available via API yet. Try deleting and re-uploading.");
+                    const res = await fetch('/api/v1/nhost/update-achievement', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: formData.id,
+                            student: formData.student || '',
+                            title: formData.title || 'Untitled',
+                            category: formData.category || 'academic',
+                            date: formData.date || new Date().toISOString().split('T')[0],
+                            description: formData.description || '',
+                            image: formData.image || null,
+                            tier: formData.tier || 'Bronze',
+                            added_by_role: 'Council'
+                        })
+                    });
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.message || 'Failed to update achievement');
+                    refetchAchievements(); 
                 } else {
                     const res = await fetch('/api/v1/nhost/insert-achievement', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
+                            student: formData.student || '',
                             title: formData.title || 'Untitled',
-                            category: formData.category || 'General',
+                            category: formData.category || 'academic',
                             date: formData.date || new Date().toISOString().split('T')[0],
                             description: formData.description || '',
                             image: formData.image || null,
@@ -309,7 +331,7 @@ function CouncilDashboardContent() {
                     });
                     const result = await res.json();
                     if (!res.ok) throw new Error(result.message || 'Failed to insert achievement');
-                    refetchAnnouncements(); 
+                    refetchAchievements(); 
                 }
             } else if (addModalType === 'gallery') {
                 if (!formData.src && !isEditing) {
@@ -334,7 +356,7 @@ function CouncilDashboardContent() {
                     });
                     const result = await res.json();
                     if (!res.ok) throw new Error(result.message || 'Failed to insert gallery image');
-                    refetchAnnouncements();
+                    refetchGalleryImages();
                 }
             }
         } catch (e: any) {
@@ -976,11 +998,10 @@ function CouncilDashboardContent() {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-gray-300">Category</label>
-                                        <select value={formData.category || 'Academic'} onChange={e => setFormData({ ...formData, category: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded-md p-2 text-white focus:border-yellow-500/50 outline-none">
-                                            <option value="Academic">Academic</option>
-                                            <option value="Sports">Sports</option>
-                                            <option value="Research">Research</option>
-                                            <option value="Cultural">Cultural</option>
+                                        <select value={formData.category || 'academic'} onChange={e => setFormData({ ...formData, category: e.target.value })} className="w-full bg-black/50 border border-white/10 rounded-md p-2 text-white focus:border-yellow-500/50 outline-none">
+                                            <option value="academic">Academic</option>
+                                            <option value="sports">Sports</option>
+                                            <option value="cultural">Cultural</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">
