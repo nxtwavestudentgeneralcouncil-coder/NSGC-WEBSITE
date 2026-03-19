@@ -8,11 +8,13 @@ const nhost = new NhostClient({
 });
 
 const INSERT_CLUB_MEMBER = `
-    mutation InsertClubMember($club_id: uuid!, $user_id: uuid!, $role: String!) {
+    mutation InsertClubMember($club_id: uuid!, $user_id: uuid, $role: String!, $custom_name: String, $custom_email: String) {
         insert_club_members_one(object: {
             club_id: $club_id,
             user_id: $user_id,
-            role: $role
+            role: $role,
+            custom_name: $custom_name,
+            custom_email: $custom_email
         }) {
             id
         }
@@ -22,16 +24,18 @@ const INSERT_CLUB_MEMBER = `
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { club_id, user_id, role } = body;
+        const { club_id, user_id, role, custom_name, custom_email } = body;
 
-        if (!club_id || !user_id || !role) {
+        if (!club_id || !role || (!user_id && !custom_name)) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
         const { data, error } = await nhost.graphql.request(INSERT_CLUB_MEMBER, {
             club_id,
-            user_id,
-            role
+            user_id: user_id || null,
+            role,
+            custom_name: custom_name || null,
+            custom_email: custom_email || null
         });
 
         if (error) {

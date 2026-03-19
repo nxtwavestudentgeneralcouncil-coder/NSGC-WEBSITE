@@ -39,7 +39,7 @@ const PRIMARY_QUERY = `
             id name slug description logo_url club_email category
             club_head_id lead website
             club_members {
-                id role
+                id role custom_name custom_email
                 user { id displayName avatarUrl email }
             }
             club_events {
@@ -91,7 +91,7 @@ const FALLBACK_QUERY = `
             id name slug description logo_url club_email category
             club_head_id lead website
             club_members {
-                id role
+                id role custom_name custom_email
                 user { id displayName avatarUrl email }
             }
             club_events {

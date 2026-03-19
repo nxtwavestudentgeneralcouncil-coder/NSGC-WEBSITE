@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
-    Megaphone, Calendar, Plus, Trash2, LogOut, Star, Flag, Users, Globe, Camera, TrendingUp, AlertTriangle, LayoutGrid, List, X, Upload, Eye, FileText
+    Megaphone, Calendar, Plus, Trash2, LogOut, Star, Flag, Users, Globe, Camera, AlertTriangle, LayoutGrid, List, X, Upload, Eye, FileText
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -117,7 +117,8 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
         members: activeClub.club_members?.length || 0,
         teamMembers: activeClub.club_members?.map((m: any) => ({
             id: m.id, // club_member id
-            name: m.user?.displayName || m.user?.email || 'Unknown',
+            name: m.custom_name || m.user?.displayName || m.user?.email || 'Unknown',
+            email: m.custom_email || m.user?.email || '',
             role: m.role,
             avatar: m.user?.avatarUrl
         })) || []
@@ -328,17 +329,30 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                         const res = await fetch('/api/v1/nhost/update-club-member', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: formData.id, role: formData.role || 'member' })
+                            body: JSON.stringify({ 
+                                id: formData.id, 
+                                role: formData.role || 'member',
+                                custom_name: formData.name,
+                                custom_email: formData.email
+                            })
                         });
                         if (!res.ok) {
                             const err = await res.json().catch(() => ({ message: 'Update failed' }));
                             throw new Error(err.message || 'Update failed');
                         }
                     } else {
+                        if (!formData.name || !formData.email) return alert("Please provide both Name and Email for the student.");
+                        
                         const res = await fetch('/api/v1/nhost/insert-club-member', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ club_id: currentClubId, user_id: formData.user_id, role: formData.role || 'member' })
+                            body: JSON.stringify({ 
+                                club_id: activeClub?.id || currentClubId, 
+                                user_id: formData.user_id || undefined, 
+                                role: formData.role || 'member',
+                                custom_name: formData.user_id ? undefined : formData.name,
+                                custom_email: formData.user_id ? undefined : formData.email
+                            })
                         });
                         if (!res.ok) {
                             const err = await res.json().catch(() => ({ message: 'Creation failed' }));
@@ -478,9 +492,7 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                 <h3 className="text-4xl font-bold tracking-tight text-white mb-1">
                                     {currentClubDetails?.members || "0"}
                                 </h3>
-                                <p className="text-[10px] text-[#00E5FF] flex items-center gap-1 font-medium">
-                                    <TrendingUp className="w-3 h-3" /> +12% from last month
-                                </p>
+
                             </div>
                             <div className="w-14 h-14 rounded-2xl bg-[#00E5FF]/10 flex items-center justify-center text-[#00E5FF] group-hover:scale-110 transition-transform duration-500">
                                 <Users className="w-7 h-7" />
@@ -987,29 +999,68 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                         {/* Modals for Team Member */}
                                         {addModalType === 'member' && (
                                             <>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-medium text-gray-300">Select User <span className="text-red-500">*</span></label>
-                                                    <select
-                                                        value={formData.user_id || ''}
-                                                        onChange={(e) => {
-                                                            const selectedUser = users.find((u: any) => u.id === e.target.value);
-                                                            setFormData({ 
-                                                                ...formData, 
-                                                                user_id: e.target.value, 
-                                                                name: selectedUser?.displayName || selectedUser?.email || '' 
-                                                            });
-                                                        }}
-                                                        required
-                                                        disabled={!!formData.id}
-                                                        className="w-full bg-black/50 border border-white/10 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:border-teal-500 h-10"
-                                                    >
-                                                        <option value="">Choose a student...</option>
-                                                        {users.map((u: any) => (
-                                                            <option key={u.id} value={u.id}>
-                                                                {u.displayName || u.email}
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-300 flex items-center justify-between">
+                                                            <span>Student Name <span className="text-red-500">*</span></span>
+                                                            {formData.user_id ? (
+                                                                <span className="text-xs text-green-400 font-normal">✓ Account Linked</span>
+                                                            ) : (
+                                                                <span className="text-xs text-amber-500 font-normal">Unlinked (Custom Member)</span>
+                                                            )}
+                                                        </label>
+                                                        <Input
+                                                            list="users-name-datalist"
+                                                            value={formData.name || ''}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                const match = users.find((u: any) => u.displayName?.trim().toLowerCase() === val.trim().toLowerCase());
+                                                                
+                                                                setFormData(prev => ({ 
+                                                                    ...prev, 
+                                                                    name: val, 
+                                                                    email: match ? match.email : prev.email,
+                                                                    user_id: match ? match.id : (users.find((u: any) => u.email?.trim().toLowerCase() === prev.email?.trim().toLowerCase())?.id || '')
+                                                                }));
+                                                            }}
+                                                            required
+                                                            disabled={!!formData.id}
+                                                            className="w-full bg-black/50 border border-white/10 text-white focus:border-teal-500"
+                                                            placeholder="Student's Name"
+                                                        />
+                                                        <datalist id="users-name-datalist">
+                                                            {users.map((u: any) => u.displayName && (
+                                                                <option key={u.id} value={u.displayName} />
+                                                            ))}
+                                                        </datalist>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-gray-300">Student Email <span className="text-red-500">*</span></label>
+                                                        <Input
+                                                            list="users-email-datalist"
+                                                            value={formData.email || ''}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                const match = users.find((u: any) => u.email?.trim().toLowerCase() === val.trim().toLowerCase());
+                                                                
+                                                                setFormData(prev => ({ 
+                                                                    ...prev, 
+                                                                    email: val,
+                                                                    name: match ? (match.displayName || prev.name) : prev.name,
+                                                                    user_id: match ? match.id : (users.find((u: any) => u.displayName?.trim().toLowerCase() === prev.name?.trim().toLowerCase())?.id || '')
+                                                                }));
+                                                            }}
+                                                            required
+                                                            disabled={!!formData.id}
+                                                            className="w-full bg-black/50 border border-white/10 text-white focus:border-teal-500"
+                                                            placeholder="student@example.com"
+                                                        />
+                                                        <datalist id="users-email-datalist">
+                                                            {users.map((u: any) => u.email && (
+                                                                <option key={u.id} value={u.email} />
+                                                            ))}
+                                                        </datalist>
+                                                    </div>
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-medium text-gray-300">Role <span className="text-red-500">*</span></label>
@@ -1022,13 +1073,33 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                                     />
                                                 </div>
                                                 <div className="space-y-2 pt-2">
-                                                    <label className="text-sm font-medium text-gray-300">Profile Image URL (Optional)</label>
+                                                    <label className="text-sm font-medium text-gray-300">Profile Image (Max 1MB)</label>
                                                     <Input
-                                                        value={formData.image || ''}
-                                                        onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                                                        className="bg-black/50 border-white/10"
-                                                        placeholder="https://example.com/avatar.jpg"
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (file) {
+                                                                if (file.size > 1048576) {
+                                                                    alert("File size exceeds 1MB. Please upload a smaller image.");
+                                                                    e.target.value = '';
+                                                                    return;
+                                                                }
+                                                                const reader = new FileReader();
+                                                                reader.onloadend = () => {
+                                                                    setFormData({ ...formData, image: reader.result as string });
+                                                                };
+                                                                reader.readAsDataURL(file);
+                                                            }
+                                                        }}
+                                                        className="bg-black/50 border-white/10 text-white file:bg-teal-500 file:text-black file:border-0 file:rounded-md file:mr-4 file:px-2 file:py-1 file:text-sm file:font-semibold hover:file:bg-teal-400"
                                                     />
+                                                    {formData.image && (
+                                                        <div className="mt-2 flex items-center gap-3">
+                                                            <img src={formData.image} alt="Preview" className="h-10 w-10 rounded-full border border-teal-500/50 object-cover" />
+                                                            <button type="button" onClick={() => setFormData({...formData, image: ''})} className="text-xs text-red-500 hover:text-red-400">Remove</button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </>
                                         )}
@@ -1074,9 +1145,36 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                                     </div>
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-sm font-medium text-gray-300">Image Source <span className="text-red-500">*</span></label>
-                                                    <Input required value={formData.src || ''} onChange={e => setFormData({ ...formData, src: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-teal-500" placeholder="https://example.com/image.jpg" />
-                                                    <p className="text-[10px] text-gray-400 mt-1">Provide a direct URL to an image, preferably hosted on an image sharing service or cloud storage.</p>
+                                                    <label className="text-sm font-medium text-gray-300">Image Source (Max 1MB) <span className="text-red-500">*</span></label>
+                                                    <Input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        required={!formData.src}
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (file) {
+                                                                if (file.size > 1048576) {
+                                                                    alert("File size exceeds 1MB. Please upload a smaller image.");
+                                                                    e.target.value = '';
+                                                                    return;
+                                                                }
+                                                                const reader = new FileReader();
+                                                                reader.onloadend = () => {
+                                                                    setFormData({ ...formData, src: reader.result as string });
+                                                                };
+                                                                reader.readAsDataURL(file);
+                                                            }
+                                                        }}
+                                                        className="bg-black/50 border-white/10 text-white focus:border-teal-500 file:bg-teal-500 file:text-black file:border-0 file:rounded-md file:mr-4 file:px-2 file:py-1 file:text-sm file:font-semibold hover:file:bg-teal-400"
+                                                    />
+                                                    <p className="text-[10px] text-gray-400 mt-1">Upload an image directly from your local computer.</p>
+                                                    {formData.src && (
+                                                        <div className="mt-4 pt-4 border-t border-white/10">
+                                                            <p className="text-sm text-gray-400 mb-2">Preview:</p>
+                                                            <img src={formData.src} alt="Preview" className="w-full h-48 object-cover rounded-md border border-white/10" />
+                                                            <button type="button" onClick={() => setFormData({...formData, src: ''})} className="mt-2 text-xs text-red-500 hover:text-red-400">Remove Image</button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </>
                                         )}
@@ -1125,13 +1223,33 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <label className="text-sm font-medium text-gray-300">Profile Image URL (Optional)</label>
+                                                        <label className="text-sm font-medium text-gray-300">Profile Image (Max 1MB)</label>
                                                         <Input
-                                                            value={formData.image || ''}
-                                                            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                                                            className="bg-black/50 border-white/10 text-white"
-                                                            placeholder="https://example.com/logo.jpg"
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={(e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (file) {
+                                                                    if (file.size > 1048576) {
+                                                                        alert("File size exceeds 1MB. Please upload a smaller image.");
+                                                                        e.target.value = '';
+                                                                        return;
+                                                                    }
+                                                                    const reader = new FileReader();
+                                                                    reader.onloadend = () => {
+                                                                        setFormData({ ...formData, image: reader.result as string });
+                                                                    };
+                                                                    reader.readAsDataURL(file);
+                                                                }
+                                                            }}
+                                                            className="bg-black/50 border-white/10 text-white file:bg-teal-500 file:text-black file:border-0 file:rounded-md file:mr-4 file:px-2 file:py-1 file:text-sm file:font-semibold hover:file:bg-teal-400"
                                                         />
+                                                        {formData.image && (
+                                                            <div className="mt-2 flex items-center gap-3">
+                                                                <img src={formData.image} alt="Profile Preview" className="h-12 w-12 rounded-full border border-teal-500/50 object-cover" />
+                                                                <button type="button" onClick={() => setFormData({...formData, image: ''})} className="text-xs text-red-500 hover:text-red-400">Remove</button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </>
