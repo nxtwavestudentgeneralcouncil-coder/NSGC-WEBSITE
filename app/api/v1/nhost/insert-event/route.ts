@@ -13,6 +13,51 @@ export async function POST(req: Request) {
         });
 
         const mutation = `
+            mutation InsertEvent($title: String!, $description: String!, $event_date: timestamptz!, $venue: String!, $organizer_type: String!, $registration_link: String, $created_by: uuid, $added_by_role: String, $club_id: uuid) {
+                insert_events_one(object: {
+                    title: $title,
+                    description: $description,
+                    event_date: $event_date,
+                    venue: $venue,
+                    organizer_type: $organizer_type,
+                    registration_link: $registration_link,
+                    created_by: $created_by,
+                    added_by_role: $added_by_role
+                }) {
+                    id
+                }
+                insert_club_events_one(object: {
+                    club_id: $club_id,
+                    title: $title,
+                    description: $description,
+                    event_date: $event_date,
+                    created_by: $created_by
+                }) @include(if: $is_club_event) {
+                    id
+                }
+            }
+        `;
+
+        // We'll use two separate mutations or one with @include if we want to be fancy.
+        // Actually, let's keep it simple: if club_id is present, we insert into club_events.
+        // If not, we insert into events. 
+        
+        const isClubEvent = !!body.club_id;
+        const insertMutation = isClubEvent ? `
+            mutation InsertClubEvent($title: String!, $description: String!, $event_date: timestamptz!, $created_by: uuid, $club_id: uuid!, $image_url: String) {
+                insert_club_events_one(object: {
+                    club_id: $club_id,
+                    title: $title,
+                    description: $description,
+                    event_date: $event_date,
+                    created_by: $created_by,
+                    image_url: $image_url
+                }) {
+                    id
+                    title
+                }
+            }
+        ` : `
             mutation InsertEvent($title: String!, $description: String!, $event_date: timestamptz!, $venue: String!, $organizer_type: String!, $registration_link: String, $created_by: uuid, $added_by_role: String) {
                 insert_events_one(object: {
                     title: $title,
@@ -26,19 +71,25 @@ export async function POST(req: Request) {
                 }) {
                     id
                     title
-                    event_date
-                    venue
                 }
             }
         `;
 
         const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-        const payload = {
+        
+        const payload: any = isClubEvent ? {
+            title: body.title,
+            description: body.description || '',
+            event_date: body.event_date || new Date().toISOString(),
+            club_id: body.club_id,
+            image_url: body.image_url || null,
+            created_by: (body.created_by && isValidUUID(body.created_by)) ? body.created_by : null
+        } : {
             title: body.title,
             description: body.description || '',
             event_date: body.event_date || new Date().toISOString(),
             venue: body.venue || 'TBA',
-            organizer_type: body.organizer_type || 'council',
+            organizer_type: (body.added_by_role?.toLowerCase().includes('council') || body.organizer_type === 'council') ? 'council' : 'club',
             registration_link: body.registration_link || null,
             created_by: (body.created_by && isValidUUID(body.created_by)) ? body.created_by : null,
             added_by_role: body.added_by_role || 'Council'
@@ -46,7 +97,7 @@ export async function POST(req: Request) {
 
         console.log("[insert-event] Payload:", payload);
 
-        let { data, error } = await nhost.graphql.request(mutation, payload);
+        let { data, error } = await nhost.graphql.request(insertMutation, payload);
 
         // Resiliency: Fallback to null created_by on FK violation
         if (error && payload.created_by !== null) {
@@ -54,7 +105,7 @@ export async function POST(req: Request) {
             if (errorMsg?.toLowerCase().includes('foreign key violation') || errorMsg?.toLowerCase().includes('violates foreign key constraint')) {
                 console.warn("[insert-event] Foreign key violation for created_by. Retrying with null...");
                 const fallbackPayload = { ...payload, created_by: null };
-                const retry = await nhost.graphql.request(mutation, fallbackPayload);
+                const retry = await nhost.graphql.request(insertMutation, fallbackPayload);
                 data = retry.data;
                 error = retry.error;
             }

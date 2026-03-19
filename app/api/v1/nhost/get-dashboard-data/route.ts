@@ -42,6 +42,9 @@ const PRIMARY_QUERY = `
                 id role
                 user { id displayName avatarUrl email }
             }
+            club_events {
+                id title description event_date image_url
+            }
         }
         tickets {
             id title description status priority department votes
@@ -90,6 +93,9 @@ const FALLBACK_QUERY = `
             club_members {
                 id role
                 user { id displayName avatarUrl email }
+            }
+            club_events {
+                id title description event_date image_url
             }
         }
         tickets {

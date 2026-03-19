@@ -48,7 +48,7 @@ function NotificationBellContent() {
       const res = await fetch(`/api/v1/nhost/get-notifications?userId=${user.id}`);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch notifications: ${res.status}`);
+        throw new Error(errorData.error || errorData.message || `Failed to fetch notifications: ${res.status}`);
       }
       const data = await res.json();
       setNotifications(data);
@@ -178,7 +178,10 @@ function NotificationBellContent() {
                 )}
 
                 {!loading && !error && notifications.map((recipient: any) => {
-                  const notification = recipient.notification;
+                  // Support both singular and plural relationship naming from different API versions or Hasura tracking
+                  const notification = recipient.notification || 
+                                     (recipient.notifications && Array.isArray(recipient.notifications) ? recipient.notifications[0] : null);
+                  
                   if (!notification) return null; // Fallback if data is missing
 
                   return (

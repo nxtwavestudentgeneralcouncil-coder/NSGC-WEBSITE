@@ -26,7 +26,14 @@ export async function POST(req: Request) {
             adminSecret
         });
 
-        const mutation = `
+        const isClubEvent = !!body.is_club_event;
+        const mutation = isClubEvent ? `
+            mutation DeleteClubEvent($id: uuid!) {
+                delete_club_events_by_pk(id: $id) {
+                    id
+                }
+            }
+        ` : `
             mutation DeleteEvent($id: uuid!) {
                 delete_events_by_pk(id: $id) {
                     id

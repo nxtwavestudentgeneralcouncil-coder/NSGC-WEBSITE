@@ -33,13 +33,22 @@ export async function GET(req: Request) {
     // The error message in the NextResponse.json is changed.
     if (!userId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
         console.warn(`[get-notifications] Invalid or missing userId: "${userId}"`);
-        return NextResponse.json({ message: 'Invalid or missing user ID' }, { status: 400 });
+        return NextResponse.json({ error: 'Invalid or missing user ID' }, { status: 400 });
+    }
+
+    const subdomain = (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim();
+    const region = (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim();
+    const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
+
+    if (!subdomain || !region) {
+        console.error('[get-notifications] Missing Nhost subdomain or region');
+        return NextResponse.json({ error: 'Nhost configuration missing' }, { status: 500 });
     }
 
     const nhost = new NhostClient({
-        subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
-        region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
-        adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
+        subdomain,
+        region,
+        adminSecret
     });
 
     try {

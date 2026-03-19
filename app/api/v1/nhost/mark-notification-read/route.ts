@@ -31,7 +31,7 @@ export async function POST(req: Request) {
 
         if (error) {
             console.error("[mark-notification-read] GraphQL Error:", error);
-            return NextResponse.json({ message: Array.isArray(error) ? error[0]?.message : (error as any).message }, { status: 400 });
+            return NextResponse.json({ error: Array.isArray(error) ? error[0]?.message : (error as any).message }, { status: 400 });
         }
 
         return NextResponse.json({ success: true, data }, { status: 200 });

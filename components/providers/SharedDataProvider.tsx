@@ -54,6 +54,9 @@ export interface Event {
     participants?: number;
     addedByRole?: string;
     createdBy?: string;
+    club_id?: string;
+    club_slug?: string;
+    is_club_event?: boolean;
 }
 
 export interface Election {
@@ -119,6 +122,12 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
         apiLoading: true,
     });
 
+    const parseCategoryFromRole = useCallback((role: string, fallback: string = 'Social') => {
+        if (!role) return fallback;
+        const match = role.match(/^\[(.*?)\]/);
+        return match ? match[1] : fallback;
+    }, []);
+
     const fetchAllData = useCallback(async () => {
         setState(prev => ({ ...prev, apiLoading: true }));
         try {
@@ -153,8 +162,25 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
                 category: c.category || 'General',
                 clubEmail: c.club_email || '',
                 club_members: c.club_members || [],
-                club_events: data.events?.filter((e: any) => e.club_id === c.id) || []
+                club_events: c.club_events || []
             }));
+
+            const allClubEvents: Event[] = (data.clubs || []).flatMap((c: any) =>
+                (c.club_events || []).map((e: any) => ({
+                    id: e.id,
+                    name: e.title,
+                    description: e.description,
+                    date: e.event_date,
+                    location: c.name, // Use club name as location for club events
+                    type: parseCategoryFromRole(e.added_by_role) || 'Social',
+                    image: e.image_url,
+                    registrationLink: e.registration_link, // Keep registration link if available
+                    addedByRole: e.added_by_role, // Use event's added_by_role
+                    club_id: c.id,
+                    club_slug: c.slug,
+                    is_club_event: true
+                }))
+            );
 
             const mappedAnnouncements: Announcement[] = (data.announcements || []).map((a: any) => ({
                 id: a.id,
@@ -173,17 +199,21 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
 
             setState({
                 announcements: mappedAnnouncements,
-                events: (data.events || []).map((e: any) => ({
-                    id: e.id,
-                    name: e.title,
-                    description: e.description,
-                    date: e.event_date,
-                    location: e.venue,
-                    type: e.organizer_type === 'council' ? 'Academic' : 'Social',
-                    image: e.image_url,
-                    registrationLink: e.registration_link,
-                    addedByRole: e.added_by_role
-                })),
+                events: [
+                    ...(data.events || []).map((e: any) => ({
+                        id: e.id,
+                        name: e.title,
+                        description: e.description,
+                        date: e.event_date,
+                        location: e.venue,
+                        type: parseCategoryFromRole(e.added_by_role, e.organizer_type === 'council' ? 'Academic' : (['Academic', 'Social', 'Sports'].includes(e.organizer_type) ? e.organizer_type : 'Social')),
+                        image: e.image_url,
+                        registrationLink: e.registration_link,
+                        addedByRole: e.added_by_role,
+                        is_club_event: false
+                    })),
+                    ...allClubEvents
+                ],
                 members: data.council_members || [],
                 clubs: mappedClubs,
                 elections: (data.elections || []).map((el: any) => ({

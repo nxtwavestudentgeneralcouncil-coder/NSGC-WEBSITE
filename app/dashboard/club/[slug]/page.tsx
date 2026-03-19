@@ -26,8 +26,10 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
 
     // --- State Management ---
     const {
+        events,
         announcements,
         galleryImages,
+        users,
         refetchAnnouncements,
         refetchEvents,
         refetchGalleryImages
@@ -57,7 +59,7 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
     const [addModalType, setAddModalType] = useState<'event' | 'announcement' | 'member' | 'gallery' | 'profile'>('event');
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState<{ type: string, id: string } | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<{ type: string, id: string, isClubEvent?: boolean } | null>(null);
 
     // Form States
     const [formData, setFormData] = useState<Record<string, any>>({});
@@ -121,15 +123,12 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
         })) || []
     } : null;
 
-    const clubEvents = activeClub?.club_events?.map((e: any) => ({
-        id: e.id,
-        name: e.title,
-        date: new Date(e.event_date).toLocaleDateString(),
-        location: e.description?.slice(0, 30) || 'Virtual', // truncate description for location field
-        type: 'Event',
-        image: e.image_url,
-        registrationLink: ''
-    })) || [];
+    const clubEvents = events.filter(e => {
+        const isClubIdMatch = e.club_id === activeClub?.id;
+        const isSlugMatch = e.club_slug === resolvedParams.slug;
+        const roleMatch = e.addedByRole?.toLowerCase().includes(currentClubName.toLowerCase());
+        return isClubIdMatch || isSlugMatch || roleMatch;
+    });
 
     const clubAnnouncements = announcements.filter(a => a.author === currentClubName || a.addedByRole?.includes(currentClubName));
     const clubGalleryImages = galleryImages.filter(img => img.addedByRole?.includes(currentClubName));
@@ -142,10 +141,13 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
         if (type === 'event' && data) {
             initialData = {
                 id: data.id,
-                title: data.name,
-                description: data.location,
-                event_date: new Date(data.date).toISOString().slice(0, 16),
-                image_url: data.image
+                name: data.name,
+                description: data.description,
+                date: data.date ? new Date(data.date).toISOString().split('T')[0] : '',
+                location: data.location,
+                type: data.type,
+                registrationLink: data.registrationLink,
+                is_club_event: data.is_club_event
             };
         } else if (type === 'profile' && data) {
             initialData = {
@@ -159,8 +161,8 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
         setIsAddModalOpen(true);
     };
 
-    const confirmDelete = (type: 'event' | 'announcement' | 'member' | 'gallery', id: string) => {
-        setItemToDelete({ type, id });
+    const confirmDelete = (type: 'event' | 'announcement' | 'member' | 'gallery', id: string, isClubEvent?: boolean) => {
+        setItemToDelete({ type, id, isClubEvent });
         setIsDeleteModalOpen(true);
     };
 
@@ -169,39 +171,52 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
         const { type, id } = itemToDelete;
         
         try {
+            let res: Response | undefined;
             switch (type) {
                 case 'event': 
-                    await fetch('/api/v1/nhost/delete-event', {
+                    res = await fetch('/api/v1/nhost/delete-event', {
                         method: 'POST',
-                        body: JSON.stringify({ id })
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id, is_club_event: itemToDelete.isClubEvent ?? true })
                     });
-                    refetchEvents();
-                    refetchMyClubByEmail();
+                    if (res.ok) {
+                        refetchEvents();
+                        refetchMyClubByEmail();
+                    }
                     break;
                 case 'announcement': 
-                    await fetch('/api/v1/nhost/delete-announcement', {
+                    res = await fetch('/api/v1/nhost/delete-announcement', {
                         method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ id })
                     });
-                    refetchAnnouncements();
+                    if (res.ok) refetchAnnouncements();
                     break;
                 case 'member':
-                    await fetch('/api/v1/nhost/delete-club-member', {
+                    res = await fetch('/api/v1/nhost/delete-club-member', {
                         method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ id })
                     });
-                    refetchMyClubByEmail();
+                    if (res.ok) refetchMyClubByEmail();
                     break;
                 case 'gallery': 
-                    await fetch('/api/v1/nhost/delete-gallery-image', {
+                    res = await fetch('/api/v1/nhost/delete-gallery-image', {
                         method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ id })
                     });
-                    refetchGalleryImages();
+                    if (res.ok) refetchGalleryImages();
                     break;
             }
-        } catch (e) {
+            
+            if (res && !res.ok) {
+                const errData = await res.json().catch(() => ({ message: 'Delete failed' }));
+                throw new Error(errData.message || 'Delete failed');
+            }
+        } catch (e: any) {
             console.error("Error deleting:", e);
+            alert(`Failed to delete: ${e.message}`);
         }
         
         setIsDeleteModalOpen(false);
@@ -215,41 +230,63 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
         try {
             switch (addModalType) {
                 case 'event':
+                    // Safe date parsing
+                    let finalDateStr = formData.event_date || new Date().toISOString();
+                    if (formData.date) {
+                        const parsed = new Date(formData.date);
+                        if (!isNaN(parsed.getTime())) {
+                            finalDateStr = parsed.toISOString();
+                        }
+                    }
+
                     if (isEditing) {
-                        await fetch('/api/v1/nhost/update-event', {
+                        const res = await fetch('/api/v1/nhost/update-event', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 id: formData.id,
                                 title: formData.name || formData.title,
                                 description: formData.description || '',
-                                event_date: formData.date || formData.event_date,
+                                event_date: finalDateStr,
                                 venue: formData.location || formData.venue || 'TBA',
                                 registration_link: formData.registrationLink || '',
-                                added_by_role: `Club Manager (${currentClubName})`
+                                added_by_role: `[${formData.type || 'Social'}] Club Manager (${currentClubName})`,
+                                is_club_event: formData.is_club_event ?? true,
+                                type: formData.type || 'Social'
                             })
                         });
+                        if (!res.ok) {
+                            const err = await res.json().catch(() => ({ message: 'Update failed' }));
+                            throw new Error(err.message || 'Update failed');
+                        }
                     } else {
-                        await fetch('/api/v1/nhost/insert-event', {
+                        const res = await fetch('/api/v1/nhost/insert-event', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 title: formData.name || formData.title || 'New Event',
                                 description: formData.description || '',
-                                event_date: formData.date || formData.event_date || new Date().toISOString(),
+                                event_date: finalDateStr,
                                 venue: formData.location || formData.venue || 'TBA',
                                 registration_link: formData.registrationLink || '',
                                 organizer_type: 'club',
-                                added_by_role: `Club Manager (${currentClubName})`
+                                type: formData.type || 'Social',
+                                club_id: activeClub?.id,
+                                added_by_role: `[${formData.type || 'Social'}] Club Manager (${currentClubName})`
                             })
                         });
+                        
+                        if (!res.ok) {
+                            const err = await res.json().catch(() => ({ message: 'Creation failed' }));
+                            throw new Error(err.message || 'Creation failed');
+                        }
                     }
                     refetchEvents();
                     refetchMyClubByEmail();
                     break;
                 case 'announcement':
                     if (isEditing) {
-                        await fetch('/api/v1/nhost/update-announcement', {
+                        const res = await fetch('/api/v1/nhost/update-announcement', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -257,41 +294,63 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                 title: formData.title,
                                 content: formData.content,
                                 category: formData.category || 'General',
+                                priority: formData.priority || 'Low',
+                                link: formData.link || null,
                                 added_by_role: `Club Manager (${currentClubName})`
                             })
                         });
+                        if (!res.ok) {
+                            const err = await res.json().catch(() => ({ message: 'Update failed' }));
+                            throw new Error(err.message || 'Update failed');
+                        }
                     } else {
-                        await fetch('/api/v1/nhost/insert-announcement', {
+                        const res = await fetch('/api/v1/nhost/insert-announcement', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 title: formData.title,
                                 content: formData.content,
                                 category: formData.category || 'General',
+                                priority: formData.priority || 'Low',
+                                link: formData.link || null,
                                 added_by_role: `Club Manager (${currentClubName})`
                             })
                         });
+                        if (!res.ok) {
+                            const err = await res.json().catch(() => ({ message: 'Creation failed' }));
+                            throw new Error(err.message || 'Creation failed');
+                        }
                     }
                     refetchAnnouncements();
                     break;
                 case 'member':
                     if (isEditing) {
-                        await fetch('/api/v1/nhost/update-club-member', {
+                        const res = await fetch('/api/v1/nhost/update-club-member', {
                             method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ id: formData.id, role: formData.role || 'member' })
                         });
+                        if (!res.ok) {
+                            const err = await res.json().catch(() => ({ message: 'Update failed' }));
+                            throw new Error(err.message || 'Update failed');
+                        }
                     } else {
-                        await fetch('/api/v1/nhost/insert-club-member', {
+                        const res = await fetch('/api/v1/nhost/insert-club-member', {
                             method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ club_id: currentClubId, user_id: formData.user_id, role: formData.role || 'member' })
                         });
+                        if (!res.ok) {
+                            const err = await res.json().catch(() => ({ message: 'Creation failed' }));
+                            throw new Error(err.message || 'Creation failed');
+                        }
                     }
                     refetchMyClubByEmail();
                     break;
                 case 'gallery':
                     if (!formData.src) return alert("Please upload an image before saving.");
                     if (!isEditing) {
-                        await fetch('/api/v1/nhost/insert-gallery-image', {
+                        const res = await fetch('/api/v1/nhost/insert-gallery-image', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -301,23 +360,39 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                 added_by_role: `Club Manager (${currentClubName})`
                             })
                         });
+                        if (!res.ok) {
+                            const err = await res.json().catch(() => ({ message: 'Upload failed' }));
+                            throw new Error(err.message || 'Upload failed');
+                        }
                     }
                     refetchGalleryImages();
                     break;
                 case 'profile':
                     if (isEditing) {
-                        await fetch('/api/v1/nhost/update-club', {
+                        const res = await fetch('/api/v1/nhost/update-club', {
                             method: 'POST',
-                            body: JSON.stringify({ id: formData.id, name: formData.name, description: formData.description, logo_url: formData.logo_url || formData.image })
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                id: formData.id, 
+                                name: formData.name, 
+                                description: formData.description, 
+                                logo_url: formData.logo_url || formData.image 
+                            })
                         });
+                        if (!res.ok) {
+                            const err = await res.json().catch(() => ({ message: 'Update failed' }));
+                            throw new Error(err.message || 'Update failed');
+                        }
                         refetchMyClubByEmail();
                     }
                     break;
             }
-        } catch (e) {
+            setIsAddModalOpen(false);
+            setFormData({});
+        } catch (e: any) {
             console.error("Save error:", e);
+            alert(`Error saving: ${e.message}`);
         }
-        setIsAddModalOpen(false);
     };
 
     if (!isAuthorized || isLoading || (!hasOverrideRole && myClubByEmailLoading) || (hasOverrideRole && !clubDataLoaded)) {
@@ -517,7 +592,7 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                                             <Button variant="ghost" size="icon" onClick={() => openAddModal('event', event)} className="h-8 w-8 text-slate-400 hover:text-white">
                                                                 <Eye className="w-4 h-4" />
                                                             </Button>
-                                                            <Button variant="ghost" size="icon" onClick={() => confirmDelete('event', event.id)} className="h-8 w-8 text-red-400 hover:bg-red-400/10">
+                                                            <Button variant="ghost" size="icon" onClick={() => confirmDelete('event', event.id, event.is_club_event)} className="h-8 w-8 text-red-400 hover:bg-red-400/10">
                                                                 <Trash2 className="w-4 h-4" />
                                                             </Button>
                                                         </div>
@@ -526,7 +601,7 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                                     <div className="space-y-2 mb-4">
                                                         <div className="flex items-center gap-2 text-xs text-slate-400">
                                                             <Calendar className="w-3.5 h-3.5 text-[#00E5FF]" />
-                                                            {event.date}
+                                                            {new Date(event.date).toLocaleDateString()}
                                                         </div>
                                                         <div className="flex items-center gap-2 text-xs text-slate-400">
                                                             <Globe className="w-3.5 h-3.5 text-[#00E5FF]" />
@@ -792,11 +867,21 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                                         placeholder="e.g. Annual Hackathon"
                                                     />
                                                 </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-medium text-gray-300">Description <span className="text-red-500">*</span></label>
+                                                    <Textarea
+                                                        value={formData.description || ''}
+                                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                                        required
+                                                        className="bg-black/50 border-white/10 min-h-[100px]"
+                                                        placeholder="Describe your event..."
+                                                    />
+                                                </div>
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div className="space-y-2">
-                                                        <label className="text-sm font-medium text-gray-300">Date & Time <span className="text-red-500">*</span></label>
+                                                        <label className="text-sm font-medium text-gray-300">Date <span className="text-red-500">*</span></label>
                                                         <Input
-                                                            type="datetime-local"
+                                                            type="date"
                                                             value={formData.date || ''}
                                                             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                                                             required
@@ -903,14 +988,28 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                         {addModalType === 'member' && (
                                             <>
                                                 <div className="space-y-2">
-                                                    <label className="text-sm font-medium text-gray-300">Name <span className="text-red-500">*</span></label>
-                                                    <Input
-                                                        value={formData.name || ''}
-                                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                    <label className="text-sm font-medium text-gray-300">Select User <span className="text-red-500">*</span></label>
+                                                    <select
+                                                        value={formData.user_id || ''}
+                                                        onChange={(e) => {
+                                                            const selectedUser = users.find((u: any) => u.id === e.target.value);
+                                                            setFormData({ 
+                                                                ...formData, 
+                                                                user_id: e.target.value, 
+                                                                name: selectedUser?.displayName || selectedUser?.email || '' 
+                                                            });
+                                                        }}
                                                         required
-                                                        className="bg-black/50 border-white/10"
-                                                        placeholder="e.g. Jane Doe"
-                                                    />
+                                                        disabled={!!formData.id}
+                                                        className="w-full bg-black/50 border border-white/10 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:border-teal-500 h-10"
+                                                    >
+                                                        <option value="">Choose a student...</option>
+                                                        {users.map((u: any) => (
+                                                            <option key={u.id} value={u.id}>
+                                                                {u.displayName || u.email}
+                                                            </option>
+                                                        ))}
+                                                    </select>
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-medium text-gray-300">Role <span className="text-red-500">*</span></label>
@@ -1048,6 +1147,55 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                                     <Button type="submit" form="resource-form" className="bg-[#00E5FF] hover:bg-[#00E5FF]/90 text-black font-semibold min-w-24">
                                         Save Data
                                     </Button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+                
+                {/* Delete Confirmation Modal */}
+                <AnimatePresence>
+                    {isDeleteModalOpen && (
+                        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="bg-[#0F172A] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
+                            >
+                                <div className="p-8">
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500 border border-red-500/20">
+                                            <Trash2 className="w-7 h-7" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-bold text-white">Delete {itemToDelete?.type === 'gallery' ? 'Image' : itemToDelete?.type === 'member' ? 'Member' : 'Item'}?</h3>
+                                            <p className="text-slate-400 text-sm">Action cannot be undone.</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <p className="text-slate-300 mb-8 leading-relaxed">
+                                        Are you sure you want to permanently remove this {itemToDelete?.type}? All associated data will be lost from our records.
+                                    </p>
+                                    
+                                    <div className="flex justify-end gap-3">
+                                        <Button 
+                                            variant="ghost" 
+                                            onClick={() => {
+                                                setIsDeleteModalOpen(false);
+                                                setItemToDelete(null);
+                                            }} 
+                                            className="text-slate-400 hover:text-white hover:bg-white/5 font-semibold px-6"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button 
+                                            onClick={executeDelete} 
+                                            className="bg-red-500 hover:bg-red-600 text-white font-bold px-8 shadow-lg shadow-red-500/20"
+                                        >
+                                            Delete Permanently
+                                        </Button>
+                                    </div>
                                 </div>
                             </motion.div>
                         </div>
