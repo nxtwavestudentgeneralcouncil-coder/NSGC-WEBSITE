@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 
 export async function POST(req: Request) {
     try {
@@ -9,21 +9,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Missing achievement ID' }, { status: 400 });
         }
 
-        const subdomain = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN;
-        const region = process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION;
-        const adminSecret = process.env.NHOST_ADMIN_SECRET;
-
-        if (!subdomain || !region || !adminSecret) {
-            console.error("Missing Nhost configuration in environment variables");
-            return NextResponse.json({ 
-                message: "Server configuration error: Missing Nhost environment variables" 
-            }, { status: 500 });
-        }
-
-        const nhost = new NhostClient({
-            subdomain,
-            region,
-            adminSecret
+        const nhost = createNhostClient({
+            subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
+            region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
+            adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
         });
 
         const mutation = `
@@ -34,7 +23,12 @@ export async function POST(req: Request) {
             }
         `;
 
-        const { data, error } = await nhost.graphql.request(mutation, { id: body.id });
+        const result = await nhost.graphql.request({
+            document: mutation,
+            variables: { id: body.id }
+        });
+
+        const { data, error } = result;
 
         if (error) {
             console.error("GraphQL Error:", error);

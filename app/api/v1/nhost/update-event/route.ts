@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 
 export async function POST(req: Request) {
     try {
@@ -15,10 +15,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: `Invalid event ID format: ${body.id}` }, { status: 400 });
         }
 
-        const nhost = new NhostClient({
+        const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
+        const nhost = createNhostClient({
             subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
             region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
-            adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
+            adminSecret
         });
 
         const isClubEvent = !!body.is_club_event;
@@ -68,7 +69,12 @@ export async function POST(req: Request) {
             organizer_type: (body.added_by_role?.toLowerCase().includes('council') || body.organizer_type === 'council') ? 'council' : 'club'
         };
 
-        const { data, error } = await nhost.graphql.request(mutation, payload);
+        const result = await nhost.graphql.request({
+            document: mutation,
+            variables: payload
+        });
+
+        const { data, error } = result;
 
         if (error) {
             console.error("GraphQL Error:", error);

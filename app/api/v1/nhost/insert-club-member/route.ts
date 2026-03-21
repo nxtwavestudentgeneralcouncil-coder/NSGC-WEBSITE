@@ -1,7 +1,7 @@
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-const nhost = new NhostClient({
+const nhost = createNhostClient({
     subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || '').trim(),
     region: (process.env.NEXT_PUBLIC_NHOST_REGION || '').trim(),
     adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
@@ -30,13 +30,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        const { data, error } = await nhost.graphql.request(INSERT_CLUB_MEMBER, {
-            club_id,
-            user_id: user_id || null,
-            role,
-            custom_name: custom_name || null,
-            custom_email: custom_email || null
+        const result = await nhost.graphql.request({
+            document: INSERT_CLUB_MEMBER,
+            variables: {
+                club_id,
+                user_id: user_id || null,
+                role,
+                custom_name: custom_name || null,
+                custom_email: custom_email || null
+            }
         });
+
+        const { data, error } = result;
 
         if (error) {
             console.error('Error inserting club member:', error);
@@ -44,7 +49,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: errorMessage }, { status: 500 });
         }
 
-        return NextResponse.json(data.insert_club_members_one);
+        return NextResponse.json((data as any).insert_club_members_one);
     } catch (err) {
         console.error('Unexpected error:', err);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

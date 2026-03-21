@@ -1,7 +1,7 @@
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-const nhost = new NhostClient({
+const nhost = createNhostClient({
     subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || '').trim(),
     region: (process.env.NEXT_PUBLIC_NHOST_REGION || '').trim(),
     adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
@@ -24,7 +24,12 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
         }
 
-        const { data, error } = await nhost.graphql.request(DELETE_CLUB_MEMBER, { id });
+        const result = await nhost.graphql.request({
+            document: DELETE_CLUB_MEMBER,
+            variables: { id }
+        });
+
+        const { data, error } = result;
 
         if (error) {
             console.error('Error deleting club member:', error);
@@ -32,7 +37,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: errorMessage }, { status: 500 });
         }
 
-        return NextResponse.json(data.delete_club_members_by_pk);
+        return NextResponse.json((data as any).delete_club_members_by_pk);
     } catch (err) {
         console.error('Unexpected error:', err);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

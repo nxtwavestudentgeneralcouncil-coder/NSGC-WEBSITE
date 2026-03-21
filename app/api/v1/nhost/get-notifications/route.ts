@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,23 +36,19 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Invalid or missing user ID' }, { status: 400 });
     }
 
-    const subdomain = (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim();
-    const region = (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim();
-    const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
-
-    if (!subdomain || !region) {
-        console.error('[get-notifications] Missing Nhost subdomain or region');
-        return NextResponse.json({ error: 'Nhost configuration missing' }, { status: 500 });
-    }
-
-    const nhost = new NhostClient({
-        subdomain,
-        region,
-        adminSecret
+    const nhost = createNhostClient({
+        subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
+        region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
+        adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
     });
 
     try {
-        const { data, error } = await nhost.graphql.request(NOTIFICATIONS_QUERY, { userId });
+        const result = await nhost.graphql.request({
+            document: NOTIFICATIONS_QUERY,
+            variables: { userId }
+        });
+
+        const { data, error } = result;
 
         if (error) {
             const errorMessage = Array.isArray(error)
@@ -63,7 +59,7 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: errorMessage }, { status: 500 });
         }
 
-        return NextResponse.json(data?.notification_recipients || [], { status: 200 });
+        return NextResponse.json((data as any)?.notification_recipients ?? [], { status: 200 });
     } catch (err: any) {
         console.error('[get-notifications] Request threw exception:', err?.message);
         return NextResponse.json({ error: err.message }, { status: 500 });

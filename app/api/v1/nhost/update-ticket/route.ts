@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 import { sendPushNotifications } from '@/lib/notifications';
 
 export async function POST(request: Request) {
@@ -11,10 +11,11 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, message: 'Ticket ID is required' }, { status: 400 });
         }
 
-        const nhost = new NhostClient({
+        const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
+        const nhost = createNhostClient({
             subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
             region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
-            adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
+            adminSecret
         });
 
         // Build the _set object dynamically — only include fields that are provided
@@ -46,10 +47,15 @@ export async function POST(request: Request) {
             }
         `;
 
-        const { data, error } = await nhost.graphql.request(mutation, {
-            id,
-            _set: setFields
+        const result = await nhost.graphql.request({
+            document: mutation,
+            variables: {
+                id,
+                _set: setFields
+            }
         });
+
+        const { data, error } = result;
 
         if (error) {
             const errorMessage = Array.isArray(error)

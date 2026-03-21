@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 
 export async function POST(req: Request) {
     try {
@@ -14,10 +14,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: `Invalid club ID format: ${body.id}` }, { status: 400 });
         }
 
-        const nhost = new NhostClient({
+        const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
+        const nhost = createNhostClient({
             subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
             region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
-            adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
+            adminSecret
         });
 
         const mutation = `
@@ -39,17 +40,22 @@ export async function POST(req: Request) {
             }
         `;
 
-        const { data, error } = await nhost.graphql.request(mutation, {
-            id: body.id,
-            name: body.name,
-            slug: body.slug,
-            description: body.description,
-            logo_url: body.logo_url,
-            club_email: body.club_email ? body.club_email.toLowerCase() : null,
-            category: body.category,
-            website: body.website,
-            lead: body.lead
+        const result = await nhost.graphql.request({
+            document: mutation,
+            variables: {
+                id: body.id,
+                name: body.name,
+                slug: body.slug,
+                description: body.description,
+                logo_url: body.logo_url,
+                club_email: body.club_email ? body.club_email.toLowerCase() : null,
+                category: body.category,
+                website: body.website,
+                lead: body.lead
+            }
         });
+
+        const { data, error } = result;
 
         if (error) {
             console.error("GraphQL Error:", error);

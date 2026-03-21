@@ -1,46 +1,18 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 import { sendPushNotifications } from '@/lib/notifications';
 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
 
-        const nhost = new NhostClient({
+        const nhost = createNhostClient({
             subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
             region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
             adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
         });
 
-        const mutation = `
-            mutation InsertEvent($title: String!, $description: String!, $event_date: timestamptz!, $venue: String!, $organizer_type: String!, $registration_link: String, $created_by: uuid, $added_by_role: String, $club_id: uuid) {
-                insert_events_one(object: {
-                    title: $title,
-                    description: $description,
-                    event_date: $event_date,
-                    venue: $venue,
-                    organizer_type: $organizer_type,
-                    registration_link: $registration_link,
-                    created_by: $created_by,
-                    added_by_role: $added_by_role
-                }) {
-                    id
-                }
-                insert_club_events_one(object: {
-                    club_id: $club_id,
-                    title: $title,
-                    description: $description,
-                    event_date: $event_date,
-                    created_by: $created_by
-                }) @include(if: $is_club_event) {
-                    id
-                }
-            }
-        `;
-
-        // We'll use two separate mutations or one with @include if we want to be fancy.
-        // Actually, let's keep it simple: if club_id is present, we insert into club_events.
-        // If not, we insert into events. 
+        const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
         
         const isClubEvent = !!body.club_id;
         const insertMutation = isClubEvent ? `
@@ -75,8 +47,6 @@ export async function POST(req: Request) {
             }
         `;
 
-        const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-        
         const payload: any = isClubEvent ? {
             title: body.title,
             description: body.description || '',
@@ -97,7 +67,11 @@ export async function POST(req: Request) {
 
         console.log("[insert-event] Payload:", payload);
 
-        let { data, error } = await nhost.graphql.request(insertMutation, payload);
+        let result = await nhost.graphql.request({
+            document: insertMutation,
+            variables: payload
+        });
+        let { data, error } = result;
 
         // Resiliency: Fallback to null created_by on FK violation
         if (error && payload.created_by !== null) {
@@ -105,7 +79,10 @@ export async function POST(req: Request) {
             if (errorMsg?.toLowerCase().includes('foreign key violation') || errorMsg?.toLowerCase().includes('violates foreign key constraint')) {
                 console.warn("[insert-event] Foreign key violation for created_by. Retrying with null...");
                 const fallbackPayload = { ...payload, created_by: null };
-                const retry = await nhost.graphql.request(insertMutation, fallbackPayload);
+                const retry = await nhost.graphql.request({
+                    document: insertMutation,
+                    variables: fallbackPayload
+                });
                 data = retry.data;
                 error = retry.error;
             }

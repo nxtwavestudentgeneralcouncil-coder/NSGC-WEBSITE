@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 
 export async function POST(req: Request) {
     try {
@@ -22,10 +22,11 @@ export async function POST(req: Request) {
             }
         }
 
-        const nhost = new NhostClient({
+        const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
+        const nhost = createNhostClient({
             subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
             region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
-            adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
+            adminSecret
         });
 
         const mutation = `
@@ -47,16 +48,16 @@ export async function POST(req: Request) {
             role
         }));
 
-        const { data, error } = await nhost.graphql.request(mutation, {
-            userId,
-            defaultRole,
-            userRoles: userRolesToInsert
-        }, {
-            headers: {
-                // Must pass the admin secret header securely from the backend to bypass permissions
-                'x-hasura-admin-secret': process.env.NHOST_ADMIN_SECRET || ''
+        const result = await nhost.graphql.request({
+            document: mutation,
+            variables: {
+                userId,
+                defaultRole,
+                userRoles: userRolesToInsert
             }
         });
+
+        const { data, error } = result;
 
         if (error) {
             console.error("GraphQL Error:", error);

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 
 export async function POST(req: Request) {
     try {
@@ -10,10 +10,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Candidate ID is required' }, { status: 400 });
         }
 
-        const nhost = new NhostClient({
-            subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '',
-            region: process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '',
-            adminSecret: process.env.NHOST_ADMIN_SECRET || ''
+        const nhost = createNhostClient({
+            subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
+            region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
+            adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
         });
 
         const mutation = `
@@ -29,14 +29,15 @@ export async function POST(req: Request) {
             }
         `;
 
-        const { data, error } = await nhost.graphql.request(mutation, {
-            candidateId
+        const result = await nhost.graphql.request({
+            document: mutation,
+            variables: { candidateId }
         });
+
+        const { data, error } = result;
 
         if (error) {
             console.error("GraphQL Error casting vote:", error);
-            // Fallback: If _inc isn't supported or fails, we might need a different approach, 
-            // but for standard Hasura setups, _inc on an int field is correct.
             return NextResponse.json({ 
                 message: Array.isArray(error) ? error[0]?.message : (error as any).message 
             }, { status: 400 });

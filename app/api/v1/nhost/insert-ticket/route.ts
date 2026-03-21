@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 import { sendPushNotifications } from '@/lib/notifications';
 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
 
-        const nhost = new NhostClient({
+        const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
+        const nhost = createNhostClient({
             subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
             region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
-            adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
+            adminSecret
         });
 
         const mutation = `
@@ -20,22 +21,27 @@ export async function POST(req: Request) {
             }
         `;
 
-        const { data, error } = await nhost.graphql.request(mutation, {
-            object: {
-                title: body.subject || body.title,
-                description: body.description,
-                status: body.status || 'Pending',
-                priority: body.priority || 'Medium',
-                department: body.department || 'Other',
-                type: body.type || 'Other',
-                submitted_by: body.studentName || body.submitted_by,
-                submitted_by_email: body.email || null,
-                image_url: body.image || body.image_url || null,
-                hostel_type: body.hostelType || null,
-                room_number: body.roomNumber || null,
-                votes: 0
+        const result = await nhost.graphql.request({
+            document: mutation,
+            variables: {
+                object: {
+                    title: body.subject || body.title,
+                    description: body.description,
+                    status: body.status || 'Pending',
+                    priority: body.priority || 'Medium',
+                    department: body.department || 'Other',
+                    type: body.type || 'Other',
+                    submitted_by: body.studentName || body.submitted_by,
+                    submitted_by_email: body.email || null,
+                    image_url: body.image || body.image_url || null,
+                    hostel_type: body.hostelType || null,
+                    room_number: body.roomNumber || null,
+                    votes: 0
+                }
             }
         });
+
+        const { data, error } = result;
 
         if (error) {
             const errorMessage = Array.isArray(error) ? error[0]?.message : (error as any).message || String(error);
@@ -43,24 +49,28 @@ export async function POST(req: Request) {
             // Fallback for missing column
             if (errorMessage.includes('submitted_by_email') || errorMessage.includes('column') || errorMessage.includes('field')) {
                 console.warn('submitted_by_email column missing, retrying without it...');
-                const fallbackResult = await nhost.graphql.request(mutation, {
-                    object: {
-                        title: body.subject || body.title,
-                        description: body.description,
-                        status: body.status || 'Pending',
-                        priority: body.priority || 'Medium',
-                        department: body.department || 'Other',
-                        type: body.type || 'Other',
-                        submitted_by: body.studentName || body.submitted_by,
-                        image_url: body.image || body.image_url || null,
-                        hostel_type: body.hostelType || null,
-                        room_number: body.roomNumber || null,
-                        votes: 0
+                const fallbackResult = await nhost.graphql.request({
+                    document: mutation,
+                    variables: {
+                        object: {
+                            title: body.subject || body.title,
+                            description: body.description,
+                            status: body.status || 'Pending',
+                            priority: body.priority || 'Medium',
+                            department: body.department || 'Other',
+                            type: body.type || 'Other',
+                            submitted_by: body.studentName || body.submitted_by,
+                            image_url: body.image || body.image_url || null,
+                            hostel_type: body.hostelType || null,
+                            room_number: body.roomNumber || null,
+                            votes: 0
+                        }
                     }
                 });
                 
                 if (fallbackResult.error) {
-                    return NextResponse.json({ message: Array.isArray(fallbackResult.error) ? fallbackResult.error[0]?.message : (fallbackResult.error as any).message }, { status: 400 });
+                    const fallbackError = fallbackResult.error;
+                    return NextResponse.json({ message: Array.isArray(fallbackError) ? fallbackError[0]?.message : (fallbackError as any).message }, { status: 400 });
                 }
 
                 // Send notification on fallback success

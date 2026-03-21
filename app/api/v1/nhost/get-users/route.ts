@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 
 export async function POST() {
     // Initialize Nhost client using environment variables
-    const nhost = new NhostClient({
-        subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '',
-        region: process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '',
-        adminSecret: process.env.NHOST_ADMIN_SECRET || ''
+    const nhost = createNhostClient({
+        subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
+        region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
+        adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
     });
 
     const query = `
@@ -24,12 +24,9 @@ export async function POST() {
     `;
 
     try {
-        // Use the admin secret to bypass all Hasura permissions
-        const { data, error } = await nhost.graphql.request(query, undefined, {
-            headers: {
-                'x-hasura-admin-secret': process.env.NHOST_ADMIN_SECRET || ''
-            }
-        });
+        // Use the admin secret configured above
+        const result = await nhost.graphql.request({ document: query });
+        const { data, error } = result;
 
         if (error) {
             console.error(error);
@@ -40,9 +37,9 @@ export async function POST() {
         }
 
         // Format data for test expectations (TestSprite TC001 expects allowedRoles)
-        if (data && data.users) {
+        if (data && (data as any).users) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            data.users = data.users.map((user: any) => ({
+            (data as any).users = (data as any).users.map((user: any) => ({
                 ...user,
                 allowedRoles: user.roles ? user.roles.map((r: any) => r.role) : []
             }));

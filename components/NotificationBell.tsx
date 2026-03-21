@@ -41,11 +41,13 @@ function NotificationBellContent() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchNotifications = useCallback(async () => {
+    const uid = user?.id;
+    if (!uid || typeof uid !== 'string') return;
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!user?.id || !uuidRegex.test(user.id)) return;
+    if (!uuidRegex.test(uid)) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/v1/nhost/get-notifications?userId=${user.id}`);
+      const res = await fetch(`/api/v1/nhost/get-notifications?userId=${uid}`);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.message || `Failed to fetch notifications: ${res.status}`);
@@ -62,11 +64,12 @@ function NotificationBellContent() {
   }, [user?.id]);
 
   useEffect(() => {
+    if (!user?.id) return; // Don't start polling until user is authenticated
     fetchNotifications();
     // Poll every 30 seconds as a simpler alternative to subscriptions since they are restricted
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  }, [fetchNotifications, user?.id]);
 
   const unreadCount = notifications.filter((n: any) => !n.is_read).length;
 

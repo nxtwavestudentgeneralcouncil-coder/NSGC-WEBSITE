@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 
 export async function POST(req: Request) {
     try {
@@ -10,10 +10,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Missing required fields: day, meal_type, items' }, { status: 400 });
         }
 
-        const nhost = new NhostClient({
+        const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
+        const nhost = createNhostClient({
             subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '',
             region: process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '',
-            adminSecret: process.env.NHOST_ADMIN_SECRET || ''
+            adminSecret
         });
 
         const mutation = `
@@ -27,16 +28,21 @@ export async function POST(req: Request) {
             }
         `;
 
-        const { data, error } = await nhost.graphql.request(mutation, {
-            object: {
-                day,
-                meal_type,
-                items,
-                updated_by: updated_by || null,
-                updated_at: new Date().toISOString()
-            },
-            update_columns: ['items', 'updated_at', 'updated_by']
+        const result = await nhost.graphql.request({
+            document: mutation,
+            variables: {
+                object: {
+                    day,
+                    meal_type,
+                    items,
+                    updated_by: updated_by || null,
+                    updated_at: new Date().toISOString()
+                },
+                update_columns: ['items', 'updated_at', 'updated_by']
+            }
         });
+
+        const { data, error } = result;
 
         if (error) {
             const errorMessage = Array.isArray(error) ? error[0]?.message : (error as any).message || String(error);

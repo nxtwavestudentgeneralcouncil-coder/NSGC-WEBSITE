@@ -1,10 +1,11 @@
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-const nhost = new NhostClient({
+const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
+const nhost = createNhostClient({
     subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || '').trim(),
     region: (process.env.NEXT_PUBLIC_NHOST_REGION || '').trim(),
-    adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
+    adminSecret
 });
 
 const UPDATE_CLUB_MEMBER = `
@@ -17,7 +18,6 @@ const UPDATE_CLUB_MEMBER = `
             role
             custom_name
             custom_email
-        }
         }
     }
 `;
@@ -39,12 +39,17 @@ export async function POST(req: NextRequest) {
 
         console.log(`[update-club-member] Updating member ${id} to role ${role}`);
 
-        const { data, error } = await nhost.graphql.request(UPDATE_CLUB_MEMBER, {
-            id,
-            role,
-            custom_name: custom_name || null,
-            custom_email: custom_email || null
+        const result = await nhost.graphql.request({
+            document: UPDATE_CLUB_MEMBER,
+            variables: {
+                id,
+                role,
+                custom_name: custom_name || null,
+                custom_email: custom_email || null
+            }
         });
+
+        const { data, error } = result;
 
         if (error) {
             console.error('Error updating club member:', error);
@@ -52,7 +57,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: errorMessage }, { status: 500 });
         }
 
-        return NextResponse.json(data.update_club_members_by_pk);
+        return NextResponse.json((data as any).update_club_members_by_pk);
     } catch (err) {
         console.error('Unexpected error:', err);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

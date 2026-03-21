@@ -9,6 +9,8 @@ import { MobileHeader } from "@/components/layout/MobileHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Providers } from "./providers";
 
+export const dynamic = 'force-dynamic';
+
 // Use Orbitron for Display / Headers
 const orbitron = Orbitron({
   variable: "--font-orbitron",

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 
 export async function POST(req: Request) {
     try {
@@ -14,10 +14,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Invalid status. Must be: pending, approved, rejected' }, { status: 400 });
         }
 
-        const nhost = new NhostClient({
+        const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
+        const nhost = createNhostClient({
             subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '',
             region: process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '',
-            adminSecret: process.env.NHOST_ADMIN_SECRET || ''
+            adminSecret
         });
 
         const mutation = `
@@ -31,12 +32,17 @@ export async function POST(req: Request) {
             }
         `;
 
-        const { data, error } = await nhost.graphql.request(mutation, {
-            id,
-            status,
-            admin_notes: admin_notes || null,
-            updated_at: new Date().toISOString()
+        const result = await nhost.graphql.request({
+            document: mutation,
+            variables: {
+                id,
+                status,
+                admin_notes: admin_notes || null,
+                updated_at: new Date().toISOString()
+            }
         });
+
+        const { data, error } = result;
 
         if (error) {
             const errorMessage = Array.isArray(error) ? error[0]?.message : (error as any).message || String(error);

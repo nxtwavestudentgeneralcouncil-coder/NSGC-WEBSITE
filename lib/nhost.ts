@@ -1,7 +1,10 @@
-import { NhostClient } from '@nhost/nextjs';
+import { NhostClient } from '@nhost/nhost-js';
 
-// Fallback to empty strings if not defined to prevent crashing during build before user sets them
+// Use NhostClient constructor (not createNhostClient) to initialize
+// the xstate auth machine required by @nhost/react hooks
 export const nhost = new NhostClient({
   subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || '',
-  region: process.env.NEXT_PUBLIC_NHOST_REGION || ''
+  region: process.env.NEXT_PUBLIC_NHOST_REGION || '',
+  autoSignIn: true,
+  autoRefreshToken: true,
 });

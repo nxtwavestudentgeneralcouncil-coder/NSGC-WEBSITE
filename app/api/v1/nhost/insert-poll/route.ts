@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
 
-        const nhost = new NhostClient({
+        const nhost = createNhostClient({
             subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
             region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
             adminSecret: (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim()
@@ -23,11 +23,16 @@ export async function POST(req: Request) {
             }
         `;
 
-        const { data, error } = await nhost.graphql.request(mutation, {
-            question: body.question || body.title,
-            options: body.options || [],
-            is_active: body.is_active !== undefined ? body.is_active : true
+        const result = await nhost.graphql.request({
+            document: mutation,
+            variables: {
+                question: body.question || body.title,
+                options: body.options || [],
+                is_active: body.is_active !== undefined ? body.is_active : true
+            }
         });
+
+        const { data, error } = result;
 
         if (error) {
             console.error("GraphQL Error:", error);

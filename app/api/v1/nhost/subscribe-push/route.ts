@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,10 +15,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const nhost = new NhostClient({
+    const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
+    const nhost = createNhostClient({
       subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || '',
       region: process.env.NEXT_PUBLIC_NHOST_REGION || '',
-      adminSecret: process.env.NHOST_ADMIN_SECRET || '',
+      adminSecret,
     });
 
     // Upsert: if the endpoint already exists for this user, update it
@@ -46,12 +47,17 @@ export async function POST(req: Request) {
       }
     `;
 
-    const { data, error } = await nhost.graphql.request(mutation, {
-      user_id: userId,
-      endpoint,
-      keys_p256dh,
-      keys_auth,
+    const result = await nhost.graphql.request({
+      document: mutation,
+      variables: {
+        user_id: userId,
+        endpoint,
+        keys_p256dh,
+        keys_auth,
+      }
     });
+
+    const { data, error } = result;
 
     if (error) {
       const errorMessage = Array.isArray(error)
@@ -77,10 +83,11 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'endpoint is required' }, { status: 400 });
     }
 
-    const nhost = new NhostClient({
+    const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
+    const nhost = createNhostClient({
       subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || '',
       region: process.env.NEXT_PUBLIC_NHOST_REGION || '',
-      adminSecret: process.env.NHOST_ADMIN_SECRET || '',
+      adminSecret,
     });
 
     const mutation = `
@@ -91,7 +98,12 @@ export async function DELETE(req: Request) {
       }
     `;
 
-    const { error } = await nhost.graphql.request(mutation, { endpoint });
+    const result = await nhost.graphql.request({
+      document: mutation,
+      variables: { endpoint }
+    });
+
+    const { error } = result;
 
     if (error) {
       const errorMessage = Array.isArray(error)

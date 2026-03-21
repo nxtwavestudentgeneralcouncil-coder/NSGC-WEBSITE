@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,7 +18,7 @@ export default function FeedbackPage() {
         setPolls(currentPolls =>
             currentPolls.map(poll => {
                 if (poll.id === pollId) {
-                    const updatedOptions = poll.options.map(opt =>
+                    const updatedOptions = poll.options.map((opt: any) =>
                         opt.id === optionId ? { ...opt, votes: opt.votes + 1 } : opt
                     );
                     return { ...poll, options: updatedOptions, totalVotes: poll.totalVotes + 1, userVoted: true, userChoice: optionId };
@@ -87,7 +89,7 @@ export default function FeedbackPage() {
                                                     </Badge>
                                                 </div>
                                                 <div className="space-y-3">
-                                                    {poll.options.map((option) => (
+                                                    {poll.options.map((option: any) => (
                                                         <button
                                                             key={option.id}
                                                             onClick={() => handleVote(poll.id, option.id)}

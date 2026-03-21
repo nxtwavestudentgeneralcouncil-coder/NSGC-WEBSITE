@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import NotificationBell from '@/components/NotificationBell';
 import { User, LogIn } from 'lucide-react';
@@ -8,6 +9,11 @@ import { Button } from '@/components/ui/button';
 
 export function MobileHeader() {
   const { isAuthenticated } = useAuthenticationStatus();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
     <div className="md:hidden sticky top-0 z-[40] bg-zinc-950/80 backdrop-blur-xl border-b border-cyan-900/30 supports-[backdrop-filter]:bg-zinc-950/60 transition-colors">
@@ -20,7 +26,9 @@ export function MobileHeader() {
         </Link>
         
         <div className="flex items-center gap-2">
-            {isAuthenticated ? (
+            {!isMounted ? (
+                <div className="w-8 h-8" /> 
+            ) : isAuthenticated ? (
                 <>
                   <NotificationBell />
                   <Link href="/profile" className="w-8 h-8 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center hover:bg-zinc-800 transition-colors">
