@@ -1,4 +1,4 @@
-import webPush from 'web-push';
+import * as webPush from 'web-push';
 import { createNhostClient } from '@nhost/nhost-js';
 
 // Configure web-push with VAPID keys
@@ -8,6 +8,8 @@ const vapidEmail = process.env.VAPID_EMAIL || 'mailto:nsgc@nxtwave.co.in';
 
 if (vapidPublicKey && vapidPrivateKey) {
   webPush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
+} else {
+  console.warn('[notifications] VAPID keys are missing. Browser push notifications will not be sent.');
 }
 
 function createNhostAdmin(): any {
@@ -42,13 +44,9 @@ interface NotificationOptions {
 async function getAllPushSubscriptions(targetUserId?: string): Promise<any[]> {
   const nhost = createNhostAdmin();
   
-  const whereClause = targetUserId
-    ? `where: { user_id: { _eq: "${targetUserId}" } }`
-    : '';
-
   const query = `
-    query GetPushSubscriptions {
-      push_subscriptions(${whereClause}) {
+    query GetPushSubscriptions($where: push_subscriptions_bool_exp) {
+      push_subscriptions(where: $where) {
         id
         user_id
         endpoint
@@ -58,8 +56,12 @@ async function getAllPushSubscriptions(targetUserId?: string): Promise<any[]> {
     }
   `;
 
+  const variables = {
+    where: targetUserId ? { user_id: { _eq: targetUserId } } : {}
+  };
+
   try {
-    const result = await nhost.graphql.request(query);
+    const result = await nhost.graphql.request(query, variables);
     const { data, error } = result;
 
     if (error) {
@@ -185,8 +187,11 @@ export async function sendPushNotifications(options: NotificationOptions): Promi
   if (vapidPublicKey && vapidPrivateKey) {
     tasks.push(
       (async () => {
-        const subscriptions = await getAllPushSubscriptions(options.targetUserId);
-        console.log(`[notifications] Sending push to ${subscriptions.length} device(s)`);
+        try {
+          const subscriptions = await getAllPushSubscriptions(options.targetUserId);
+          console.log(`[notifications] Found ${subscriptions.length} push subscription(s) for ${options.targetUserId || 'all users'}`);
+
+          if (subscriptions.length === 0) return;
 
         const payload: PushPayload = {
           title: options.title,
@@ -218,6 +223,9 @@ export async function sendPushNotifications(options: NotificationOptions): Promi
         });
 
         await Promise.allSettled(pushPromises);
+        } catch (err) {
+          console.error('[notifications] Push notification task failed:', err);
+        }
       })()
     );
   }

@@ -27,6 +27,14 @@ const dmMono = DM_Mono({
 export const metadata: Metadata = {
   title: "NSGC NEXUS COMMAND",
   description: "Space-grade terminal for the Student Council.",
+  manifest: "/manifest.json",
+  themeColor: "#000000",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "NSGC NEXUS",
+  },
   icons: {
     icon: "/images/nsgc_logo_transparent.png",
     apple: "/images/nsgc_logo_transparent.png",
