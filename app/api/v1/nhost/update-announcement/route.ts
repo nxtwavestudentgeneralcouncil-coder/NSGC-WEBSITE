@@ -38,9 +38,7 @@ export async function POST(req: Request) {
             }
         `;
  
-        const result = await nhost.graphql.request({
-            document: mutation,
-            variables: {
+        const result = await nhost.graphql.request(mutation, {
                 id: body.id,
                 title: body.title,
                 content: body.content,
@@ -48,8 +46,7 @@ export async function POST(req: Request) {
                 priority: body.priority,
                 link: body.link,
                 added_by_role: body.added_by_role || 'Council'
-            }
-        });
+            });
 
         const { data, error } = result;
 

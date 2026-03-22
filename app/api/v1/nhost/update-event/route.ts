@@ -69,10 +69,7 @@ export async function POST(req: Request) {
             organizer_type: (body.added_by_role?.toLowerCase().includes('council') || body.organizer_type === 'council') ? 'council' : 'club'
         };
 
-        const result = await nhost.graphql.request({
-            document: mutation,
-            variables: payload
-        });
+        const result = await nhost.graphql.request(mutation, payload);
 
         const { data, error } = result;
 

@@ -1,5 +1,5 @@
 import webPush from 'web-push';
-import { createClient, withAdminSession } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
 
 // Configure web-push with VAPID keys
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
@@ -12,10 +12,10 @@ if (vapidPublicKey && vapidPrivateKey) {
 
 function createNhostAdmin(): any {
   const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
-  return createClient({
+  return createNhostClient({
     subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
     region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
-    configure: [withAdminSession({ adminSecret })],
+    adminSecret,
   });
 }
 
@@ -59,9 +59,8 @@ async function getAllPushSubscriptions(targetUserId?: string): Promise<any[]> {
   `;
 
   try {
-    const result = await nhost.graphql.request({ query });
-    const data = result.body.data;
-    const error = result.body.errors;
+    const result = await nhost.graphql.request(query);
+    const { data, error } = result;
 
     if (error) {
       console.error('[notifications] Failed to fetch push subscriptions:', error);
@@ -93,18 +92,17 @@ async function createInAppNotification(options: NotificationOptions): Promise<vo
       }
     `;
 
-    const result = await nhost.graphql.request({
-      query: insertNotif,
-      variables: {
+    const result = await nhost.graphql.request(
+      insertNotif,
+      {
         title: options.title,
         message: options.message,
         type: options.type || 'general',
         link: options.link || null,
       }
-    });
+    );
 
-    const notifData = result.body.data;
-    const notifError = result.body.errors;
+    const { data: notifData, error: notifError } = result;
 
     if (notifError) {
       console.error('[notifications] Failed to insert notification:', notifError);
@@ -128,13 +126,13 @@ async function createInAppNotification(options: NotificationOptions): Promise<vo
           }
         }
       `;
-      await nhost.graphql.request({
-        query: insertRecipient,
-        variables: {
+      await nhost.graphql.request(
+        insertRecipient,
+        {
           notification_id: notificationId,
           user_id: options.targetUserId,
         }
-      });
+      );
     } else {
       // Broadcast — get all users and create recipients
       const getUsersQuery = `
@@ -144,8 +142,8 @@ async function createInAppNotification(options: NotificationOptions): Promise<vo
           }
         }
       `;
-      const result = await nhost.graphql.request({ query: getUsersQuery });
-      const usersData = result.body.data;
+      const usersResult = await nhost.graphql.request(getUsersQuery);
+      const { data: usersData } = usersResult;
       const users = (usersData as any)?.users || [];
 
       if (users.length > 0) {
@@ -162,10 +160,10 @@ async function createInAppNotification(options: NotificationOptions): Promise<vo
             }
           }
         `;
-        await nhost.graphql.request({
-          query: insertManyRecipients,
-          variables: { objects: recipientObjects }
-        });
+        await nhost.graphql.request(
+          insertManyRecipients,
+          { objects: recipientObjects }
+        );
       }
     }
   } catch (err) {
@@ -232,12 +230,12 @@ export async function sendPushNotifications(options: NotificationOptions): Promi
 async function removeExpiredSubscription(subscriptionId: string): Promise<void> {
   const nhost = createNhostAdmin();
   try {
-    await nhost.graphql.request({
-      query: `mutation DeleteSub($id: uuid!) {
+    await nhost.graphql.request(
+      `mutation DeleteSub($id: uuid!) {
         delete_push_subscriptions_by_pk(id: $id) { id }
       }`,
-      variables: { id: subscriptionId }
-    });
+      { id: subscriptionId }
+    );
     console.log(`[notifications] Removed expired subscription: ${subscriptionId}`);
   } catch (err) {
     console.error('[notifications] Failed to remove expired subscription:', err);

@@ -30,16 +30,13 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        const result = await nhost.graphql.request({
-            document: INSERT_CLUB_MEMBER,
-            variables: {
+        const result = await nhost.graphql.request(INSERT_CLUB_MEMBER, {
                 club_id,
                 user_id: user_id || null,
                 role,
                 custom_name: custom_name || null,
                 custom_email: custom_email || null
-            }
-        });
+            });
 
         const { data, error } = result;
 

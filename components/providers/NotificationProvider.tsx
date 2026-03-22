@@ -87,7 +87,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         setIsSubscribed(true);
         console.log('[NotificationProvider] Push subscription registered with server');
       } else {
-        console.error('[NotificationProvider] Failed to register subscription with server');
+        const errorData = await response.json();
+        console.error('[NotificationProvider] Failed to register subscription with server', errorData);
       }
     } catch (err) {
       console.error('[NotificationProvider] Subscription failed:', err);

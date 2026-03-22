@@ -40,9 +40,7 @@ export async function POST(req: Request) {
             }
         `;
 
-        const result = await nhost.graphql.request({
-            document: mutation,
-            variables: {
+        const result = await nhost.graphql.request(mutation, {
                 id: body.id,
                 name: body.name,
                 slug: body.slug,
@@ -52,8 +50,7 @@ export async function POST(req: Request) {
                 category: body.category,
                 website: body.website,
                 lead: body.lead
-            }
-        });
+            });
 
         const { data, error } = result;
 

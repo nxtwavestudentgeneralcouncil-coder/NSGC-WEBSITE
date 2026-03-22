@@ -32,17 +32,14 @@ export async function POST(req: Request) {
             }
         `;
  
-        const result = await nhost.graphql.request({
-            document: mutation,
-            variables: {
+        const result = await nhost.graphql.request(mutation, {
                 id: body.id,
                 name: body.name,
                 role: body.role,
                 email: body.email,
                 status: body.status || 'Active',
                 image: body.image
-            }
-        });
+            });
 
         const { data, error } = result;
 

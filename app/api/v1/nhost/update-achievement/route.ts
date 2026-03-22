@@ -40,10 +40,7 @@ export async function POST(req: Request) {
             added_by_role: body.added_by_role || 'President'
         };
 
-        const result = await nhost.graphql.request({
-            document: mutation,
-            variables: payload
-        });
+        const result = await nhost.graphql.request(mutation, payload);
 
         const { data, error } = result;
 

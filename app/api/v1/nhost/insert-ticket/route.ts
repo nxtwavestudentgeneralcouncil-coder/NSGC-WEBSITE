@@ -21,9 +21,7 @@ export async function POST(req: Request) {
             }
         `;
 
-        const result = await nhost.graphql.request({
-            document: mutation,
-            variables: {
+        const result = await nhost.graphql.request(mutation, {
                 object: {
                     title: body.subject || body.title,
                     description: body.description,
@@ -38,8 +36,7 @@ export async function POST(req: Request) {
                     room_number: body.roomNumber || null,
                     votes: 0
                 }
-            }
-        });
+            });
 
         const { data, error } = result;
 
@@ -49,9 +46,7 @@ export async function POST(req: Request) {
             // Fallback for missing column
             if (errorMessage.includes('submitted_by_email') || errorMessage.includes('column') || errorMessage.includes('field')) {
                 console.warn('submitted_by_email column missing, retrying without it...');
-                const fallbackResult = await nhost.graphql.request({
-                    document: mutation,
-                    variables: {
+                const fallbackResult = await nhost.graphql.request(mutation, {
                         object: {
                             title: body.subject || body.title,
                             description: body.description,
@@ -65,8 +60,7 @@ export async function POST(req: Request) {
                             room_number: body.roomNumber || null,
                             votes: 0
                         }
-                    }
-                });
+                    });
                 
                 if (fallbackResult.error) {
                     const fallbackError = fallbackResult.error;

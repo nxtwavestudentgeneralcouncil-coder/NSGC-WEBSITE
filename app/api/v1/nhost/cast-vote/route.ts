@@ -29,10 +29,7 @@ export async function POST(req: Request) {
             }
         `;
 
-        const result = await nhost.graphql.request({
-            document: mutation,
-            variables: { candidateId }
-        });
+        const result = await nhost.graphql.request(mutation, { candidateId });
 
         const { data, error } = result;
 

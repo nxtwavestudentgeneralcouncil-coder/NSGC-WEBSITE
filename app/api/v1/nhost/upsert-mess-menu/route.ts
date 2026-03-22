@@ -28,9 +28,7 @@ export async function POST(req: Request) {
             }
         `;
 
-        const result = await nhost.graphql.request({
-            document: mutation,
-            variables: {
+        const result = await nhost.graphql.request(mutation, {
                 object: {
                     day,
                     meal_type,
@@ -39,8 +37,7 @@ export async function POST(req: Request) {
                     updated_at: new Date().toISOString()
                 },
                 update_columns: ['items', 'updated_at', 'updated_by']
-            }
-        });
+            });
 
         const { data, error } = result;
 

@@ -39,15 +39,12 @@ export async function POST(req: NextRequest) {
 
         console.log(`[update-club-member] Updating member ${id} to role ${role}`);
 
-        const result = await nhost.graphql.request({
-            document: UPDATE_CLUB_MEMBER,
-            variables: {
+        const result = await nhost.graphql.request(UPDATE_CLUB_MEMBER, {
                 id,
                 role,
                 custom_name: custom_name || null,
                 custom_email: custom_email || null
-            }
-        });
+            });
 
         const { data, error } = result;
 

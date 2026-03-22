@@ -43,10 +43,7 @@ export async function GET(req: Request) {
     });
 
     try {
-        const result = await nhost.graphql.request({
-            document: NOTIFICATIONS_QUERY,
-            variables: { userId }
-        });
+        const result = await nhost.graphql.request(NOTIFICATIONS_QUERY, { userId });
 
         const { data, error } = result;
 

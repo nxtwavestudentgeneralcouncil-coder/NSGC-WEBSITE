@@ -24,10 +24,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
         }
 
-        const result = await nhost.graphql.request({
-            document: DELETE_CLUB_MEMBER,
-            variables: { id }
-        });
+        const result = await nhost.graphql.request(DELETE_CLUB_MEMBER, { id });
 
         const { data, error } = result;
 

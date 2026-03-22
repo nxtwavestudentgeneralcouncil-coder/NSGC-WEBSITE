@@ -24,9 +24,7 @@ export async function POST(req: Request) {
             }
         `;
 
-        const result = await nhost.graphql.request({
-            document: mutation,
-            variables: {
+        const result = await nhost.graphql.request(mutation, {
                 object: {
                     student_id: student_id || null,
                     student_name: student_name || null,
@@ -37,8 +35,7 @@ export async function POST(req: Request) {
                     suggested_item,
                     status: 'pending'
                 }
-            }
-        });
+            });
 
         const { data, error } = result;
 

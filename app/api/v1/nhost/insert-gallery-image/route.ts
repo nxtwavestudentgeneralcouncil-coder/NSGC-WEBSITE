@@ -36,10 +36,7 @@ export async function POST(req: Request) {
             created_by: (body.created_by && isValidUUID(body.created_by)) ? body.created_by : null
         };
 
-        let result = await nhost.graphql.request({
-            document: mutation,
-            variables: payload
-        });
+        let result = await nhost.graphql.request(mutation, payload);
         let { data, error } = result;
 
         // Resiliency: Fallback to null created_by on FK violation
@@ -48,10 +45,7 @@ export async function POST(req: Request) {
             if (errorMsg?.toLowerCase().includes('foreign key violation') || errorMsg?.toLowerCase().includes('violates foreign key constraint')) {
                 console.warn("[insert-gallery-image] Foreign key violation for created_by. Retrying with null...");
                 const fallbackPayload = { ...payload, created_by: null };
-                const retry = await nhost.graphql.request({
-                    document: mutation,
-                    variables: fallbackPayload
-                });
+                const retry = await nhost.graphql.request(mutation, fallbackPayload);
                 data = retry.data;
                 error = retry.error;
             }

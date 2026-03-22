@@ -23,14 +23,11 @@ export async function POST(req: Request) {
             }
         `;
 
-        const result = await nhost.graphql.request({
-            document: mutation,
-            variables: {
+        const result = await nhost.graphql.request(mutation, {
                 question: body.question || body.title,
                 options: body.options || [],
                 is_active: body.is_active !== undefined ? body.is_active : true
-            }
-        });
+            });
 
         const { data, error } = result;
 

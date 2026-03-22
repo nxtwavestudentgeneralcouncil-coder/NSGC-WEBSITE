@@ -47,15 +47,12 @@ export async function POST(req: Request) {
       }
     `;
 
-    const result = await nhost.graphql.request({
-      document: mutation,
-      variables: {
+    const result = await nhost.graphql.request(mutation, {
         user_id: userId,
         endpoint,
         keys_p256dh,
         keys_auth,
-      }
-    });
+      });
 
     const { data, error } = result;
 
@@ -98,10 +95,7 @@ export async function DELETE(req: Request) {
       }
     `;
 
-    const result = await nhost.graphql.request({
-      document: mutation,
-      variables: { endpoint }
-    });
+    const result = await nhost.graphql.request(mutation, { endpoint });
 
     const { error } = result;
 

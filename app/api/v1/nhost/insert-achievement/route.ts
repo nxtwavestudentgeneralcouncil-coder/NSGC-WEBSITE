@@ -45,10 +45,7 @@ export async function POST(req: Request) {
 
         console.log("[insert-achievement] Payload:", payload);
 
-        let result = await nhost.graphql.request({
-            document: mutation,
-            variables: payload
-        });
+        let result = await nhost.graphql.request(mutation, payload);
         let { data, error } = result;
 
         // Resiliency: Fallback to null created_by / student_id on FK violation
@@ -61,10 +58,7 @@ export async function POST(req: Request) {
                     created_by: null,
                     student_id: null 
                 };
-                const retry = await nhost.graphql.request({
-                    document: mutation,
-                    variables: fallbackPayload
-                });
+                const retry = await nhost.graphql.request(mutation, fallbackPayload);
                 data = retry.data;
                 error = retry.error;
             }

@@ -32,15 +32,12 @@ export async function POST(req: Request) {
             }
         `;
 
-        const result = await nhost.graphql.request({
-            document: mutation,
-            variables: {
+        const result = await nhost.graphql.request(mutation, {
                 id,
                 status,
                 admin_notes: admin_notes || null,
                 updated_at: new Date().toISOString()
-            }
-        });
+            });
 
         const { data, error } = result;
 

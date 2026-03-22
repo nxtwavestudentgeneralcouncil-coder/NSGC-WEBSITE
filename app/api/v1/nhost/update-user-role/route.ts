@@ -48,14 +48,11 @@ export async function POST(req: Request) {
             role
         }));
 
-        const result = await nhost.graphql.request({
-            document: mutation,
-            variables: {
+        const result = await nhost.graphql.request(mutation, {
                 userId,
                 defaultRole,
                 userRoles: userRolesToInsert
-            }
-        });
+            });
 
         const { data, error } = result;
 

@@ -25,7 +25,7 @@ export async function POST() {
 
     try {
         // Use the admin secret configured above
-        const result = await nhost.graphql.request({ document: query });
+        const result = await nhost.graphql.request(query);
         const { data, error } = result;
 
         if (error) {

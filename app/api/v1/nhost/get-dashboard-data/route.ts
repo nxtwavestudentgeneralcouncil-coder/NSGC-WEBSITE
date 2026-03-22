@@ -114,7 +114,7 @@ export async function GET() {
 
     try {
         // Try the primary query first
-        const result = await nhost.graphql.request({ document: PRIMARY_QUERY });
+        const result = await nhost.graphql.request(PRIMARY_QUERY);
         const { data, error } = result;
 
         if (error) {
@@ -126,7 +126,7 @@ export async function GET() {
             console.warn('[get-dashboard-data] Retrying with fallback query...');
 
             // Try the fallback query
-            const fallbackResult = await nhost.graphql.request({ document: FALLBACK_QUERY });
+            const fallbackResult = await nhost.graphql.request(FALLBACK_QUERY);
             const { data: fallbackData, error: fallbackError } = fallbackResult;
 
             if (fallbackError) {
@@ -144,7 +144,7 @@ export async function GET() {
     } catch (err: any) {
         console.error('[get-dashboard-data] Request threw exception:', err?.message);
         try {
-            const fallbackResult = await nhost.graphql.request({ document: FALLBACK_QUERY });
+            const fallbackResult = await nhost.graphql.request(FALLBACK_QUERY);
             const { data: fallbackData, error: fallbackError } = fallbackResult;
 
             if (fallbackError) {
