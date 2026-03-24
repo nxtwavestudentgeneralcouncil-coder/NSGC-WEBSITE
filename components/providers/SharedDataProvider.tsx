@@ -235,7 +235,15 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
                     addedByRole: a.added_by_role,
                     createdBy: a.created_by
                 })),
-                users: data.users || [],
+                users: (data.users || []).map((u: any) => ({
+                    id: u.id,
+                    firstName: u.displayName?.split(' ')[0] || 'Student',
+                    lastName: u.displayName?.split(' ').slice(1).join(' ') || '',
+                    email: u.email || '',
+                    status: 'Active',
+                    joinedDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A',
+                    avatarUrl: u.avatarUrl
+                })),
                 polls: data.polls || [],
                 surveys: data.surveys || [],
                 galleryImages: (data.gallery_images || []).map((img: any) => ({

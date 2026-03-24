@@ -52,6 +52,14 @@ const PRIMARY_QUERY = `
             created_at updated_at timeline image_url
             hostel_type room_number
         }
+        users {
+            id
+            displayName
+            email
+            avatarUrl
+            createdAt
+            defaultRole
+        }
     }
 `;
 
@@ -101,6 +109,14 @@ const FALLBACK_QUERY = `
         tickets {
             id title description status priority department votes
             assigned_to submitted_by created_at updated_at
+        }
+        users {
+            id
+            displayName
+            email
+            avatarUrl
+            createdAt
+            defaultRole
         }
     }
 `;

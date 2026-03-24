@@ -25,8 +25,15 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NSGC NEXUS COMMAND",
-  description: "Space-grade terminal for the Student Council.",
+  title: {
+    default: "NSGC NEXUS COMMAND | Student General Council",
+    template: "%s | NSGC NEXUS"
+  },
+  description: "The official space-grade terminal for the Student General Council (NSGC). Manage clubs, events, achievements, and more.",
+  keywords: ["NSGC", "Student Council", "Nexus Command", "Student Management", "University Portal", "NextJS Council App"],
+  authors: [{ name: "V_Mach" }],
+  creator: "V_Mach",
+  publisher: "NSGC",
   manifest: "/manifest.json",
   themeColor: "#000000",
   viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
@@ -38,7 +45,44 @@ export const metadata: Metadata = {
   icons: {
     icon: "/images/nsgc_logo_transparent.png",
     apple: "/images/nsgc_logo_transparent.png",
-  }
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://nsgc-sigma.vercel.app/",
+    siteName: "NSGC NEXUS COMMAND",
+    title: "NSGC NEXUS COMMAND | Student General Council",
+    description: "The official space-grade terminal and portal for the Student General Council (NSGC).",
+    images: [
+      {
+        url: "/images/nsgc_logo_transparent.png",
+        width: 1200,
+        height: 630,
+        alt: "NSGC NEXUS COMMAND Logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NSGC NEXUS COMMAND | Student General Council",
+    description: "The official space-grade terminal and portal for the Student General Council (NSGC).",
+    images: ["/images/nsgc_logo_transparent.png"],
+    creator: "@vma_ch",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  alternates: {
+    canonical: "https://nsgc-sigma.vercel.app/",
+  },
 };
 
 export default function RootLayout({

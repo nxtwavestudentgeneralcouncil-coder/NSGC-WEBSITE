@@ -603,10 +603,11 @@ function PresidentDashboardContent() {
                 setUsers(prev => {
                     const exists = prev.find(u => u.id === itemId);
                     if (exists) {
-                        return prev.map(u => u.id === itemId ? { ...u, ...formData } as User : u);
+                        return prev.map(u => u.id === itemId ? { ...u, ...formData, status: formData.status || 'Active' } as User : u);
                     }
                     return prev;
                 });
+                // Note: Persistence for user status (Suspend) could be added here via an update-user-status API
                 break;
             case 'poll':
                 if (!isEditing) {
@@ -615,6 +616,8 @@ function PresidentDashboardContent() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             question: formData.question || formData.title,
+                            options: formData.options || [],
+                            is_active: formData.status !== 'Closed',
                             created_by: user?.id || null,
                             added_by_role: 'President'
                         })
@@ -627,6 +630,8 @@ function PresidentDashboardContent() {
                         body: JSON.stringify({
                             id: itemId,
                             question: formData.question || formData.title,
+                            options: formData.options || [],
+                            is_active: formData.status !== 'Closed',
                             added_by_role: 'President'
                         })
                     }).then(res => handleResponse(res, "Poll updated", refetchPolls))
@@ -644,6 +649,7 @@ function PresidentDashboardContent() {
                             description: formData.description || 'No description',
                             time: formData.time || formData.estimatedTime || '5 mins',
                             link: formData.link,
+                            is_active: formData.status !== 'Closed',
                             created_by: user?.id || null,
                             added_by_role: 'President'
                         })
@@ -659,6 +665,7 @@ function PresidentDashboardContent() {
                             description: formData.description || 'No description',
                             time: formData.time || formData.estimatedTime || '5 mins',
                             link: formData.link,
+                            is_active: formData.status !== 'Closed',
                             added_by_role: 'President'
                         })
                     }).then(res => handleResponse(res, "Survey updated", refetchSurveys))
@@ -765,14 +772,16 @@ function PresidentDashboardContent() {
                 {/* Tabs */}
                 <Tabs defaultValue="announcements" value={activeTab} onValueChange={setActiveTab} className="space-y-10">
                     <div className="bg-[#111625] rounded-[24px] p-2 border border-white/5 mb-10 shadow-xl overflow-hidden hidden md:block">
-                        <TabsList className="grid grid-cols-4 grid-rows-2 h-auto gap-2 bg-transparent p-0 w-full">
+                        <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 h-auto gap-2 bg-transparent p-0 w-full">
                             <TabsTrigger value="announcements" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Megaphone className="w-4 h-4 mr-3" /> Announcements</TabsTrigger>
                             <TabsTrigger value="members" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Users className="w-4 h-4 mr-3" /> Council Members</TabsTrigger>
+                            <TabsTrigger value="students" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Users className="w-4 h-4 mr-3" /> Students</TabsTrigger>
                             <TabsTrigger value="clubs" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Flag className="w-4 h-4 mr-3" /> Clubs</TabsTrigger>
                             <TabsTrigger value="gallery" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Camera className="w-4 h-4 mr-3" /> Gallery</TabsTrigger>
                             <TabsTrigger value="events" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Calendar className="w-4 h-4 mr-3" /> Events</TabsTrigger>
                             <TabsTrigger value="elections" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Vote className="w-4 h-4 mr-3" /> Elections</TabsTrigger>
                             <TabsTrigger value="achievements" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><Trophy className="w-4 h-4 mr-3" /> Achievements</TabsTrigger>
+                            <TabsTrigger value="polls" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><BarChart2 className="w-4 h-4 mr-3" /> Polls & Feedback</TabsTrigger>
                             <TabsTrigger value="complaints" className="h-[60px] rounded-xl data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-[#94a3b8] font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-white/5 data-[state=inactive]:hover:text-white"><MessageSquare className="w-4 h-4 mr-3" /> Complaints</TabsTrigger>
                         </TabsList>
                     </div>
@@ -782,11 +791,13 @@ function PresidentDashboardContent() {
                         <TabsList className="inline-flex h-auto bg-[#111625] p-1 rounded-full border border-white/5">
                             <TabsTrigger value="announcements" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Megaphone className="w-3.5 h-3.5 mr-2" /> Announcements</TabsTrigger>
                             <TabsTrigger value="members" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Users className="w-3.5 h-3.5 mr-2" /> Members</TabsTrigger>
+                            <TabsTrigger value="students" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Users className="w-3.5 h-3.5 mr-2" /> Students</TabsTrigger>
                             <TabsTrigger value="clubs" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Flag className="w-3.5 h-3.5 mr-2" /> Clubs</TabsTrigger>
                             <TabsTrigger value="gallery" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Camera className="w-3.5 h-3.5 mr-2" /> Gallery</TabsTrigger>
                             <TabsTrigger value="events" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Calendar className="w-3.5 h-3.5 mr-2" /> Events</TabsTrigger>
                             <TabsTrigger value="elections" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Vote className="w-3.5 h-3.5 mr-2" /> Elections</TabsTrigger>
                             <TabsTrigger value="achievements" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><Trophy className="w-3.5 h-3.5 mr-2" /> Achievements</TabsTrigger>
+                            <TabsTrigger value="polls" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><BarChart2 className="w-3.5 h-3.5 mr-2" /> Polls & Feedback</TabsTrigger>
                             <TabsTrigger value="complaints" className="rounded-full px-5 py-2.5 data-[state=active]:bg-[#0ea5e9] data-[state=active]:text-black text-xs font-bold whitespace-nowrap"><MessageSquare className="w-3.5 h-3.5 mr-2" /> Complaints</TabsTrigger>
                         </TabsList>
                     </div>
