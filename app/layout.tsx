@@ -9,7 +9,7 @@ import { MobileHeader } from "@/components/layout/MobileHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Providers } from "./providers";
 
-export const dynamic = 'force-dynamic';
+// Removed force-dynamic to allow Next.js to statically optimize eligible pages
 
 // Use Orbitron for Display / Headers
 const orbitron = Orbitron({
@@ -57,7 +57,6 @@ export default function RootLayout({
           <div className="bg-grid absolute inset-0 z-[-6]" />
           <div className="bg-atmosphere absolute inset-0 z-[-5]" />
           <div className="bg-noise absolute inset-0 z-[-4]" />
-          <div className="bg-particles absolute inset-0 z-[-3]" />
           <div className="bg-scanlines pointer-events-none fixed inset-0 z-[100]" />
           
           <Navbar />

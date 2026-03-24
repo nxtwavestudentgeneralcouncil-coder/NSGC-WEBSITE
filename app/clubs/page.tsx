@@ -114,11 +114,10 @@ export default function ClubsPage() {
                                 return (
                                     <motion.div
                                         key={club.id}
-                                        layout
                                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                                         animate={{ opacity: 1, scale: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                                        transition={{ duration: 0.2 }}
                                     >
                                         <Link href={`/clubs/${club.id}`} className="block h-full">
                                             <Card className="bg-[#0B1224]/80 border-white/5 backdrop-blur-md overflow-hidden hover:border-white/10 transition-all duration-500 group h-full cursor-pointer hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">

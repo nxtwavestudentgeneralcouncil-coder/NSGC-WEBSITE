@@ -283,8 +283,7 @@ export function useClubData() {
     const sharedData = useSharedData();
     const allClubs = sharedData.clubs || [];
 
-    // Get basic list of all clubs (might still be used by some components for basic UI)
-    const { data: clubsData, loading: clubsLoading, error: clubsError, refetch: refetchClubs } = useQuery(GET_CLUBS);
+    // Clubs data is already fetched by SharedDataProvider — no duplicate query needed
 
     // Get clubs managed by the current user (explicit membership)
     const { data: managedClubsData, loading: managedClubsLoading, refetch: refetchManagedClubs } = useQuery(GET_MY_MANAGED_CLUBS, {
@@ -304,10 +303,10 @@ export function useClubData() {
     const myClubByEmailLoading = !sharedData.isLoaded;
 
     return {
-        clubs: clubsData?.clubs || [],
-        clubsLoading,
-        clubsError,
-        refetchClubs,
+        clubs: allClubs,
+        clubsLoading: !sharedData.isLoaded,
+        clubsError: null,
+        refetchClubs: sharedData.refetchClubs,
         
         allClubs, // Expose the full list for admin lookups
         isLoaded: sharedData.isLoaded,

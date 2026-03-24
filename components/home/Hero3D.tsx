@@ -3,7 +3,20 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, ChevronDown } from 'lucide-react';
-import { CyberSolarSystem } from '@/components/solar/CyberSolarSystem';
+import dynamic from 'next/dynamic';
+
+// Lazy-load the heavy Three.js 3D solar system to avoid blocking initial render
+const CyberSolarSystem = dynamic(
+    () => import('@/components/solar/CyberSolarSystem').then(mod => ({ default: mod.CyberSolarSystem })),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="w-full h-full bg-black flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        )
+    }
+);
 
 export function Hero3D() {
     return (
@@ -20,9 +33,9 @@ export function Hero3D() {
             {/* Launch Console - Center Low */}
             <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 w-full max-w-2xl px-4 flex flex-col items-center">
 
-                {/* Orbital Rings around console */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] max-w-[100vw] h-[300%] border border-blue-500/10 rounded-[50%] animate-[spin_10s_linear_infinite] pointer-events-none z-0" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] max-w-[100vw] h-[250%] border-t border-b border-blue-500/5 rounded-[50%] animate-[spin_15s_linear_infinite_reverse] pointer-events-none z-0" />
+                {/* Orbital Rings around console - Slowed down for better performance */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110%] max-w-[100vw] h-[300%] border border-blue-500/10 rounded-[50%] animate-[spin_25s_linear_infinite] pointer-events-none z-0" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] max-w-[100vw] h-[250%] border-t border-b border-blue-500/5 rounded-[50%] animate-[spin_40s_linear_infinite_reverse] pointer-events-none z-0" />
 
                 <motion.div
                     initial={{ opacity: 0, y: 100, rotateX: 30 }}

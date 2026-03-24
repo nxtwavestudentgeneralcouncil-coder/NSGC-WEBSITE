@@ -23,13 +23,13 @@ export function CustomCursor() {
     const handleMouseOver = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       // Check if the element or any of its parents is a clickable element
+      // Removed getComputedStyle check as it forces expensive style recalculation
       if (
         target.tagName.toLowerCase() === 'button' ||
         target.tagName.toLowerCase() === 'a' ||
         target.closest('button') ||
         target.closest('a') ||
-        target.classList.contains('cursor-pointer') ||
-        getComputedStyle(target).cursor === 'pointer'
+        target.classList.contains('cursor-pointer')
       ) {
         setIsHovering(true);
       } else {

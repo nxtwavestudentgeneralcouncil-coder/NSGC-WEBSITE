@@ -135,8 +135,19 @@ body {
       rgba(0, 0, 0, 0.2) 50%,
       rgba(0, 0, 0, 0.2));
   background-size: 100% 4px;
-  opacity: 0.1;
+  opacity: 0.03;
   pointer-events: none;
+}
+
+/* Disable heavy animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .bg-scanlines,
+  .bg-noise {
+    display: none;
+  }
+  .bg-grid {
+    opacity: 0.15;
+  }
 }
 
 .bg-grid {
@@ -148,9 +159,9 @@ body {
   background-size: 40px 40px;
   transform: perspective(600px) rotateX(60deg) translateY(50px) scale(2.5);
   transform-origin: center top;
-  /* Start from top to recede down */
   pointer-events: none;
-  opacity: 0.8;
+  opacity: 0.3;
+  will-change: transform;
 }
 
 /* Core Glass Panel aesthetics */

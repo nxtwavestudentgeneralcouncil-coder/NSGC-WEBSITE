@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useSharedData } from '@/hooks/useSharedData';
 
@@ -256,19 +256,21 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
 
     const getTicketById = (id: string) => localTickets.find(t => t.id === id);
 
+    const contextValue = useMemo(() => ({
+        tickets: localTickets,
+        createTicket,
+        updateTicketStatus,
+        updateTicketContent,
+        deleteTicket,
+        assignTicket,
+        addComment,
+        upvoteTicket,
+        getTicketById,
+        refreshTickets: refetchTickets
+    }), [localTickets, refetchTickets]);
+
     return (
-        <TicketContext.Provider value={{
-            tickets: localTickets,
-            createTicket,
-            updateTicketStatus,
-            updateTicketContent,
-            deleteTicket,
-            assignTicket,
-            addComment,
-            upvoteTicket,
-            getTicketById,
-            refreshTickets: refetchTickets
-        }}>
+        <TicketContext.Provider value={contextValue}>
             {children}
         </TicketContext.Provider>
     );

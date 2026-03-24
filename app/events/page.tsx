@@ -130,7 +130,7 @@ export default function EventsPage() {
                                             key={event.id}
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.1 }}
+                                            transition={{ duration: 0.2 }}
                                             className="group"
                                         >
                                             <Card className="bg-[#0B1224]/80 border-white/5 backdrop-blur-md overflow-hidden hover:border-cyan-500/30 transition-all duration-500 hover:bg-[#0B1224] hover:shadow-[0_0_30px_rgba(6,182,212,0.05)]">

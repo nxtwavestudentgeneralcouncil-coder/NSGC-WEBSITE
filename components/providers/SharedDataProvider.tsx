@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useUserData } from '@nhost/react';
 
 // --- Types (matching useSharedData.ts) ---
@@ -323,7 +323,7 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
         setState(prev => ({ ...prev, tickets: typeof val === 'function' ? val(prev.tickets) : val }));
     }, []);
 
-    const contextValue: SharedDataState = {
+    const contextValue: SharedDataState = useMemo(() => ({
         ...state,
         refetch: fetchAllData,
         setState,
@@ -338,7 +338,7 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
         setSurveys,
         setGalleryImages,
         setTickets
-    };
+    }), [state, fetchAllData, setState, setAnnouncements, setEvents, setMembers, setClubs, setElections, setAchievements, setUsers, setPolls, setSurveys, setGalleryImages, setTickets]);
 
     return (
         <SharedDataContext.Provider value={contextValue}>

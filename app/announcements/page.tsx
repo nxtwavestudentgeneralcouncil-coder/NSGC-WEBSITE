@@ -138,11 +138,10 @@ export default function AnnouncementsPage() {
                             {filteredAnnouncements.map((announcement: any, index: number) => (
                                 <motion.div
                                     key={announcement.id}
-                                    layout
                                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                                    transition={{ duration: 0.2 }}
                                 >
                                     <Card className="bg-[#0b1324] border-white/5 overflow-hidden hover:border-white/10 transition-all duration-300 group h-full hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
                                         <CardContent className="p-6 flex flex-col h-full">

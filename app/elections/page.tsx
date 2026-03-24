@@ -123,7 +123,7 @@ export default function ElectionsPage() {
                                 key={election.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 + 0.2 }}
+                                transition={{ duration: 0.2 }}
                             >
                                 <Card className="bg-[#0B1224]/80 border-white/5 backdrop-blur-md overflow-hidden group hover:border-cyan-500/20 transition-all duration-500 h-full flex flex-col">
                                     <CardContent className="p-8 space-y-8 flex-grow flex flex-col">

@@ -137,10 +137,10 @@ export async function GET() {
                 return NextResponse.json({ error: fbError }, { status: 500 });
             }
 
-            return NextResponse.json(fallbackData ?? {}, { status: 200 });
+            return NextResponse.json(fallbackData ?? {}, { status: 200, headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' } });
         }
 
-        return NextResponse.json(data ?? {}, { status: 200 });
+        return NextResponse.json(data ?? {}, { status: 200, headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' } });
     } catch (err: any) {
         console.error('[get-dashboard-data] Request threw exception:', err?.message);
         try {
@@ -150,7 +150,7 @@ export async function GET() {
             if (fallbackError) {
                 return NextResponse.json({ error: err.message }, { status: 500 });
             }
-            return NextResponse.json(fallbackData ?? {}, { status: 200 });
+            return NextResponse.json(fallbackData ?? {}, { status: 200, headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' } });
         } catch (innerErr: any) {
             console.error('[get-dashboard-data] Fallback also threw:', innerErr?.message);
             return NextResponse.json({ error: err.message }, { status: 500 });

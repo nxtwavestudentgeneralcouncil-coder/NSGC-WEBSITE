@@ -57,7 +57,7 @@ export default function AchievementsPage() {
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true, margin: "-50px" }}
-                            transition={{ duration: 0.5, delay: index * 0.1 }}
+                            transition={{ duration: 0.3 }}
                         >
                             <Card className="bg-[#0b1324]/80 backdrop-blur-sm border-yellow-500/20 overflow-hidden hover:border-yellow-500/50 transition-all duration-500 group h-full hover:shadow-[0_8px_30px_rgba(234,179,8,0.15)] rounded-2xl">
                                 <CardContent className="p-8 flex flex-col items-center text-center h-full relative">

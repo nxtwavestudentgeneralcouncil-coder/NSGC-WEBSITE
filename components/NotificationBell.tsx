@@ -66,8 +66,8 @@ function NotificationBellContent() {
   useEffect(() => {
     if (!user?.id) return; // Don't start polling until user is authenticated
     fetchNotifications();
-    // Poll every 30 seconds as a simpler alternative to subscriptions since they are restricted
-    const interval = setInterval(fetchNotifications, 30000);
+    // Poll every 60 seconds as a simpler alternative to subscriptions since they are restricted
+    const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
   }, [fetchNotifications, user?.id]);
 

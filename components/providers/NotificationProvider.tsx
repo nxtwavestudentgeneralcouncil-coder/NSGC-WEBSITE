@@ -116,16 +116,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [subscribeUser]);
 
-  // Auto-prompt after a short delay if permission is 'default' and user is logged in
-  useEffect(() => {
-    if (permission !== 'default' || !user?.id) return;
-
-    const timer = setTimeout(() => {
-      requestPermission();
-    }, 3000); // Wait 3 seconds after login before prompting
-
-    return () => clearTimeout(timer);
-  }, [permission, user?.id, requestPermission]);
+  // Notification permission is now only requested via explicit user action (requestPermission)
+  // Auto-prompting removed to avoid jarring UX and potential interaction blocking
 
   return (
     <NotificationContext.Provider value={{ permission, isSubscribed, requestPermission }}>
