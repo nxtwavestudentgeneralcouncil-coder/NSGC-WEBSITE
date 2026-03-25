@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sparkles, GraduationCap, Users, ArrowUpRight, Palette } from 'lucide-react';
 import { useSharedData } from '@/hooks/useSharedData';
+import Image from 'next/image';
 
 // Helper to determine the top-right icon based on category
 const getCategoryIcon = (category: string) => {
@@ -71,9 +72,11 @@ export default function AchievementsPage() {
                                     <div className="relative mb-6 mt-4">
                                         <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-b from-yellow-400 to-yellow-600 shadow-[0_0_20px_rgba(234,179,8,0.3)] transition-transform duration-500 group-hover:scale-105">
                                             {item.image ? (
-                                                <img
+                                                <Image
                                                     src={item.image}
                                                     alt={item.student || 'Student'}
+                                                    width={128}
+                                                    height={128}
                                                     className="w-full h-full object-cover rounded-full border-4 border-[#0b1324]"
                                                 />
                                             ) : (

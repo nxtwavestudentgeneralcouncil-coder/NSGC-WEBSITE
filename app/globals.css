@@ -105,38 +105,66 @@ body {
   }
 }
 
-/* Atmospheric Background Elements */
-.bg-atmosphere {
-  position: fixed;
-  inset: 0;
-  z-index: -5;
-  background:
-    radial-gradient(circle at right top, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-    linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.8));
-  pointer-events: none;
+/* Atmospheric Background Elements - Disabled on mobile for performance */
+@media (min-width: 1024px) {
+  .bg-atmosphere {
+    position: fixed;
+    inset: 0;
+    z-index: -5;
+    background:
+      radial-gradient(circle at right top, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+      linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.8));
+    pointer-events: none;
+  }
+
+  .bg-noise {
+    position: fixed;
+    inset: 0;
+    z-index: -4;
+    opacity: 0.04;
+    /* Replaced heavy SVG fractalFilter with more efficient static noise pattern */
+    background-image: url("https://www.transparenttextures.com/patterns/black-linen.png"); 
+    pointer-events: none;
+  }
+
+  .bg-scanlines {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: linear-gradient(to bottom,
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, 0) 50%,
+        rgba(0, 0, 0, 0.2) 50%,
+        rgba(0, 0, 0, 0.2));
+    background-size: 100% 4px;
+    opacity: 0.03;
+    pointer-events: none;
+  }
+
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    z-index: -6;
+    background-image: linear-gradient(to right, rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+    background-size: 40px 40px;
+    transform: perspective(600px) rotateX(60deg) translateY(50px) scale(2.5);
+    transform-origin: center top;
+    pointer-events: none;
+    opacity: 0.3;
+    will-change: transform;
+  }
 }
 
-.bg-noise {
-  position: fixed;
-  inset: 0;
-  z-index: -4;
-  opacity: 0.04;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  pointer-events: none;
-}
-
-.bg-scanlines {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  background: linear-gradient(to bottom,
-      rgba(255, 255, 255, 0),
-      rgba(255, 255, 255, 0) 50%,
-      rgba(0, 0, 0, 0.2) 50%,
-      rgba(0, 0, 0, 0.2));
-  background-size: 100% 4px;
-  opacity: 0.03;
-  pointer-events: none;
+/* Simplified background for mobile */
+@media (max-width: 1023px) {
+  .bg-atmosphere, .bg-noise, .bg-scanlines, .bg-grid {
+    display: none;
+  }
+  
+  body {
+    background: #000; /* Solid black for OLED/Performance */
+  }
 }
 
 /* Disable heavy animations for users who prefer reduced motion */
@@ -150,27 +178,20 @@ body {
   }
 }
 
-.bg-grid {
-  position: fixed;
-  inset: 0;
-  z-index: -6;
-  background-image: linear-gradient(to right, rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
-  background-size: 40px 40px;
-  transform: perspective(600px) rotateX(60deg) translateY(50px) scale(2.5);
-  transform-origin: center top;
-  pointer-events: none;
-  opacity: 0.3;
-  will-change: transform;
-}
-
-/* Core Glass Panel aesthetics */
+/* Core Glass Panel aesthetics - Optimized for mobile */
 .glass-panel {
-  background: rgba(10, 10, 15, 0.7);
-  backdrop-filter: blur(12px);
+  background: rgba(10, 10, 15, 0.85);
+  backdrop-filter: blur(8px); /* Reduced from 12px */
   border-top: 1px solid var(--accent);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8), 0 0 15px rgba(59, 130, 246, 0.15);
   border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .glass-panel {
+    backdrop-filter: none; /* Disable blur on small mobile for CPU relief */
+    background: rgba(15, 15, 20, 0.95);
+  }
 }
 
 /* Aggressive Scrollbar Hide Utility */

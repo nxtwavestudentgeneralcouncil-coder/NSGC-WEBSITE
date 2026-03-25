@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { motion } from 'framer-motion';
 import { useSharedData } from '@/hooks/useSharedData';
 import { Camera } from 'lucide-react';
+import Image from 'next/image';
 
 export default function GalleryPage() {
     const { galleryImages } = useSharedData();
@@ -36,9 +37,11 @@ export default function GalleryPage() {
                                 transition={{ delay: Math.min(index * 0.1, 1) }}
                             >
                                 {img.src && (
-                                    <img
+                                    <Image
                                         src={img.src}
                                         alt={img.alt}
+                                        width={500}
+                                        height={300}
                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                     />
                                 )}

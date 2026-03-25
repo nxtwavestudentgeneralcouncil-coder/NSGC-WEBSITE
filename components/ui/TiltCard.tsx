@@ -14,8 +14,8 @@ interface TiltCardProps extends React.HTMLAttributes<HTMLDivElement> {
 export function TiltCard({
     children,
     className,
-    tiltIntensity = 20,
-    glareOpacity = 0.4,
+    tiltIntensity = 12, // Reduced from 20 for more stability
+    glareOpacity = 0.2, // Reduced from 0.4
     ...props
 }: TiltCardProps) {
     const ref = useRef<HTMLDivElement>(null);
@@ -23,8 +23,9 @@ export function TiltCard({
     const x = useMotionValue(0);
     const y = useMotionValue(0);
 
-    const mouseX = useSpring(x, { stiffness: 500, damping: 40 });
-    const mouseY = useSpring(y, { stiffness: 500, damping: 40 });
+    // Smoother, slightly slower springs to reduce update frequency
+    const mouseX = useSpring(x, { stiffness: 200, damping: 30 });
+    const mouseY = useSpring(y, { stiffness: 200, damping: 30 });
 
     const rotateX = useTransform(mouseY, [-0.5, 0.5], [tiltIntensity, -tiltIntensity]);
     const rotateY = useTransform(mouseX, [-0.5, 0.5], [-tiltIntensity, tiltIntensity]);

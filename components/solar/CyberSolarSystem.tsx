@@ -1,8 +1,8 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Stars } from '@react-three/drei';
-import { Suspense } from 'react';
+import { OrbitControls, Stars, PerformanceMonitor, AdaptiveDpr } from '@react-three/drei';
+import { Suspense, useState, useCallback } from 'react';
 import { CyberSun } from './CyberSun';
 import { CyberPlanet } from './CyberPlanet';
 import { SceneEffects } from './SceneEffects';
@@ -17,29 +17,40 @@ const planets = [
 ];
 
 export function CyberSolarSystem() {
+    const [dpr, setDpr] = useState(2);
+    const [lowQuality, setLowQuality] = useState(false);
+
+    // Callbacks for PerformanceMonitor
+    const onDecline = useCallback(() => setLowQuality(true), []);
+    const onIncline = useCallback(() => setLowQuality(false), []);
+
     return (
         <div className="w-full h-full absolute inset-0 bg-black">
             <Canvas
+                shadows={false}
                 camera={{ position: [0, 20, 35], fov: 40 }}
                 gl={{ antialias: false, toneMapping: THREE.ReinhardToneMapping, toneMappingExposure: 1.5 }}
-                dpr={[1, 2]} // Quality scaling
+                dpr={dpr}
             >
+                <PerformanceMonitor onDecline={onDecline} onIncline={onIncline} onFallback={() => setLowQuality(true)} />
+                <AdaptiveDpr pixelated />
+                
                 <ambientLight intensity={0.2} />
 
                 <Suspense fallback={null}>
                     {/* The Central Sun */}
-                    <CyberSun />
+                    <CyberSun quality={lowQuality ? 'low' : 'high'} />
 
                     {/* The Planets */}
                     {planets.map((planet) => (
-                        <CyberPlanet key={planet.name} {...planet} />
+                        <CyberPlanet key={planet.name} {...planet} quality={lowQuality ? 'low' : 'high'} />
                     ))}
 
-                    {/* Background Stars - Dense and animated */}
-                    <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+                    {/* Background Stars - Significantly reduced on low quality */}
+                    <Stars radius={100} depth={50} count={lowQuality ? 500 : 2000} factor={4} saturation={0} fade speed={1} />
 
-                    {/* Scene Post-Processing Effects */}
-                    <SceneEffects />
+                    {/* Scene Post-Processing Effects - ONLY on high quality */}
+                    {!lowQuality && <SceneEffects />}
 
                     {/* Camera Controls - constrained mostly to look at system */}
                     <OrbitControls
@@ -49,7 +60,7 @@ export function CyberSolarSystem() {
                         minDistance={15}
                         maxPolarAngle={Math.PI / 2} // Don't go below the plane too much
                         minPolarAngle={0}
-                        autoRotate
+                        autoRotate={true}
                         autoRotateSpeed={0.2}
                     />
                 </Suspense>

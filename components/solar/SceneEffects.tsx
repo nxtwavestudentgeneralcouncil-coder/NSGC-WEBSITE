@@ -11,21 +11,18 @@ const VignetteEffect = Vignette as any;
 export function SceneEffects() {
     return (
         <EffectComposer disableNormalPass>
-            {/* Intense Bloom for the "Digital" look */}
+            {/* Optimized Bloom for performance */}
             <BloomEffect
-                luminanceThreshold={0.2}
+                luminanceThreshold={0.5} // Increased threshold to glow only brightest parts
                 mipmapBlur
-                intensity={1.5}
-                radius={0.6}
+                intensity={1.0} // Reduced intensity
+                radius={0.4}
             />
 
-            {/* Film Grain/Noise for texture */}
-            <NoiseEffect
-                opacity={0.05}
-                blendFunction={BlendFunction.OVERLAY}
-            />
+            {/* Noise pass disabled - Global CSS noise is enough and much cheaper */}
+            {/* <NoiseEffect opacity={0.05} blendFunction={BlendFunction.OVERLAY} /> */}
 
-            {/* Vignette to focus center */}
+            {/* Vignette - kept as it's relatively cheap and adds focus */}
             <VignetteEffect
                 eskil={false}
                 offset={0.1}

@@ -8,6 +8,7 @@ import { useSharedData } from '@/hooks/useSharedData';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // Helper to determine category icon and colors
 const getCategoryDetails = (club: any) => {
@@ -127,7 +128,13 @@ export default function ClubsPage() {
                                                     <div className="flex justify-between items-start mb-6">
                                                         {club.logo_url ? (
                                                             <div className="w-12 h-12 rounded-2xl overflow-hidden border border-white/10 shrink-0 transition-transform duration-500 group-hover:scale-110">
-                                                                <img src={club.logo_url} alt={club.name} className="w-full h-full object-cover" />
+                                                                <Image 
+                                                                    src={club.logo_url} 
+                                                                    alt={club.name} 
+                                                                    width={48} 
+                                                                    height={48} 
+                                                                    className="w-full h-full object-cover" 
+                                                                />
                                                             </div>
                                                         ) : (
                                                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${bg} ${color} shadow-inner shrink-0 transition-transform duration-500 group-hover:scale-110`}>

@@ -15,15 +15,17 @@ interface CyberPlanetProps {
     color: string;
     route: string;
     description: string;
+    quality?: 'high' | 'low';
 }
 
 const MotionMesh = motion.mesh as any;
 
-export function CyberPlanet({ name, radius, distance, speed, color, route, description }: CyberPlanetProps) {
+export function CyberPlanet({ name, radius, distance, speed, color, route, description, quality = 'high' }: CyberPlanetProps) {
     const meshRef = useRef<THREE.Mesh>(null);
     const orbitRef = useRef<THREE.Group>(null);
     const router = useRouter();
     const [hovered, setHovered] = useState(false);
+    const isLow = quality === 'low';
 
     // Random start angle
     const initialAngle = useRef(Math.random() * Math.PI * 2).current;
@@ -48,7 +50,7 @@ export function CyberPlanet({ name, radius, distance, speed, color, route, descr
     return (
         <group>
             {/* Orbital Path (Visible Ring) */}
-            <Ring args={[distance - 0.05, distance + 0.05, 64]} rotation={[-Math.PI / 2, 0, 0]}>
+            <Ring args={[distance - 0.05, distance + 0.05, isLow ? 16 : 32]} rotation={[-Math.PI / 2, 0, 0]}>
                 <meshBasicMaterial color={color} opacity={0.1} transparent side={THREE.DoubleSide} />
             </Ring>
 
@@ -66,17 +68,27 @@ export function CyberPlanet({ name, radius, distance, speed, color, route, descr
                         }}
                         transition={{ duration: 0.5, type: 'spring' }}
                     >
-                        <sphereGeometry args={[radius, 64, 64]} />
-                        {/* Unicorn-style fluid material */}
-                        <MeshDistortMaterial
-                            color={color}
-                            emissive={color}
-                            emissiveIntensity={hovered ? 2 : 0.5}
-                            roughness={0.2}
-                            metalness={1}
-                            distort={hovered ? 0.6 : 0.3} // More distortion on hover
-                            speed={hovered ? 5 : 2}
-                        />
+                        <sphereGeometry args={[radius, isLow ? 16 : 32, isLow ? 16 : 32]} />
+                        {/* High-performance material for low quality */}
+                        {isLow ? (
+                            <meshStandardMaterial
+                                color={color}
+                                emissive={color}
+                                emissiveIntensity={hovered ? 2 : 0.5}
+                                roughness={0.3}
+                                metalness={0.8}
+                            />
+                        ) : (
+                            <MeshDistortMaterial
+                                color={color}
+                                emissive={color}
+                                emissiveIntensity={hovered ? 2 : 0.5}
+                                roughness={0.2}
+                                metalness={1}
+                                distort={hovered ? 0.6 : 0.3}
+                                speed={hovered ? 5 : 2}
+                            />
+                        )}
                     </MotionMesh>
 
                     {/* Label */}
