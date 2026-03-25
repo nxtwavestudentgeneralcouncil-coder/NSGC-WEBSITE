@@ -21,8 +21,8 @@ export function GlobalDashboards() {
     const [mounted, setMounted] = useState(false);
     const { isAuthenticated, isLoading } = useAuthenticationStatus();
     const user = useUserData();
-    const { myClubByEmail, allClubs: clubs, isLoaded } = useClubData();
-    const { members } = useSharedData();
+    const { myClubByEmail, allClubs: clubs, isLoaded: isClubsLoaded } = useClubData();
+    const { members, isLoaded: isSharedLoaded } = useSharedData();
 
     useEffect(() => { setMounted(true); }, []);
 
@@ -31,12 +31,17 @@ export function GlobalDashboards() {
     // Default to mapping nhost roles if they exist, or fallback to an empty array
     const userRoles = user?.roles ? user.roles : [];
     
-    // Nhost typical roles come back like "me_user", "public_user", and custom ones like "admin" etc. 
+    // Helper for Nhost role checks
     const hasRole = (role: string) => userRoles.some(r => r.toLowerCase() === role.toLowerCase());
 
-    const isCouncilMember = hasRole('admin') || hasRole('developer') || members.some(m => m.email && user?.email && m.email.toLowerCase() === user.email.toLowerCase());
+    const userEmail = user?.email?.trim().toLowerCase();
+    const isMemberInList = members.some(m => m.email?.trim().toLowerCase() === userEmail);
+
+    // Council visibility: Strictly tied to the database list OR administrative roles
+    const isAdminOrDev = hasRole('admin') || hasRole('developer') || hasRole('president');
+    const isCouncilMember = isAdminOrDev || (isSharedLoaded && isMemberInList);
+    
     const isPresident = hasRole('president') || hasRole('admin') || hasRole('developer');
-    const isAdminOrDev = hasRole('admin') || hasRole('developer');
     const isHostelWarden = hasRole('hostel-complaints') || hasRole('hostel_complaints') || hasRole('admin') || hasRole('developer') || hasRole('president');
     const isMessAdmin = hasRole('mess_admin') || hasRole('admin') || hasRole('developer') || hasRole('president');
 
@@ -176,20 +181,20 @@ export function GlobalDashboards() {
                     <DropdownMenuContent className="w-56 bg-black/90 border-white/10 backdrop-blur-xl text-white">
                         <DropdownMenuLabel className="font-mono text-xs text-teal-500 uppercase tracking-widest">Select Club</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-white/10" />
-                        {!isLoaded && (
+                        {!isClubsLoaded && (
                             <DropdownMenuItem disabled className="text-gray-500 italic flex items-center gap-2">
                                 <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
                                 Loading clubs...
                             </DropdownMenuItem>
                         )}
-                        {isLoaded && clubs?.map((club: any) => (
+                        {isClubsLoaded && clubs?.map((club: any) => (
                             <DropdownMenuItem key={club.id} className="hover:bg-white/5 focus:bg-white/5 cursor-pointer">
                                 <Link href={`/dashboard/club/${club.slug}`} className="w-full">
                                     {club.name}
                                 </Link>
                             </DropdownMenuItem>
                         ))}
-                        {isLoaded && (!clubs || clubs.length === 0) && (
+                        {isClubsLoaded && (!clubs || clubs.length === 0) && (
                             <DropdownMenuItem disabled className="text-gray-500 italic">No clubs found</DropdownMenuItem>
                         )}
                     </DropdownMenuContent>
@@ -231,7 +236,7 @@ export function GlobalDashboards() {
                     </Button>
                 </div>
             </>
-            {hasRole('admin') && (
+            {(hasRole('admin') || hasRole('developer') || hasRole('president')) && (
                 <>
                     <Button 
                         variant="ghost" 

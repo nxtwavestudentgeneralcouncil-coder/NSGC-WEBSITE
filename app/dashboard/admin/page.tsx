@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
 import { nhost } from '@/lib/nhost';
+import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 
 // Types
 interface User {
@@ -31,7 +32,6 @@ const AVAILABLE_ROLES = [
 
 export default function AdminDashboard() {
     const router = useRouter();
-    const [isAuthorized, setIsAuthorized] = useState(false);
     const [lockdownMode, setLockdownMode] = useState(false);
 
     // Initial Data
@@ -56,29 +56,10 @@ export default function AdminDashboard() {
         roles: ['student'],
         status: 'Active'
     });
-
-    const { isAuthenticated, isLoading } = useAuthenticationStatus();
-    const user = useUserData();
-
-    useEffect(() => {
-        if (!isLoading) {
-            if (!isAuthenticated || !user) {
-                router.push('/login');
-                return;
-            }
-            
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const roles = (user as any).roles || [];
-            const defaultRole = user.defaultRole || '';
-            
-            if (roles.includes('admin') || defaultRole === 'admin') {
-                setIsAuthorized(true);
-            } else {
-                router.push('/dashboard/student');
-            }
-        }
-
-    }, [isAuthenticated, isLoading, user, router]);
+    // Nhost Integration
+    const { isAuthorized, isLoading } = useDashboardAuth({
+        allowedRoles: ['admin', 'developer', 'president']
+    });
 
     // Fetch real users from internal API wrapper over Nhost GraphQL
     const fetchUsers = async () => {

@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuthenticationStatus, useUserData } from '@nhost/react';
+import { useAuthenticationStatus, useUserData, useSignOut } from '@nhost/react';
+import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { useSharedData, Announcement, Event, ClubTeamMember, GalleryImage } from '@/hooks/useSharedData';
 import { useQuery } from '@apollo/client';
 import { useClubData } from '@/hooks/useClubData';
@@ -64,14 +65,16 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
     // Form States
     const [formData, setFormData] = useState<Record<string, any>>({});
 
-    const { isAuthenticated, isLoading } = useAuthenticationStatus();
-    const user = useUserData();
+    // Nhost Integration
+    const { isAuthorized: isAuthByRole, isLoading, user } = useDashboardAuth({
+        allowedRoles: ['club_head', 'club_manager', 'admin', 'developer', 'president']
+    });
 
     // Roles and Overrides
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const userRoles = (user as any)?.roles || [];
     const defaultRole = user?.defaultRole || '';
-    const hasOverrideRole = userRoles.includes('admin') || userRoles.includes('developer') || defaultRole === 'admin' || defaultRole === 'developer';
+    const hasOverrideRole = userRoles.includes('admin') || userRoles.includes('developer') || userRoles.includes('president') || defaultRole === 'admin' || defaultRole === 'developer' || defaultRole === 'president';
 
     // Helper to find club by slug in administrative list
     const clubBySlug = allClubs.find(c => c.slug === resolvedParams.slug);
@@ -79,8 +82,8 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
     // Login Access Check
     useEffect(() => {
         if (!isLoading && clubDataLoaded) {
-            if (!isAuthenticated || !user) {
-                router.push('/login');
+            if (!user) {
+                // useDashboardAuth handles redirection to login
                 return;
             }
 
@@ -92,7 +95,8 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                 setIsAuthorized(true);
             } else {
                 if (!myClubByEmailLoading) {
-                    if (!myClubByEmail || myClubByEmail.slug !== resolvedParams.slug) {
+                    const isMyClub = myClubByEmail && myClubByEmail.slug === resolvedParams.slug;
+                    if (!isMyClub) {
                         router.push('/dashboard/student'); // Redirect to generic dashboard
                         return;
                     }
@@ -100,7 +104,7 @@ export default function ClubDashboard({ params }: { params: Promise<{ slug: stri
                 }
             }
         }
-    }, [isAuthenticated, isLoading, user, router, myClubByEmailLoading, myClubByEmail, resolvedParams.slug, hasOverrideRole, clubBySlug, clubDataLoaded]);
+    }, [isLoading, user, router, clubDataLoaded, hasOverrideRole, clubBySlug, myClubByEmail, myClubByEmailLoading, resolvedParams.slug]);
 
     const activeClub = hasOverrideRole ? clubBySlug : myClubByEmail;
     const currentClubId = activeClub?.id;

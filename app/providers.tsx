@@ -17,9 +17,51 @@ import { createClient } from 'graphql-ws';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { setContext } from '@apollo/client/link/context';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
+import Cookies from 'js-cookie';
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  // Sync Nhost state to cookies for PASSIVE VERIFICATION in proxy.ts
+  useEffect(() => {
+    const syncCookies = () => {
+      const session = nhost.auth.getSession();
+      const cookieOptions = { 
+        expires: 30, 
+        path: '/', 
+        sameSite: 'Lax' as const,
+        secure: process.env.NODE_ENV === 'production'
+      };
+
+      if (session) {
+        // Logged In or Token Refreshed
+        Cookies.set('nhost-refreshToken', session.refreshToken || '', cookieOptions);
+        
+        const rolesData = {
+          id: session.user?.id,
+          email: session.user?.email,
+          displayName: session.user?.displayName,
+          roles: (session.user as any)?.roles || [],
+          defaultRole: session.user?.defaultRole
+        };
+        Cookies.set('nhost-roles', JSON.stringify(rolesData), cookieOptions);
+      } else {
+        // Logged Out
+        Cookies.remove('nhost-refreshToken');
+        Cookies.remove('nhost-roles');
+      }
+    };
+
+    // 1. Sync on mount for existing sessions
+    syncCookies();
+
+    // 2. Sync on token changes
+    const unsubscribe = nhost.auth.onTokenChanged(() => {
+      syncCookies();
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const client = useMemo(() => {
     const graphqlUrl = nhost.graphql.url || '';
     

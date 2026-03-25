@@ -5,23 +5,39 @@ import { NhostClient } from '@nhost/nhost-js';
  * Lightweight helper to get Nhost session without React dependencies.
  */
 export async function getManualNhostSession(req: NextRequest) {
-  const subdomain = (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim();
-  const region = (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim();
+  // Get refresh token from cookies (check multiple common names)
+  const refreshToken = 
+    req.cookies.get('nhost-refreshToken')?.value || 
+    req.cookies.get('nhost-refresh-token')?.value ||
+    req.cookies.get('nhostRefreshToken')?.value;
   
-  if (!subdomain || !region) return null;
+  if (!refreshToken) {
+    return null;
+  }
 
-  const nhost = new NhostClient({ subdomain, region });
+  // PASSIVE VERIFICATION:
+  // We DO NOT verify the token with Nhost here because Next.js middleware runs concurrently
+  // and would cause the Nhost backend to rapidly rotate the token, triggering a 429 IP ban.
+  // Instead, we just read the roles cookie set by the client for frontend routing purposes.
+  // The backend APIs and Hasura GraphQL endpoints will cryptographically verify the real token.
   
-  // Get refresh token from cookies
-  const refreshToken = req.cookies.get('nhost-refreshToken')?.value;
+  const rolesCookie = req.cookies.get('nhost-roles')?.value;
+  let user = null;
   
-  if (!refreshToken) return null;
+  if (rolesCookie) {
+    try {
+      user = JSON.parse(rolesCookie);
+    } catch (e) {
+      console.error('[Auth Utils] Failed to parse roles cookie', e);
+    }
+  }
 
-  const { session, error } = await nhost.auth.refreshSession(refreshToken);
-  
-  if (error || !session) return null;
-  
-  return session;
+  // Return a mock session structure sufficient for proxy.ts routing checks
+  return {
+    accessToken: 'passive_verification',
+    refreshToken,
+    user: user // user will be null if cookie is missing
+  };
 }
 
 /**

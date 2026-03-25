@@ -7,51 +7,91 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 
 import { Lock, User, ArrowRight } from 'lucide-react';
-import { useSignInEmailPassword, useProviderLink } from '@nhost/react';
+import { useSignInEmailPassword, useProviderLink, useNhostClient } from '@nhost/react';
+import Cookies from 'js-cookie';
+
+import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 
 export default function LoginPage() {
     const router = useRouter();
+    
+    // Auto-redirect if already authenticated
+    useDashboardAuth({
+        redirectIfAuthenticated: '/dashboard/student'
+    });
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     
     // Nhost Auth Hook
-    const { signInEmailPassword, isLoading } = useSignInEmailPassword();
+    const nhost = useNhostClient();
+    const [isLoading, setIsLoading] = useState(false);
     const { google } = useProviderLink();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+        setIsLoading(true);
 
-        // Debug log to ensure the environment variables have been correctly reloaded
-        console.log("Attempting Nhost login with subdomain:", process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN);
-
-        // Use Nhost to authenticate
-        const result = await signInEmailPassword(email, password);
-        
-        if (result.isError) {
-            console.error("Login failed via Nhost. Error Object:", JSON.stringify(result.error, null, 2));
+        try {
+            // Use nhost client directly instead of React hook to get immediate synchronous access to the session
+            const result = await nhost.auth.signIn({ email, password });
             
-            // Map common Nhost errors or fallback to message
-            if (result.error?.status === 0) {
-                setError("Network Error: Could not reach Nhost. Nhost might be rate-limiting you (Too Many Requests). Please wait a few minutes.");
-            } else {
-                setError(result.error?.message || "Invalid email or password.");
+            if (result.error) {
+                console.error("Login failed via Nhost. Error Object:", JSON.stringify(result.error, null, 2));
+                
+                if (result.error.status === 0 || result.error.status === 429) {
+                    setError("Too many login attempts. Please wait a minute and try again.");
+                } else {
+                    setError(result.error.message || "Invalid email or password.");
+                }
+                setIsLoading(false);
+                return;
             }
-            return;
-        }
 
-        if (result.isSuccess && result.user) {
-            // Nhost user roles are available in user object
+            const session = result.session;
+            const refreshToken = session?.refreshToken || localStorage.getItem('nhostRefreshToken');
+
+            if (refreshToken) {
+                const cookieOptions = { 
+                    expires: 30, // 30 days
+                    path: '/',
+                    sameSite: 'Lax',
+                    secure: process.env.NODE_ENV === 'production'
+                } as const;
+
+                Cookies.set('nhost-refreshToken', refreshToken, cookieOptions);
+
+                // Sync roles to cookie for PASSIVE VERIFICATION in proxy.ts
+                const userObj = session?.user;
+                if (userObj) {
+                    const rolesData = {
+                        id: userObj.id,
+                        roles: (userObj as any).roles || [],
+                        defaultRole: userObj.defaultRole
+                    };
+                    Cookies.set('nhost-roles', JSON.stringify(rolesData), cookieOptions);
+                }
+            } else {
+                console.error("[Login] No refresh token could be extracted.");
+            }
+
+            // Nhost user roles are available in session.user
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const roles = (result.user as any).roles || [];
-            const defaultRole = result.user.defaultRole || '';
+            const userObj = session?.user;
+            const roles = (userObj as any)?.roles || [];
+            const defaultRole = userObj?.defaultRole || '';
             
             if (roles.includes('admin') || defaultRole === 'admin') router.push('/dashboard/admin');
             else if (roles.includes('president') || defaultRole === 'president') router.push('/dashboard/president');
             else if (roles.includes('council_member') || defaultRole === 'council_member') router.push('/dashboard/council');
             else if (roles.includes('club_head') || defaultRole === 'club_head') router.push('/dashboard/club');
             else router.push('/dashboard/student');
+        } catch (err: any) {
+            console.error("Exception during login:", err);
+            setError(err.message || "An unexpected error occurred during sign in.");
+            setIsLoading(false);
         }
     };
 

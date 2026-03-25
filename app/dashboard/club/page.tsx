@@ -3,14 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
+import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { useClubData } from '@/hooks/useClubData';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, ArrowLeft, Loader2 } from 'lucide-react';
 
 export default function ClubDashboardRouter() {
     const router = useRouter();
-    const { isAuthenticated, isLoading: authLoading } = useAuthenticationStatus();
-    const user = useUserData();
+    const { isLoading: authLoading, user, isAuthenticated } = useDashboardAuth({
+        allowedRoles: ['club_head', 'club_manager', 'admin', 'developer', 'president']
+    });
+    
     const { myClubByEmail, myClubByEmailLoading, allClubs, isLoaded: clubDataLoaded } = useClubData();
     const [message, setMessage] = useState('Verifying club access...');
 
@@ -18,12 +21,12 @@ export default function ClubDashboardRouter() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const userRoles = (user as any)?.roles || [];
     const defaultRole = user?.defaultRole || '';
-    const hasOverrideRole = userRoles.includes('admin') || userRoles.includes('developer') || defaultRole === 'admin' || defaultRole === 'developer';
+    const hasOverrideRole = userRoles.includes('admin') || userRoles.includes('developer') || userRoles.includes('president') || defaultRole === 'admin' || defaultRole === 'developer' || defaultRole === 'president';
 
     useEffect(() => {
         if (!authLoading && clubDataLoaded) {
-            if (!isAuthenticated || !user) {
-                router.push('/login');
+            if (!user) {
+                // useDashboardAuth handles redirection to login
                 return;
             }
 
@@ -40,7 +43,7 @@ export default function ClubDashboardRouter() {
                 }
             }
         }
-    }, [isAuthenticated, authLoading, user, myClubByEmail, myClubByEmailLoading, router, hasOverrideRole, clubDataLoaded]);
+    }, [authLoading, user, myClubByEmail, myClubByEmailLoading, router, hasOverrideRole, clubDataLoaded]);
 
     const isLoading = authLoading || myClubByEmailLoading || (isAuthenticated && myClubByEmail && !hasOverrideRole);
 

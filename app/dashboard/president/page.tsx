@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { GlassModal } from '@/components/ui/glass-modal';
 import {
     Users, Megaphone, Calendar, Flag, Plus, Trash2,
-    LogOut, CheckCircle, AlertTriangle, Star, Menu, FileText, ShoppingBag, BarChart2, Vote, Trophy, MessageSquare, ExternalLink, Camera, Upload, X, Crop, ThumbsUp, Eye
+    LogOut, CheckCircle, AlertTriangle, Star, Menu, FileText, ShoppingBag, BarChart2, Vote, Trophy, MessageSquare, ExternalLink, Camera, Upload, X, Crop, ThumbsUp, Eye, Loader2
 } from 'lucide-react';
 import { useTickets, TicketProvider, TicketStatus } from '@/lib/ticket-context';
 import Link from 'next/link';
@@ -22,6 +22,7 @@ import Link from 'next/link';
 import { useSharedData, Announcement, CouncilMember, Club, Event, Election, Achievement, User, GalleryImage } from '@/hooks/useSharedData';
 import { ImageCropper } from '@/components/ui/image-cropper';
 import { useAuthenticationStatus, useUserData, useSignOut } from '@nhost/react';
+import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { useClubData } from '@/hooks/useClubData';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -29,9 +30,9 @@ const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-
 
 function PresidentDashboardContent() {
     const router = useRouter();
-    const [isAuthorized, setIsAuthorized] = useState(false);
 
     const { refetchMyClubByEmail, refetchClubs: refetchClubsFromData } = useClubData();
+    const { signOut } = useSignOut();
 
     // --- State Management ---
     const {
@@ -93,33 +94,10 @@ function PresidentDashboardContent() {
     // Form States
     const [formData, setFormData] = useState<Record<string, any>>({});
 
-    const { isAuthenticated, isLoading } = useAuthenticationStatus();
-    const user = useUserData();
-    const { signOut } = useSignOut();
-
-    useEffect(() => {
-        if (!isLoading) {
-            if (!isAuthenticated || !user) {
-                router.push('/login');
-                return;
-            }
-            
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const roles = (user as any).roles || [];
-            const defaultRole = user.defaultRole || '';
-            const allRoles = [defaultRole, ...roles];
-            
-            const authorizedRoles = ['president', 'admin', 'developer'];
-            const hasAccess = allRoles.some(role => authorizedRoles.includes(role));
-
-            if (hasAccess) {
-                setIsAuthorized(true);
-            } else {
-                console.warn("[Dashboard] Unauthorized access attempt, redirecting...");
-                router.push('/dashboard/student');
-            }
-        }
-    }, [isAuthenticated, isLoading, user, router]);
+    // Nhost Integration
+    const { isAuthorized, isLoading, user } = useDashboardAuth({
+        allowedRoles: ['president', 'admin', 'developer']
+    });
 
 
 
@@ -703,8 +681,15 @@ function PresidentDashboardContent() {
         setIsAddModalOpen(false);
     };
 
-    if (!isAuthorized) {
-        return <div className="min-h-screen bg-black" />;
+    if (isLoading || !isAuthorized) {
+        return (
+            <div className="min-h-screen bg-[#0B0B14] text-white flex flex-col items-center justify-center p-4">
+                <div className="flex flex-col items-center space-y-4">
+                    <Loader2 className="w-12 h-12 text-[#0ea5e9] animate-spin" />
+                    <p className="text-[#64748B] font-mono text-xs uppercase tracking-[0.2em] animate-pulse">Authenticating Command...</p>
+                </div>
+            </div>
+        );
     }
 
     return (

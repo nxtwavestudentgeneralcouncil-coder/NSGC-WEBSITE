@@ -63,15 +63,15 @@ export const useTickets = () => {
 const STORAGE_KEY = 'nsgc_tickets_v3';
 
 export const TicketProvider = ({ children }: { children: ReactNode }) => {
-    const { tickets, refetchTickets } = useSharedData();
+    const { tickets, refetchTickets, isLoaded } = useSharedData();
     const [localTickets, setLocalTickets] = useState<Ticket[]>([]);
 
-    // Initially sync localTickets with hook tickets
+    // Sync localTickets with hook tickets
     useEffect(() => {
-        if (tickets && tickets.length > 0) {
-            setLocalTickets(tickets);
+        if (isLoaded) {
+            setLocalTickets(tickets || []);
         }
-    }, [tickets]);
+    }, [isLoaded, tickets]);
 
     const createTicket = (data: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'status' | 'assignedTo' | 'votes' | 'votedBy'>) => {
         const tempId = `CMP-PENDING-${Date.now()}`;

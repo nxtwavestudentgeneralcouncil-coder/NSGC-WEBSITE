@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useAuthenticationStatus, useSignOut } from '@nhost/react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import Cookies from 'js-cookie';
 
 export function MobileBottomNav() {
   const pathname = usePathname();
@@ -130,7 +131,12 @@ export function MobileBottomNav() {
                      <span className="text-sm font-mono uppercase tracking-widest">Settings</span>
                    </Link>
                   <div className="w-px h-6 bg-white/10" />
-                   <button onClick={() => { signOut(); setIsMoreMenuOpen(false); }} className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors">
+                   <button onClick={() => { 
+                     Cookies.remove('nhost-refreshToken'); 
+                     Cookies.remove('nhost-roles');
+                     signOut(); 
+                     setIsMoreMenuOpen(false); 
+                   }} className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors">
                      <LogOut className="w-5 h-5" />
                      <span className="text-sm font-mono uppercase tracking-widest">Logout</span>
                    </button>

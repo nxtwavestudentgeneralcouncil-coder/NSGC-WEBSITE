@@ -12,49 +12,22 @@ import {
 } from 'lucide-react';
 import { useTickets, TicketStatus } from '@/lib/ticket-context';
 import { useAuthenticationStatus, useUserData, useSignOut } from '@nhost/react';
+import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function HostelComplaintsDashboard() {
     const router = useRouter();
-    const [isAuthorized, setIsAuthorized] = useState(false);
     const { tickets, updateTicketStatus } = useTickets();
     const [selectedTicket, setSelectedTicket] = useState<any>(null);
     const [viewingImage, setViewingImage] = useState<string | null>(null);
 
-    const { isAuthenticated, isLoading } = useAuthenticationStatus();
-    const user = useUserData();
     const { signOut } = useSignOut();
 
-    useEffect(() => {
-        if (!isLoading) {
-            if (!isAuthenticated || !user) {
-                router.push('/login');
-                return;
-            }
-            
-            const roles = (user as any).roles || [];
-            const defaultRole = user.defaultRole || '';
-            
-            // Authorization for hostel-complaints / hostel_complaints role, plus admin/president
-            if (
-                roles.includes('hostel-complaints') || 
-                roles.includes('hostel_complaints') || 
-                defaultRole === 'hostel-complaints' || 
-                defaultRole === 'hostel_complaints' || 
-                roles.includes('admin') || 
-                roles.includes('president') || 
-                roles.includes('developer') ||
-                defaultRole === 'admin' || 
-                defaultRole === 'president' ||
-                defaultRole === 'developer'
-            ) {
-                setIsAuthorized(true);
-            } else {
-                router.push('/dashboard/student');
-            }
-        }
-    }, [isAuthenticated, isLoading, user, router]);
+    // Nhost Integration
+    const { isAuthorized, isLoading, user } = useDashboardAuth({
+        allowedRoles: ['hostel-complaints', 'hostel_complaints', 'admin', 'developer', 'president']
+    });
 
     // Filter tickets to only show Hostel complaints
     // Check type, department, OR hostelType (for older complaints saved before the schema fix)

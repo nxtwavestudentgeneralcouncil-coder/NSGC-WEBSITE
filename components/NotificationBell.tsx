@@ -49,6 +49,12 @@ function NotificationBellContent() {
     try {
       const res = await fetch(`/api/v1/nhost/get-notifications?userId=${uid}`);
       if (!res.ok) {
+        if (res.status === 401) {
+          const Cookies = (await import('js-cookie')).default;
+          Cookies.remove('nhost-refreshToken');
+          window.location.href = '/login?expired=1';
+          return;
+        }
         const errorData = await res.json().catch(() => ({}));
         throw new Error(errorData.error || errorData.message || `Failed to fetch notifications: ${res.status}`);
       }

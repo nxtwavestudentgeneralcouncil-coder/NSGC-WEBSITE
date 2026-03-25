@@ -1,9 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createNhostClient } from '@nhost/nhost-js';
+import { verifySession, unauthorizedResponse } from '@/lib/auth-utils';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+    // Verify session
+    const allowedRoles = ['mess_admin', 'mess-admin', 'admin', 'developer', 'president', 'student', 'user', 'me_user'];
+    const session = await verifySession(req, allowedRoles);
+    if (!session) {
+        return unauthorizedResponse('Authentication required to access mess menu');
+    }
+
     const nhost = createNhostClient({
         subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
         region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),

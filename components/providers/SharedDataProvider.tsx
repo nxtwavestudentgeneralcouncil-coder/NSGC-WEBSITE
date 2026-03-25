@@ -87,6 +87,7 @@ interface SharedDataState {
     totalUsers: number;
     isLoaded: boolean;
     apiLoading: boolean;
+    error: string | null;
     refetch: () => Promise<void>;
     setState: React.Dispatch<React.SetStateAction<Omit<SharedDataState, 'refetch' | 'setState' | 'setAnnouncements' | 'setEvents' | 'setMembers' | 'setClubs' | 'setElections' | 'setAchievements' | 'setUsers' | 'setPolls' | 'setSurveys' | 'setGalleryImages' | 'setTickets'>>>;
     setAnnouncements: (announcements: Announcement[] | ((prev: Announcement[]) => Announcement[])) => void;
@@ -120,6 +121,7 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
         totalUsers: 0,
         isLoaded: false,
         apiLoading: true,
+        error: null,
     });
 
     const parseCategoryFromRole = useCallback((role: string, fallback: string = 'Social') => {
@@ -129,22 +131,29 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
     }, []);
 
     const fetchAllData = useCallback(async () => {
-        setState(prev => ({ ...prev, apiLoading: true }));
+        setState(prev => ({ ...prev, apiLoading: true, error: null }));
         try {
             console.log('[SharedDataProvider] Fetching dashboard data...');
             const res = await fetch('/api/v1/nhost/get-dashboard-data');
 
             if (!res.ok) {
                 console.error(`[SharedDataProvider] HTTP ${res.status}: ${res.statusText}`);
-                setState(prev => ({ ...prev, apiLoading: false, isLoaded: true }));
+                if (res.status === 401) {
+                    const Cookies = (await import('js-cookie')).default;
+                    Cookies.remove('nhost-refreshToken');
+                    window.location.href = '/login?expired=1';
+                    return;
+                }
+                setState(prev => ({ ...prev, apiLoading: false, isLoaded: true, error: `HTTP ${res.status}` }));
                 return;
             }
 
             const data = await res.json();
 
             if (data.error) {
-                console.error('[SharedDataProvider] API Error:', typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
-                setState(prev => ({ ...prev, apiLoading: false, isLoaded: true }));
+                const errMsg = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+                console.error('[SharedDataProvider] API Error:', errMsg);
+                setState(prev => ({ ...prev, apiLoading: false, isLoaded: true, error: errMsg }));
                 return;
             }
 
@@ -154,7 +163,7 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
                 name: c.name,
                 slug: c.slug || '',
                 description: c.description || '',
-                lead: c.lead || (c.club_members?.find((m: any) => m.role === 'manager')?.custom_name || c.club_members?.find((m: any) => m.role === 'manager')?.user?.displayName) || '',
+                lead: c.lead || (c.club_members?.find((m: any) => m.role === 'manager' || m.role === 'lead' || m.role === 'club_head')?.custom_name || c.club_members?.find((m: any) => m.role === 'manager' || m.role === 'lead' || m.role === 'club_head')?.user?.displayName) || '',
                 members: c.club_members?.length || 0,
                 image: c.logo_url,
                 logo_url: c.logo_url,
@@ -221,11 +230,11 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
                     title: el.title,
                     date: el.date,
                     description: el.description,
-                    startDate: '', // Map as needed
-                    startTime: '',
-                    endDate: '',
-                    endTime: '',
-                    status: 'Ongoing',
+                    startDate: el.start_date || el.date, 
+                    startTime: el.start_time || '',
+                    endDate: el.end_date || el.date,
+                    endTime: el.end_time || '',
+                    status: el.status || 'Ongoing',
                     candidates: el.candidates || []
                 })),
                 achievements: (data.achievements || []).map((a: any) => ({
@@ -275,10 +284,11 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
                 totalUsers: data.users?.length || 0,
                 isLoaded: true,
                 apiLoading: false,
+                error: null,
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error('[SharedDataProvider] Fetch failed:', error);
-            setState(prev => ({ ...prev, apiLoading: false, isLoaded: true }));
+            setState(prev => ({ ...prev, apiLoading: false, isLoaded: true, error: error.message }));
         }
     }, []);
 

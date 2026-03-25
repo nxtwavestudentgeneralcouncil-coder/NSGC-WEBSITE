@@ -16,8 +16,9 @@ import {
 } from 'lucide-react';
 import { useTickets } from '@/lib/ticket-context';
 import Link from 'next/link';
-import { useSharedData, Announcement, Achievement, GalleryImage } from '@/hooks/useSharedData';
-import { useAuthenticationStatus, useUserData } from '@nhost/react';
+import { useSharedData, Announcement, CouncilMember, Club, Event, Election, Achievement, User, GalleryImage } from '@/hooks/useSharedData';
+import { useAuthenticationStatus, useUserData, useSignOut } from '@nhost/react';
+import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 
 function CouncilDashboardContent() {
     const router = useRouter();
@@ -27,7 +28,7 @@ function CouncilDashboardContent() {
 
     // Contexts
     const { tickets, updateTicketStatus } = useTickets();
-    const { announcements, setAnnouncements, events, setEvents, achievements, setAchievements, galleryImages, setGalleryImages, members, refetchAnnouncements, refetchEvents, refetchAchievements, refetchGalleryImages } = useSharedData();
+    const { announcements, setAnnouncements, events, setEvents, achievements, setAchievements, galleryImages, setGalleryImages, members, refetchAnnouncements, refetchEvents, refetchAchievements, refetchGalleryImages, isLoaded } = useSharedData();
     // UI States
     const [activeTab, setActiveTab] = useState('announcements');
     const [selectedTicket, setSelectedTicket] = useState<any>(null); // For viewing full complaint details
@@ -46,31 +47,50 @@ function CouncilDashboardContent() {
 
     const [formData, setFormData] = useState<Record<string, any>>({});
 
-    const { isAuthenticated, isLoading } = useAuthenticationStatus();
-    const user = useUserData();
+    // Nhost Integration — don't restrict by allowedRoles here, because
+    // council access is also granted via the members list (not just Nhost roles).
+    // useDashboardAuth only checks authentication; authorization is handled below.
+    const { isLoading, user } = useDashboardAuth({});
+
+    // Combined Authorization Logic
+    const { isLoaded: isSharedDataLoaded } = useSharedData();
 
     useEffect(() => {
-        if (!isLoading) {
-            if (!isAuthenticated || !user) {
-                router.push('/login');
-                return;
-            }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // Wait until both Nhost AND Shared Data have finished loading
+        if (!isLoading && isSharedDataLoaded && user) {
             const roles = (user as any).roles || [];
-            const defaultRole = user?.defaultRole || '';
-            const isEmailAuthorized = members.some(m => m.email && user?.email && m.email.toLowerCase() === user.email.toLowerCase());
-            const hasOverrideRole = roles.includes('admin') || roles.includes('developer') || defaultRole === 'admin' || defaultRole === 'developer';
-            
-            if (isEmailAuthorized || hasOverrideRole) {
+            const defaultRole = user.defaultRole || '';
+            const allRoles = [defaultRole, ...roles].map((r: string) => r.toLowerCase());
+            const councilRoles = ['council', 'council_member', 'admin', 'developer', 'president'];
+            const hasCouncilRole = allRoles.some(r => councilRoles.includes(r));
+
+            if (hasCouncilRole) {
+                // Admins/Developers/Presidents/CouncilRoles always get in
                 setIsAuthorized(true);
+            } else if (user?.email && members.length > 0) {
+                const userEmail = user.email.trim().toLowerCase();
+                const isListed = members.some(m => m.email?.trim().toLowerCase() === userEmail);
+                
+                if (isListed) {
+                    setIsAuthorized(true);
+                } else {
+                    console.warn(`[Council] User ${userEmail} not in authorized list.`);
+                    router.push('/dashboard/student');
+                }
             } else {
+                // Not authorized after full load
+                console.warn('[Council] No authorization found.');
                 router.push('/dashboard/student');
             }
         }
-    }, [isAuthenticated, isLoading, user, router, members]);
+    }, [isLoading, isSharedDataLoaded, user, members, router]);
 
     if (!isAuthorized) {
-        return <div className="min-h-screen bg-black" />;
+        return (
+            <div className="min-h-screen bg-black text-white flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0ea5e9]"></div>
+            </div>
+        );
     }
 
     // Determine whose content to show: the selected member (for admin) or the logged-in user

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FileText, ShoppingBag, BarChart2, Bell, Clock, Flag, Users, BellOff, Edit2, ListX, ChevronRight, PieChart, TerminalSquare, UtensilsCrossed, X, ChevronDown, Send, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { useTickets } from '@/lib/ticket-context';
 import { useSharedData } from '@/hooks/useSharedData';
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
@@ -17,7 +18,6 @@ import { useClubData } from '@/hooks/useClubData';
 
 function StudentDashboardContent() {
     const router = useRouter();
-    const [isAuthorized, setIsAuthorized] = useState(false);
     const [messMenuOpen, setMessMenuOpen] = useState(false);
     const [messMenuData, setMessMenuData] = useState<{day: string; meals: Record<string, string>}[]>([]);
     const [messMenuLoading, setMessMenuLoading] = useState(false);
@@ -105,7 +105,10 @@ function StudentDashboardContent() {
             const res = await fetch('/api/v1/nhost/get-mess-change-requests');
             const data = await res.json();
             if (Array.isArray(data)) {
-                setMyMenuRequests(data.filter((r: any) => r.student_email === user.email));
+                const userEmailLower = user.email.toLowerCase();
+                setMyMenuRequests(data.filter((r: any) => 
+                    (r.student_email || '').toLowerCase() === userEmailLower
+                ));
             }
         } catch (err) {
             console.error('Failed to fetch menu requests:', err);
@@ -115,45 +118,40 @@ function StudentDashboardContent() {
     };
 
 
-    // Nhost Integration
-    const { isAuthenticated, isLoading } = useAuthenticationStatus();
-    const user = useUserData();
+    // Nhost Integration — allow ANY authenticated user to view the student dashboard.
+    // Multi-role users (e.g. mess_admin + student) should be able to access this page
+    // without being forcibly redirected. The login page handles initial routing.
+    const { isAuthorized, isLoading, user } = useDashboardAuth({
+        allowedRoles: [
+            'student', 'user', 'me_user',
+            'admin', 'developer', 'president',
+            'council', 'council_member',
+            'club_head', 'club_manager',
+            'mess_admin', 'mess-admin',
+            'hostel_complaints', 'hostel-complaints'
+        ]
+    });
 
+    // Student dashboard specific data fetching
     useEffect(() => {
-        if (!isLoading) {
-            if (!isAuthenticated || !user) {
-                router.push('/login');
-                return;
-            }
-            
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const roles = (user as any).roles || [];
-            const defaultRole = user.defaultRole || '';
-            
-            if (roles.includes('student') || defaultRole === 'student' || (!roles.includes('president') && !roles.includes('admin') && !roles.includes('council_member') && !roles.includes('club_head'))) {
-                setIsAuthorized(true);
-                fetchMyMenuRequests();
-            } else if (roles.includes('president') || defaultRole === 'president') {
-                router.push('/dashboard/president');
-            } else if (roles.includes('admin') || defaultRole === 'admin') {
-                router.push('/dashboard/admin');
-            } else if (roles.includes('club_head') || defaultRole === 'club_head') {
-                router.push('/dashboard/club');
-            } else if (roles.includes('council_member') || defaultRole === 'council_member') {
-                router.push('/dashboard/council');
-            }
+        if (isAuthorized && user?.email) {
+            fetchMyMenuRequests();
         }
-    }, [isAuthenticated, isLoading, user, router]);
+    }, [isAuthorized, user]);
     const { tickets } = useTickets();
     const { announcements: sharedAnnouncements, events: sharedEvents, clubs, members, isLoaded } = useSharedData();
     const { myClubByEmail } = useClubData();
 
     // Filter tickets to only show the current student's own complaints
     const userEmail = user?.email?.toLowerCase() || '';
-    const userName = user?.displayName || '';
-    const myFilteredTickets = tickets.filter(t => {
-        if (t.email && userEmail) return t.email.toLowerCase() === userEmail;
-        if (t.studentName && userName) return t.studentName === userName;
+    const userName = (user?.displayName || '').toLowerCase();
+    
+    const myFilteredTickets = (tickets || []).filter(t => {
+        const ticketEmail = (t.email || '').toLowerCase();
+        const ticketStudent = (t.studentName || '').toLowerCase();
+        
+        if (userEmail && ticketEmail === userEmail) return true;
+        if (userName && ticketStudent && (ticketStudent === userName || userName.includes(ticketStudent) || ticketStudent.includes(userName))) return true;
         return false;
     });
     const myTickets = myFilteredTickets.slice(0, 3); // Just show the recent 3 for dashboard overview

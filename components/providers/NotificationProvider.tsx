@@ -87,6 +87,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         setIsSubscribed(true);
         console.log('[NotificationProvider] Push subscription registered with server');
       } else {
+        if (response.status === 401) {
+          const Cookies = (await import('js-cookie')).default;
+          Cookies.remove('nhost-refreshToken');
+          window.location.href = '/login?expired=1';
+          return;
+        }
         const errorData = await response.json();
         console.error('[NotificationProvider] Failed to register subscription with server', errorData);
       }

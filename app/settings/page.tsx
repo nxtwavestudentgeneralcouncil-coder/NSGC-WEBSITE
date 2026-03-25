@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import Cookies from 'js-cookie';
 
 type SettingsTab = 'profile' | 'security' | 'notifications' | 'appearance';
 
@@ -72,6 +73,8 @@ function SettingsContent() {
 
     const handleLogout = async () => {
         setIsLoading(true);
+        Cookies.remove('nhost-refreshToken');
+        Cookies.remove('nhost-roles');
         await signOut();
         router.push('/login');
     };

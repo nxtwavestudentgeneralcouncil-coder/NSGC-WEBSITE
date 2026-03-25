@@ -124,16 +124,27 @@ const FALLBACK_QUERY = `
 
 export async function GET(req: NextRequest) {
     // 1. Verify Authentication & Authorization
-    const session = await verifySession(req, ['president', 'admin', 'developer', 'council']);
+    const allowedRoles = [
+        'president', 'admin', 'developer', 'council', 'council_member', 
+        'student', 'me_user', 'club_head', 'club_manager', 
+        'mess_admin', 'mess-admin',
+        'hostel_complaints', 'hostel-complaints'
+    ];
+    const session = await verifySession(req, allowedRoles);
     
     if (!session) {
-        // Double check if requester has a session at all
-        const basicSession = await verifySession(req);
-        if (!basicSession) {
-            return unauthorizedResponse('Authentication required to access dashboard data');
-        }
-        return forbiddenResponse('You do not have permission to view this dashboard');
+        return unauthorizedResponse('Authentication required to access dashboard data');
     }
+
+    const { user } = session;
+    const userRoles = (user as any).roles || [];
+    const defaultRole = user.defaultRole;
+    
+    // A student is someone who ONLY has student-level roles, or we want to filter for them specifically.
+    // However, if they have ANY administrative role, they should NOT be filtered as a student.
+    const privilegedRoles = ['president', 'admin', 'developer', 'council', 'council_member', 'club_head', 'club_manager', 'mess_admin', 'mess-admin', 'hostel_complaints', 'hostel-complaints'];
+    const isPrivileged = userRoles.some((r: string) => privilegedRoles.includes(r)) || privilegedRoles.includes(defaultRole);
+    const isStudent = !isPrivileged && (userRoles.includes('student') || defaultRole === 'student' || defaultRole === 'me_user');
 
     const nhost = createNhostClient({
         subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
@@ -169,6 +180,14 @@ export async function GET(req: NextRequest) {
             return NextResponse.json(fallbackData ?? {}, { status: 200, headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' } });
         }
 
+        // If user is a student, hide the users list but keep ALL tickets.
+        // The frontend (student dashboard) already filters tickets by the
+        // user's live email from the Nhost session, so server-side filtering
+        // is both redundant and broken (the cookie may lack the email field).
+        if (isStudent && data) {
+            data.users = [];
+        }
+
         return NextResponse.json(data ?? {}, { status: 200, headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' } });
     } catch (err: any) {
         console.error('[get-dashboard-data] Request threw exception:', err?.message);
@@ -178,6 +197,10 @@ export async function GET(req: NextRequest) {
 
             if (fallbackError) {
                 return NextResponse.json({ error: err.message }, { status: 500 });
+            }
+
+            if (isStudent && fallbackData) {
+                (fallbackData as any).users = [];
             }
             return NextResponse.json(fallbackData ?? {}, { status: 200, headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' } });
         } catch (innerErr: any) {

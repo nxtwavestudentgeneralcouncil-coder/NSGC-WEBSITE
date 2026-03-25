@@ -13,6 +13,7 @@ import {
     MessageSquare, Clock, Check
 } from 'lucide-react';
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
+import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MEAL_TYPES = ['breakfast', 'lunch', 'snacks', 'dinner'];
@@ -41,9 +42,11 @@ interface ChangeRequest {
 
 function MessAdminContent() {
     const router = useRouter();
-    const [isAuthorized, setIsAuthorized] = useState(false);
-    const { isAuthenticated, isLoading } = useAuthenticationStatus();
-    const user = useUserData();
+
+    // Nhost Integration
+    const { isAuthorized, isLoading, user, isAuthenticated } = useDashboardAuth({
+        allowedRoles: ['mess_admin', 'mess-admin', 'admin', 'developer', 'president']
+    });
 
     // Menu state
     const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -67,33 +70,19 @@ function MessAdminContent() {
     const [newMealType, setNewMealType] = useState('');
     const [newItems, setNewItems] = useState('');
 
-    useEffect(() => {
-        if (!isLoading) {
-            if (!isAuthenticated || !user) {
-                router.push('/login');
-                return;
-            }
-            const roles = (user as any).roles || [];
-            const defaultRole = user.defaultRole || '';
-            if (
-                roles.includes('mess_admin') || roles.includes('admin') ||
-                roles.includes('developer') || roles.includes('president') ||
-                defaultRole === 'mess_admin' || defaultRole === 'admin' ||
-                defaultRole === 'developer' || defaultRole === 'president'
-            ) {
-                setIsAuthorized(true);
-            } else {
-                router.push('/dashboard/student');
-            }
-        }
-    }, [isAuthenticated, isLoading, user, router]);
 
     const fetchMenu = useCallback(async () => {
         try {
             setLoadingMenu(true);
             const res = await fetch('/api/v1/nhost/get-mess-menu');
             const data = await res.json();
-            if (Array.isArray(data)) setMenuItems(data);
+            if (data.error) {
+                console.error('API Error (Menu):', data.error);
+                // Only alert if we're not just getting a 401/403 which are handled by middleware/auth
+                if (res.status === 500) alert(`Failed to load menu: ${data.error}`);
+            } else if (Array.isArray(data)) {
+                setMenuItems(data);
+            }
         } catch (err) {
             console.error('Failed to fetch menu:', err);
         } finally {
@@ -106,7 +95,12 @@ function MessAdminContent() {
             setLoadingRequests(true);
             const res = await fetch('/api/v1/nhost/get-mess-change-requests');
             const data = await res.json();
-            if (Array.isArray(data)) setChangeRequests(data);
+            if (data.error) {
+                console.error('API Error (Requests):', data.error);
+                if (res.status === 500) alert(`Failed to load change requests: ${data.error}`);
+            } else if (Array.isArray(data)) {
+                setChangeRequests(data);
+            }
         } catch (err) {
             console.error('Failed to fetch change requests:', err);
         } finally {
@@ -239,8 +233,15 @@ function MessAdminContent() {
     const pendingRequests = changeRequests.filter(r => r.status === 'pending');
     const dayMealCount = menuItems.length;
 
-    if (!isAuthorized) {
-        return <div className="min-h-screen bg-black" />;
+    if (isLoading || !isAuthorized) {
+        return (
+            <div className="min-h-screen bg-[#0B1120] text-white flex flex-col items-center justify-center p-4">
+                <div className="flex flex-col items-center space-y-4">
+                    <Loader2 className="w-12 h-12 text-[#10b981] animate-spin" />
+                    <p className="text-[#64748B] font-mono text-xs uppercase tracking-[0.2em] animate-pulse">Authenticating Command...</p>
+                </div>
+            </div>
+        );
     }
 
     return (

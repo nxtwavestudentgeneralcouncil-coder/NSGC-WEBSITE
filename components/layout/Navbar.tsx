@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuthenticationStatus, useSignOut } from '@nhost/react';
 import NotificationBell from '@/components/NotificationBell';
+import Cookies from 'js-cookie';
 
 const navItems = [
     { name: 'Home', href: '/' },
@@ -107,7 +108,11 @@ export function Navbar() {
                                 variant="ghost"
                                 size="icon"
                                 className="text-red-500/70 hover:text-red-400 hover:bg-red-500/10 rounded-sm w-full lg:w-10"
-                                onClick={() => signOut()}
+                                onClick={() => {
+                                    Cookies.remove('nhost-refreshToken');
+                                    Cookies.remove('nhost-roles');
+                                    signOut();
+                                }}
                             >
                                 <LogOut className="w-4 h-4" />
                             </Button>
