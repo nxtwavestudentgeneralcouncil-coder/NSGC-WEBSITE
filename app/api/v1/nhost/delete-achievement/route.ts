@@ -1,8 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createNhostClient } from '@nhost/nhost-js';
+import { verifySession, unauthorizedResponse, forbiddenResponse } from '@/lib/auth-utils';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     try {
+        // 1. Verify Authentication & Authorization
+        const session = await verifySession(req, ['president', 'admin', 'developer', 'council']);
+        if (!session) {
+            const basicSession = await verifySession(req);
+            if (!basicSession) {
+                return unauthorizedResponse('Authentication required to delete achievements');
+            }
+            return forbiddenResponse('You do not have permission to delete achievements');
+        }
+
         const body = await req.json();
 
         if (!body.id) {

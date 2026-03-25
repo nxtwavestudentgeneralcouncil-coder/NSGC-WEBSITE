@@ -1,8 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createNhostClient } from '@nhost/nhost-js';
+import { verifySession, unauthorizedResponse, forbiddenResponse } from '@/lib/auth-utils';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     try {
+        // 1. Verify Authentication & Authorization
+        const session = await verifySession(req, ['president', 'admin', 'developer']);
+        if (!session) {
+            const basicSession = await verifySession(req);
+            if (!basicSession) {
+                return unauthorizedResponse('Authentication required');
+            }
+            return forbiddenResponse('Only administrators can update user roles');
+        }
+
         const body = await req.json();
         const { userId, defaultRole } = body;
         const roles = body.roles || body.allowedRoles;

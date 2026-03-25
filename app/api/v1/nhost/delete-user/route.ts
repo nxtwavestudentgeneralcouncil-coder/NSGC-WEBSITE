@@ -1,8 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createNhostClient } from '@nhost/nhost-js';
+import { verifySession, unauthorizedResponse, forbiddenResponse } from '@/lib/auth-utils';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
+        // 1. Verify Authentication & Authorization
+        const session = await verifySession(request, ['president', 'admin', 'developer']);
+        if (!session) {
+            const basicSession = await verifySession(request);
+            if (!basicSession) {
+                return unauthorizedResponse('Authentication required');
+            }
+            return forbiddenResponse('Only administrators can delete users');
+        }
+
         const { userId } = await request.json();
 
         if (!userId) {

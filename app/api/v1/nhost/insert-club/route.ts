@@ -1,8 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createNhostClient } from '@nhost/nhost-js';
+import { verifySession, unauthorizedResponse, forbiddenResponse } from '@/lib/auth-utils';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     try {
+        // 1. Verify Authentication & Authorization (Only high-level admins can create clubs)
+        const session = await verifySession(req, ['president', 'admin', 'developer']);
+        if (!session) {
+            const basicSession = await verifySession(req);
+            if (!basicSession) {
+                return unauthorizedResponse('Authentication required to create clubs');
+            }
+            return forbiddenResponse('Only the President or Administrators can create new clubs');
+        }
+
         const body = await req.json();
 
         const nhost = createNhostClient({

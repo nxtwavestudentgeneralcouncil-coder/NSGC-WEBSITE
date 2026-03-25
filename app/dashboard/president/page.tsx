@@ -107,10 +107,15 @@ function PresidentDashboardContent() {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const roles = (user as any).roles || [];
             const defaultRole = user.defaultRole || '';
+            const allRoles = [defaultRole, ...roles];
             
-            if (roles.includes('president') || defaultRole === 'president' || roles.includes('admin') || roles.includes('developer') || defaultRole === 'admin' || defaultRole === 'developer') {
+            const authorizedRoles = ['president', 'admin', 'developer'];
+            const hasAccess = allRoles.some(role => authorizedRoles.includes(role));
+
+            if (hasAccess) {
                 setIsAuthorized(true);
             } else {
+                console.warn("[Dashboard] Unauthorized access attempt, redirecting...");
                 router.push('/dashboard/student');
             }
         }

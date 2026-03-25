@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createNhostClient } from '@nhost/nhost-js';
+import { verifySession, unauthorizedResponse, forbiddenResponse } from '@/lib/auth-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -121,7 +122,19 @@ const FALLBACK_QUERY = `
     }
 `;
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+    // 1. Verify Authentication & Authorization
+    const session = await verifySession(req, ['president', 'admin', 'developer', 'council']);
+    
+    if (!session) {
+        // Double check if requester has a session at all
+        const basicSession = await verifySession(req);
+        if (!basicSession) {
+            return unauthorizedResponse('Authentication required to access dashboard data');
+        }
+        return forbiddenResponse('You do not have permission to view this dashboard');
+    }
+
     const nhost = createNhostClient({
         subdomain: (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim(),
         region: (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim(),
