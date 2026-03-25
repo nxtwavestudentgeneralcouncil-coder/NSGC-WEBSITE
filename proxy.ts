@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getNhostSession } from '@nhost/nextjs';
+import { getManualNhostSession } from '@/lib/auth-utils';
 import { isRateLimited } from '@/lib/rate-limit';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // 1. Rate Limiting Logic
@@ -43,11 +43,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. Get Nhost session from cookies
-  const session = await getNhostSession({
-    subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || '',
-    region: process.env.NEXT_PUBLIC_NHOST_REGION || '',
-  }, request as any);
+  // 3. Get Nhost session from cookies (Manual implementation to avoid React context issues)
+  const session = await getManualNhostSession(request);
   const isAuthenticated = !!session;
 
   // 4. Handle API routes (Return 401 if not authenticated)
@@ -94,7 +91,7 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// See "Matching Paths" below to learn more
+// See "Matching Paths" below to learn more (Next.js 16 uses "proxy" instead of "middleware")
 export const config = {
   matcher: [
     '/dashboard/:path*',

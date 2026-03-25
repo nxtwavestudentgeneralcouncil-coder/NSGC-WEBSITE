@@ -1,5 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getNhostSession } from '@nhost/nextjs';
+import { NhostClient } from '@nhost/nhost-js';
+
+/**
+ * Lightweight helper to get Nhost session without React dependencies.
+ */
+export async function getManualNhostSession(req: NextRequest) {
+  const subdomain = (process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '').trim();
+  const region = (process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '').trim();
+  
+  if (!subdomain || !region) return null;
+
+  const nhost = new NhostClient({ subdomain, region });
+  
+  // Get refresh token from cookies
+  const refreshToken = req.cookies.get('nhost-refreshToken')?.value;
+  
+  if (!refreshToken) return null;
+
+  const { session, error } = await nhost.auth.refreshSession(refreshToken);
+  
+  if (error || !session) return null;
+  
+  return session;
+}
 
 /**
  * Verifies the Nhost session in an API route.
@@ -8,10 +31,7 @@ import { getNhostSession } from '@nhost/nextjs';
  * @returns The session if authorized, otherwise null.
  */
 export async function verifySession(req: NextRequest, allowedRoles?: string[]) {
-  const session = await getNhostSession({
-    subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || '',
-    region: process.env.NEXT_PUBLIC_NHOST_REGION || '',
-  }, req as any);
+  const session = await getManualNhostSession(req);
   
   if (!session) {
     return null;
