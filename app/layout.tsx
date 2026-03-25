@@ -8,6 +8,7 @@ import { CustomCursor } from "@/components/ui/custom-cursor";
 import { MobileHeader } from "@/components/layout/MobileHeader";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Providers } from "./providers";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Removed force-dynamic to allow Next.js to statically optimize eligible pages
 
@@ -141,6 +142,7 @@ export default function RootLayout({
             <MobileBottomNav />
           </main>
         </Providers>
+        <SpeedInsights />
       </body>
     </html>
   );
