@@ -141,7 +141,7 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
                 if (res.status === 401) {
                     const Cookies = (await import('js-cookie')).default;
                     Cookies.remove('nhost-refreshToken');
-                    window.location.href = '/login?expired=1';
+                    window.location.href = '/login';
                     return;
                 }
                 setState(prev => ({ ...prev, apiLoading: false, isLoaded: true, error: `HTTP ${res.status}` }));
