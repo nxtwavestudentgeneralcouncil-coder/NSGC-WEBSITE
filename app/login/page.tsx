@@ -27,7 +27,9 @@ export default function LoginPage() {
     // Nhost Auth Hook
     const nhost = useNhostClient();
     const [isLoading, setIsLoading] = useState(false);
-    const { google } = useProviderLink();
+    const { google } = useProviderLink({
+        redirectTo: typeof window !== 'undefined' ? window.location.origin : 'https://nsgc-sigma.vercel.app'
+    });
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
