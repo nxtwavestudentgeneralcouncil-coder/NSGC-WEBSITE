@@ -54,11 +54,11 @@ export default function LoginPage() {
             const refreshToken = session?.refreshToken || localStorage.getItem('nhostRefreshToken');
 
             if (refreshToken) {
-                const cookieOptions = { 
+                const cookieOptions = {
                     expires: 30, // 30 days
                     path: '/',
                     sameSite: 'Lax',
-                    secure: process.env.NODE_ENV === 'production'
+                    secure: true
                 } as const;
 
                 Cookies.set('nhost-refreshToken', refreshToken, cookieOptions);
@@ -71,7 +71,12 @@ export default function LoginPage() {
                         roles: (userObj as any).roles || [],
                         defaultRole: userObj.defaultRole
                     };
-                    Cookies.set('nhost-roles', JSON.stringify(rolesData), cookieOptions);
+                    Cookies.set('nhost-roles', JSON.stringify(rolesData), {
+                    expires: 30,
+                    path: '/',
+                    sameSite: 'Lax',
+                    secure: true
+                });
                 }
             } else {
                 console.error("[Login] No refresh token could be extracted.");

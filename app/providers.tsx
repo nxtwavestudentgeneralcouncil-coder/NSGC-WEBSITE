@@ -25,11 +25,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const syncCookies = () => {
       const session = nhost.auth.getSession();
-      const cookieOptions = { 
-        expires: 30, 
-        path: '/', 
+      const cookieOptions = {
+        expires: 30,
+        path: '/',
         sameSite: 'Lax' as const,
-        secure: process.env.NODE_ENV === 'production'
+        secure: true
       };
 
       if (session) {
