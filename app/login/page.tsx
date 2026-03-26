@@ -60,7 +60,7 @@ export default function LoginPage() {
                     expires: 30, // 30 days
                     path: '/',
                     sameSite: 'Lax',
-                    secure: true
+                    secure: process.env.NODE_ENV === 'production'
                 } as const;
 
                 Cookies.set('nhost-refreshToken', refreshToken, cookieOptions);
@@ -77,7 +77,7 @@ export default function LoginPage() {
                     expires: 30,
                     path: '/',
                     sameSite: 'Lax',
-                    secure: true
+                    secure: process.env.NODE_ENV === 'production'
                 });
                 }
             } else {

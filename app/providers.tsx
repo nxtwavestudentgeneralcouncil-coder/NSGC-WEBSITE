@@ -29,7 +29,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         expires: 30,
         path: '/',
         sameSite: 'Lax' as const,
-        secure: true
+        secure: process.env.NODE_ENV === 'production'
       };
 
       if (session) {
