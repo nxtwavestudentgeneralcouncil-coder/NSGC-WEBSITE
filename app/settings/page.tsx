@@ -73,8 +73,8 @@ function SettingsContent() {
 
     const handleLogout = async () => {
         setIsLoading(true);
-        Cookies.remove('nhost-refreshToken');
-        Cookies.remove('nhost-roles');
+        Cookies.remove('nhostRefreshToken');
+        Cookies.remove('nhostRoles');
         await signOut();
         router.push('/login');
     };

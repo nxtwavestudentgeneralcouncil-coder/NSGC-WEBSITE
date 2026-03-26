@@ -132,8 +132,8 @@ export function MobileBottomNav() {
                    </Link>
                   <div className="w-px h-6 bg-white/10" />
                    <button onClick={() => { 
-                     Cookies.remove('nhost-refreshToken'); 
-                     Cookies.remove('nhost-roles');
+                     Cookies.remove('nhostRefreshToken'); 
+                     Cookies.remove('nhostRoles');
                      signOut(); 
                      setIsMoreMenuOpen(false); 
                    }} className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors">

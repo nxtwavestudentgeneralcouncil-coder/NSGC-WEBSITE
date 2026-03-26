@@ -34,7 +34,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
       if (session) {
         // Logged In or Token Refreshed
-        Cookies.set('nhost-refreshToken', session.refreshToken || '', cookieOptions);
+        Cookies.set('nhostRefreshToken', session.refreshToken || '', cookieOptions);
         
         const rolesData = {
           id: session.user?.id,
@@ -43,11 +43,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
           roles: (session.user as any)?.roles || [],
           defaultRole: session.user?.defaultRole
         };
-        Cookies.set('nhost-roles', JSON.stringify(rolesData), cookieOptions);
+        Cookies.set('nhostRoles', JSON.stringify(rolesData), cookieOptions);
       } else {
         // Logged Out
-        Cookies.remove('nhost-refreshToken');
-        Cookies.remove('nhost-roles');
+        Cookies.remove('nhostRefreshToken');
+        Cookies.remove('nhostRoles');
       }
     };
 

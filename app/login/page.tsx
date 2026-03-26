@@ -63,7 +63,7 @@ export default function LoginPage() {
                     secure: process.env.NODE_ENV === 'production'
                 } as const;
 
-                Cookies.set('nhost-refreshToken', refreshToken, cookieOptions);
+                Cookies.set('nhostRefreshToken', refreshToken, cookieOptions);
 
                 // Sync roles to cookie for PASSIVE VERIFICATION in proxy.ts
                 const userObj = session?.user;
@@ -73,12 +73,7 @@ export default function LoginPage() {
                         roles: (userObj as any).roles || [],
                         defaultRole: userObj.defaultRole
                     };
-                    Cookies.set('nhost-roles', JSON.stringify(rolesData), {
-                    expires: 30,
-                    path: '/',
-                    sameSite: 'Lax',
-                    secure: process.env.NODE_ENV === 'production'
-                });
+                    Cookies.set('nhostRoles', JSON.stringify(rolesData), cookieOptions);
                 }
             } else {
                 console.error("[Login] No refresh token could be extracted.");

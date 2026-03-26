@@ -109,8 +109,8 @@ export function Navbar() {
                                 size="icon"
                                 className="text-red-500/70 hover:text-red-400 hover:bg-red-500/10 rounded-sm w-full lg:w-10"
                                 onClick={() => {
-                                    Cookies.remove('nhost-refreshToken');
-                                    Cookies.remove('nhost-roles');
+                                    Cookies.remove('nhostRefreshToken');
+                                    Cookies.remove('nhostRoles');
                                     signOut();
                                 }}
                             >

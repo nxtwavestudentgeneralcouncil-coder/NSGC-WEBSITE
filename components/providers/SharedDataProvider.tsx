@@ -140,7 +140,7 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
                 console.error(`[SharedDataProvider] HTTP ${res.status}: ${res.statusText}`);
                 if (res.status === 401) {
                     const Cookies = (await import('js-cookie')).default;
-                    Cookies.remove('nhost-refreshToken');
+                    Cookies.remove('nhostRefreshToken');
                     if (window.location.pathname !== '/login') {
                         window.location.href = '/login';
                     }

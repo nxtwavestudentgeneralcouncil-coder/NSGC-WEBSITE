@@ -6,14 +6,11 @@ import type { NextRequest } from 'next/server';
  * Injected directly into middleware to avoid Turbopack resolution issues with transitive imports.
  */
 async function getManualNhostSession(req: NextRequest) {
-  const refreshToken = 
-    req.cookies.get('nhost-refreshToken')?.value || 
-    req.cookies.get('nhost-refresh-token')?.value ||
-    req.cookies.get('nhostRefreshToken')?.value;
+  const refreshToken = req.cookies.get('nhostRefreshToken')?.value;
   
   if (!refreshToken) return null;
   
-  const rolesCookie = req.cookies.get('nhost-roles')?.value;
+  const rolesCookie = req.cookies.get('nhostRoles')?.value;
   let user = null;
   
   if (rolesCookie) {

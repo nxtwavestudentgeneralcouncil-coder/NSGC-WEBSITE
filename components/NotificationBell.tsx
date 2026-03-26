@@ -51,7 +51,7 @@ function NotificationBellContent() {
       if (!res.ok) {
         if (res.status === 401) {
           const Cookies = (await import('js-cookie')).default;
-          Cookies.remove('nhost-refreshToken');
+          Cookies.remove('nhostRefreshToken');
           if (window.location.pathname !== '/login') {
             window.location.href = '/login';
           }

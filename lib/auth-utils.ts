@@ -6,10 +6,7 @@ import { NhostClient } from '@nhost/nhost-js';
  */
 export async function getManualNhostSession(req: NextRequest) {
   // Get refresh token from cookies (check multiple common names)
-  const refreshToken = 
-    req.cookies.get('nhost-refreshToken')?.value || 
-    req.cookies.get('nhost-refresh-token')?.value ||
-    req.cookies.get('nhostRefreshToken')?.value;
+  const refreshToken = req.cookies.get('nhostRefreshToken')?.value;
   
   if (!refreshToken) {
     return null;
@@ -21,7 +18,7 @@ export async function getManualNhostSession(req: NextRequest) {
   // Instead, we just read the roles cookie set by the client for frontend routing purposes.
   // The backend APIs and Hasura GraphQL endpoints will cryptographically verify the real token.
   
-  const rolesCookie = req.cookies.get('nhost-roles')?.value;
+  const rolesCookie = req.cookies.get('nhostRoles')?.value;
   let user = null;
   
   if (rolesCookie) {
