@@ -23,9 +23,15 @@ export async function getManualNhostSession(req: NextRequest) {
   
   if (rolesCookie) {
     try {
-      user = JSON.parse(rolesCookie);
+      // First try decoding (since js-cookie encodes JSON strings)
+      user = JSON.parse(decodeURIComponent(rolesCookie));
     } catch (e) {
-      console.error('[Auth Utils] Failed to parse roles cookie', e);
+      // Fallback to non-decoded for backward compatibility or simple values
+      try {
+        user = JSON.parse(rolesCookie);
+      } catch (innerE) {
+        console.error('[Auth Utils] Failed to parse roles cookie', e);
+      }
     }
   }
 
