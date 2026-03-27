@@ -93,6 +93,10 @@ function PresidentDashboardContent() {
 
     // Form States
     const [formData, setFormData] = useState<Record<string, any>>({});
+    
+    // Reopen States
+    const [reopenTicketId, setReopenTicketId] = useState<string | null>(null);
+    const [reopenReason, setReopenReason] = useState<string>('');
 
     // Nhost Integration
     const { isAuthorized, isLoading, user } = useDashboardAuth({
@@ -1309,7 +1313,7 @@ function PresidentDashboardContent() {
                                                                         className="h-8 text-xs border-cyan-500/50 text-cyan-500 hover:bg-cyan-500/10 col-span-2"
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
-                                                                            updateTicketStatus(ticket.id, 'In Progress', 'Reopened by President');
+                                                                            setReopenTicketId(ticket.id);
                                                                         }}
                                                                     >
                                                                         Reopen
@@ -2339,6 +2343,50 @@ function PresidentDashboardContent() {
                     </div>
                 )}
             </GlassModal >
+
+            {/* Reopen Complaint Modal */}
+            <GlassModal
+                isOpen={!!reopenTicketId}
+                onClose={() => { setReopenTicketId(null); setReopenReason(''); }}
+                title="Reason for Reopening"
+                footer={
+                    <div className="flex justify-end gap-3 w-full">
+                        <Button 
+                            variant="ghost" 
+                            onClick={() => { setReopenTicketId(null); setReopenReason(''); }}
+                            className="text-gray-300 hover:text-white"
+                        >
+                            Cancel
+                        </Button>
+                        <Button 
+                            className="bg-[#0ea5e9] text-black hover:bg-[#38bdf8] font-bold"
+                            onClick={() => {
+                                if (!reopenReason.trim() || !reopenTicketId) return;
+                                updateTicketStatus(reopenTicketId, 'In Progress', `Reopened: ${reopenReason}`);
+                                setReopenTicketId(null);
+                                setReopenReason('');
+                            }}
+                            disabled={!reopenReason.trim()}
+                        >
+                            Confirm Reopen
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="p-2 space-y-4">
+                    <p className="text-sm text-[#94a3b8]">
+                        Please provide a reason for reopening this complaint. This reason will be visible to the student in their timeline.
+                    </p>
+                    <textarea 
+                        value={reopenReason}
+                        onChange={(e) => setReopenReason(e.target.value)}
+                        className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#0ea5e9]/50 transition-colors resize-none"
+                        rows={4}
+                        placeholder="Enter the reason here..."
+                        autoFocus
+                    />
+                </div>
+            </GlassModal>
 
             {
                 croppingImage && (

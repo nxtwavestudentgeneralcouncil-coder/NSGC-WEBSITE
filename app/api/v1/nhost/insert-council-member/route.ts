@@ -41,6 +41,24 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: Array.isArray(error) ? error[0]?.message : (error as any).message }, { status: 400 });
         }
 
+        // Try to trigger role sync in background
+        if (body.email) {
+            try {
+                // Determine the extra role based on President vs Council, defaulting to council
+                import('@/lib/role-sync').then(({ syncUserRoleByEmail }) => {
+                    const isPresident = body.role?.toLowerCase() === 'president';
+                    const targetRole = isPresident ? 'president' : 'council';
+                    const targetExtra = isPresident ? ['president'] : ['council_member'];
+                    
+                    syncUserRoleByEmail(body.email, targetRole, targetExtra).catch(err => {
+                        console.error("[InsertCouncilMember] role sync error:", err);
+                    });
+                });
+            } catch (e) {
+                console.error("[InsertCouncilMember] failed to trigger role sync:", e);
+            }
+        }
+
         return NextResponse.json({ success: true, data }, { status: 200 });
     } catch (err: any) {
         return NextResponse.json({ message: err.message || 'Server error' }, { status: 500 });

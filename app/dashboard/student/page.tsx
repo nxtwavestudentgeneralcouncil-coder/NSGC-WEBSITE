@@ -310,7 +310,18 @@ function StudentDashboardContent() {
                             <div className={`min-h-[220px] rounded-[24px] overflow-hidden ${myTickets.length > 0 ? 'bg-[#111625]' : 'bg-[#111625]/50 border-2 border-dashed border-white/5 flex flex-col items-center justify-center p-8'}`}>
                                 {myTickets.length > 0 ? (
                                     <div className="p-6 space-y-4">
-                                        {myTickets.map((item) => (
+                                        {myTickets.map((item) => {
+                                            const reopenedEvent = Array.isArray(item.timeline)
+                                                ? item.timeline.slice().reverse().find((t: any) => t.description?.startsWith('Reopened:'))
+                                                : null;
+
+                                            let incidentDate = null;
+                                            if (item.description) {
+                                                const dateMatch = item.description.match(/^\[Date of Incident: (.*?)\]\n\n/);
+                                                if (dateMatch) incidentDate = dateMatch[1];
+                                            }
+                                                
+                                            return (
                                             <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-xl bg-[#1A2133] hover:bg-[#1f2937] transition-colors border border-white/5 gap-4">
                                                 <div>
                                                     <h4 className="font-bold text-[15px] text-white leading-tight mb-1">{item.subject}</h4>
@@ -318,15 +329,26 @@ function StudentDashboardContent() {
                                                         <span>{item.id}</span>
                                                         <span>•</span>
                                                         <span>{new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                                        {incidentDate && (
+                                                            <>
+                                                                <span className="hidden sm:inline">•</span>
+                                                                <span className="hidden sm:inline text-cyan-500 font-bold whitespace-nowrap overflow-hidden text-ellipsis">Incident: {incidentDate}</span>
+                                                            </>
+                                                        )}
                                                         <span className="hidden sm:inline">•</span>
                                                         <span className="hidden sm:inline font-sans">{item.type}</span>
                                                     </div>
+                                                    {reopenedEvent?.description && (
+                                                        <div className="mt-2 text-[11px] text-amber-500/90 font-medium bg-amber-500/10 px-2 py-1 rounded inline-block">
+                                                            <span className="font-bold">Reopen Reason:</span> {reopenedEvent.description.replace('Reopened:', '').trim()}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <Badge variant="outline" className={`rounded-full px-3 py-1 font-bold tracking-widest text-[10px] uppercase border ${item.status === 'Completed' ? 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/30' : 'bg-[#0ea5e9]/10 text-[#0ea5e9] border-[#0ea5e9]/30'}`}>
                                                     {item.status}
                                                 </Badge>
                                             </div>
-                                        ))}
+                                        )})}
                                     </div>
                                 ) : (
                                     <div className="text-center text-[#64748B] space-y-3">

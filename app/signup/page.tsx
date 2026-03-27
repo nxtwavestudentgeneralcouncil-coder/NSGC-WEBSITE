@@ -14,6 +14,8 @@ export default function SignupPage() {
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [phone, setPhone] = useState('');
+    const [gender, setGender] = useState('');
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     const { signUpEmailPassword, isLoading } = useSignUpEmailPassword();
@@ -26,7 +28,11 @@ export default function SignupPage() {
         const result = await signUpEmailPassword(email, password, {
             defaultRole: 'student',
             allowedRoles: ['student'],
-            displayName: `${firstName} ${lastName}`
+            displayName: `${firstName} ${lastName}`,
+            metadata: {
+                phone,
+                gender
+            }
         });
 
         if (result.isError) {
@@ -110,6 +116,34 @@ export default function SignupPage() {
                                     placeholder="••••••••"
                                     required
                                 />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-300">Phone</label>
+                                <input
+                                    type="tel"
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
+                                    placeholder="+91..."
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-300">Gender</label>
+                                <select
+                                    value={gender}
+                                    onChange={(e) => setGender(e.target.value)}
+                                    className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500 appearance-none"
+                                    required
+                                >
+                                    <option value="" disabled className="bg-black">Select</option>
+                                    <option value="Male" className="bg-black">Male</option>
+                                    <option value="Female" className="bg-black">Female</option>
+                                    <option value="Other" className="bg-black">Other</option>
+                                </select>
                             </div>
                         </div>
 

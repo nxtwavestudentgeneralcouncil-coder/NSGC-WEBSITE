@@ -61,6 +61,19 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: Array.isArray(error) ? error[0]?.message : (error as any).message }, { status: 400 });
         }
 
+        // Try to trigger role sync in background
+        if (payload.club_email) {
+            try {
+                import('@/lib/role-sync').then(({ syncUserRoleByEmail }) => {
+                    syncUserRoleByEmail(payload.club_email!, 'club_manager', ['club_head']).catch(err => {
+                        console.error("[InsertClub] role sync error:", err);
+                    });
+                });
+            } catch (e) {
+                console.error("[InsertClub] failed to trigger role sync:", e);
+            }
+        }
+
         return NextResponse.json({ success: true, data }, { status: 200 });
     } catch (err: any) {
         return NextResponse.json({ message: err.message || 'Server error' }, { status: 500 });

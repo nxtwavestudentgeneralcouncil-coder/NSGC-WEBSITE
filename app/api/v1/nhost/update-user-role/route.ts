@@ -74,6 +74,23 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: Array.isArray(error) ? error[0]?.message : (error as any).message }, { status: 400 });
         }
 
+        // Also sync updated roles to `public_users_any` table 
+        try {
+            const roleString = roles.join(',') || defaultRole || 'student';
+            await nhost.graphql.request(`
+                mutation SyncPublicUserRole($id: uuid!, $role: String!) {
+                    update_public_users_any_by_pk(pk_columns: { id: $id }, _set: { role: $role }) {
+                        id
+                    }
+                }
+            `, {
+                id: userId,
+                role: roleString
+            });
+        } catch (syncErr) {
+            console.error("[UpdateUserRole] public_users_any sync error:", syncErr);
+        }
+
         // Return updated user data directly in response format expected by tests
         return NextResponse.json({ 
             success: true, 

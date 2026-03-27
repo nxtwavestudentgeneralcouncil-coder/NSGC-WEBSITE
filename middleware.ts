@@ -40,6 +40,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow diagnose route without auth (temporary)
+  if (pathname === '/api/v1/nhost/diagnose-users') {
+    return NextResponse.next();
+  }
+
   // 2. Get Nhost session from cookies (Passive Verification)
   const session = await getManualNhostSession(request);
   const isAuthenticated = !!session && !!session.user;

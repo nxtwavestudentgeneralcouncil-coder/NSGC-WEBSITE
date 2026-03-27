@@ -17,6 +17,7 @@ import {
     Save
 } from 'lucide-react';
 import { useUserData, useSignOut } from '@nhost/react';
+import { nhost } from '@/lib/nhost';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,8 +42,9 @@ function SettingsContent() {
     const [profile, setProfile] = useState({
         name: user?.displayName || 'Loading...',
         email: user?.email || 'Loading...',
-        bio: 'Computer Science Major | Class of 2026',
-        phone: '+91 98765 43210'
+        bio: (user?.metadata as any)?.bio || 'Computer Science Major | Class of 2026',
+        phone: (user?.metadata as any)?.phone || '',
+        gender: (user?.metadata as any)?.gender || ''
     });
 
     const [notifications, setNotifications] = useState({
@@ -57,10 +59,14 @@ function SettingsContent() {
     useEffect(() => {
         // Sync profile state when user data loads
         if (user) {
+            const metadata = (user.metadata as any) || {};
             setProfile(prev => ({ 
                 ...prev, 
                 name: user.displayName || 'Student',
-                email: user.email || ''
+                email: user.email || '',
+                bio: metadata.bio || prev.bio,
+                phone: metadata.phone || prev.phone,
+                gender: metadata.gender || prev.gender
             }));
         }
 
@@ -79,12 +85,35 @@ function SettingsContent() {
         router.push('/login');
     };
 
-    const handleSaveProfile = () => {
+    const handleSaveProfile = async () => {
         setIsLoading(true);
-        // Note: Actual Nhost profile updates require a GraphQL mutation, omitting for UI stub
-        setTimeout(() => {
+        try {
+            const response = await fetch('/api/v1/nhost/update-user-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    displayName: profile.name,
+                    metadata: {
+                        bio: profile.bio,
+                        phone: profile.phone,
+                        gender: profile.gender
+                    }
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || 'Failed to update profile');
+            }
+
+            // Refresh the Nhost session to update the local JWT with new metadata
+            await nhost.auth.refreshSession();
+        } catch (err: any) {
+            console.error('Failed to save profile:', err);
+        } finally {
             setIsLoading(false);
-        }, 1000);
+        }
     };
 
     const tabs = [
@@ -200,6 +229,20 @@ function SettingsContent() {
                                                                 onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                                                                 className="bg-black/50 border-white/10 text-white"
                                                             />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Gender</Label>
+                                                            <select
+                                                                value={profile.gender}
+                                                                onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
+                                                                className="w-full bg-black/50 border border-white/10 rounded-md px-4 py-2 text-white focus:outline-none focus:border-cyan-500 appearance-none"
+                                                            >
+                                                                <option value="" disabled className="bg-black">Select Gender</option>
+                                                                <option value="Male" className="bg-black">Male</option>
+                                                                <option value="Female" className="bg-black">Female</option>
+                                                                <option value="Other" className="bg-black">Other</option>
+                                                                <option value="Prefer not to say" className="bg-black">Prefer not to say</option>
+                                                            </select>
                                                         </div>
 
                                                         <Button onClick={handleSaveProfile} className="mt-4 bg-cyan-500 text-black hover:bg-cyan-400 w-fit" disabled={isLoading}>

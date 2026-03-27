@@ -47,7 +47,8 @@ function NotificationBellContent() {
     if (!uuidRegex.test(uid)) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/v1/nhost/get-notifications?userId=${uid}`);
+      const apiUrl = `/api/v1/nhost/get-notifications?userId=${uid}`;
+      const res = await fetch(apiUrl);
       if (!res.ok) {
         if (res.status === 401) {
           const Cookies = (await import('js-cookie')).default;
@@ -57,14 +58,27 @@ function NotificationBellContent() {
           }
           return;
         }
-        const errorData = await res.json().catch(() => ({}));
+        
+        let errorData: any = {};
+        try {
+          const text = await res.text();
+          try {
+            errorData = JSON.parse(text);
+          } catch (e) {
+            errorData = { message: text.substring(0, 100) };
+          }
+        } catch (e) {
+          errorData = { message: `Status ${res.status}` };
+        }
+        
+        console.error(`[NotificationBell] Failed to fetch from ${apiUrl}:`, res.status, errorData);
         throw new Error(errorData.error || errorData.message || `Failed to fetch notifications: ${res.status}`);
       }
       const data = await res.json();
       setNotifications(data);
       setError(null);
     } catch (err: any) {
-      console.error('[NotificationBell] Error:', err);
+      console.error('[NotificationBell] Fetch exception:', err);
       setError(err.message);
     } finally {
       setLoading(false);

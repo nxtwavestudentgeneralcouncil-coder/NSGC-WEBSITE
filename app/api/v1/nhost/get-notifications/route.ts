@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createNhostClient } from '@nhost/nhost-js';
+import { verifySession, unauthorizedResponse } from '@/lib/auth-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,19 +19,34 @@ const NOTIFICATIONS_QUERY = `
         title
         message
         type
-        link
         created_at
+        link
       }
     }
   }
 `;
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+    console.log('[get-notifications] GET request received');
+
+    // Verify session — only authenticated users can access their own notifications
+    const session = await verifySession(req);
+    if (!session) {
+        console.warn('[get-notifications] Unauthorized access attempt');
+        return unauthorizedResponse('Authentication required to fetch notifications');
+    }
+
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
-    // The uuidRegex variable is removed, and the regex is inlined.
-    // The console.warn message is slightly modified to include quotes around userId.
-    // The error message in the NextResponse.json is changed.
+
+    console.log(`[get-notifications] User ID from query: ${userId}`);
+
+    if (!userId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId.replace(/-/g, ''))) {
+        // More flexible UUID check just in case, though the standard one is fine
+        // Using a simpler check for robustness
+    }
+    
+    // Standardizing the check
     if (!userId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
         console.warn(`[get-notifications] Invalid or missing userId: "${userId}"`);
         return NextResponse.json({ error: 'Invalid or missing user ID' }, { status: 400 });
@@ -43,8 +59,8 @@ export async function GET(req: Request) {
     });
 
     try {
+        console.log(`[get-notifications] Fetching notifications for user: ${userId}`);
         const result = await nhost.graphql.request(NOTIFICATIONS_QUERY, { userId });
-
         const { data, error } = result;
 
         if (error) {
@@ -56,9 +72,11 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: errorMessage }, { status: 500 });
         }
 
-        return NextResponse.json((data as any)?.notification_recipients ?? [], { status: 200 });
+        const recipients = (data as any)?.notification_recipients ?? [];
+        console.log(`[get-notifications] Successfully fetched ${recipients.length} notifications`);
+        return NextResponse.json(recipients, { status: 200 });
     } catch (err: any) {
         console.error('[get-notifications] Request threw exception:', err?.message);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
     }
 }

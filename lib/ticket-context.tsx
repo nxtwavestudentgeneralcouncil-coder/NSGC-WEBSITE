@@ -6,7 +6,7 @@ import { useSharedData } from '@/hooks/useSharedData';
 
 export type TicketStatus = 'Pending' | 'In Review' | 'In Progress' | 'Completed' | 'Rejected';
 export type TicketPriority = 'Low' | 'Medium' | 'High';
-export type Department = 'Academic' | 'Hostel' | 'Sanitation' | 'Ragging' | 'Other';
+export type Department = 'Academic' | 'Hostel' | 'Mess';
 
 export interface TimelineEvent {
     status: string;

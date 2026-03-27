@@ -13,6 +13,12 @@ import { useTickets, TicketProvider } from '@/lib/ticket-context';
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
 import { useRef } from 'react';
 
+const SUBJECT_OPTIONS: Record<string, string[]> = {
+    Academic: ['Course Content', 'Exam Schedule', 'Faculty Feedback', 'Lab Equipment', 'Resource Accessibility'],
+    Hostel: ['Room Maintenance', 'Water Supply', 'Electricity', 'Security', 'Cleanliness'],
+    Mess: ['Food Quality', 'Menu Variety', 'Hygiene Standards', 'Token Issues', 'Timings']
+};
+
 function ComplaintsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -26,11 +32,12 @@ function ComplaintsContent() {
     // Form State
     const [formData, setFormData] = useState({
         category: '',
-        department: 'General',
         subject: '',
+        otherSubject: '',
         description: '',
         hostelType: '',
-        roomNumber: ''
+        roomNumber: '',
+        dateOfIncident: ''
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submittedId, setSubmittedId] = useState<string | null>(null);
@@ -64,13 +71,22 @@ function ComplaintsContent() {
             if (foundTicket) {
                 setActiveTab('submit');
                 setEditId(foundTicket.id);
+                let cleanDescription = foundTicket.description || '';
+                let extractedDate = '';
+                const dateMatch = cleanDescription.match(/^\[Date of Incident: (.*?)\]\n\n/);
+                if (dateMatch) {
+                    extractedDate = dateMatch[1];
+                    cleanDescription = cleanDescription.replace(dateMatch[0], '');
+                }
+
                 setFormData({
                     category: foundTicket.type,
-                    department: foundTicket.department || '',
                     subject: foundTicket.subject || '',
-                    description: foundTicket.description || '',
+                    otherSubject: '',
+                    description: cleanDescription,
                     hostelType: '', // Or extract from description if possible, but keeping it empty for now
-                    roomNumber: ''
+                    roomNumber: '',
+                    dateOfIncident: extractedDate
                 });
                 setImage(foundTicket.image || null);
             }
@@ -112,6 +128,29 @@ function ComplaintsContent() {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
+        
+        if (name === 'category') {
+            setFormData(prev => ({ 
+                ...prev, 
+                category: value, 
+                subject: '', 
+                otherSubject: '', 
+                hostelType: '', 
+                roomNumber: '',
+                dateOfIncident: ''
+            }));
+            return;
+        }
+
+        if (name === 'subject') {
+            setFormData(prev => ({ 
+                ...prev, 
+                subject: value, 
+                otherSubject: '' 
+            }));
+            return;
+        }
+
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
@@ -179,7 +218,7 @@ function ComplaintsContent() {
 
         try {
             // Basic validation
-            if (!formData.category || !formData.department || !formData.subject || !formData.description) {
+            if (!formData.category || !formData.subject || !formData.description) {
                 alert('Please fill in all required fields'); // Ideally use toast
                 setIsSubmitting(false);
                 return;
@@ -192,16 +231,33 @@ function ComplaintsContent() {
                     setIsSubmitting(false);
                     return;
                 }
+                if (!image) {
+                    alert('Evidence/Photo is mandatory for Hostel complaints');
+                    setIsSubmitting(false);
+                    return;
+                }
             }
 
             if (editId) {
+                const finalSubject = formData.subject === 'Other' ? formData.otherSubject : formData.subject;
+                
+                const metadata = user?.metadata as any;
+                const phoneStr = metadata?.phone ? metadata.phone : '';
+                const genderStr = metadata?.gender ? metadata.gender : '';
+                const extras = [phoneStr, genderStr].filter(Boolean).join(', ');
+                const studentNameString = extras ? `${user?.displayName || 'Student'} (${extras})` : user?.displayName || 'Student';
+
+                const compiledDescription = formData.dateOfIncident 
+                    ? `[Date of Incident: ${formData.dateOfIncident}]\n\n${formData.description}`
+                    : formData.description;
+
                 updateTicketContent(editId, {
-                    studentName: user?.displayName || 'Student',
+                    studentName: studentNameString,
                     email: user?.email || 'student@email.com',
-                    department: formData.category === 'Hostel' ? 'Hostel' : formData.department,
+                    department: formData.category,
                     type: formData.category,
-                    subject: formData.subject,
-                    description: formData.description,
+                    subject: finalSubject,
+                    description: compiledDescription,
                     image: image || undefined,
                     hostelType: formData.category === 'Hostel' ? formData.hostelType : undefined,
                     roomNumber: formData.category === 'Hostel' ? formData.roomNumber : undefined
@@ -213,21 +269,34 @@ function ComplaintsContent() {
                 setEditId(null);
                 setFormData({
                     category: '',
-                    department: 'General',
                     subject: '',
+                    otherSubject: '',
                     description: '',
                     hostelType: '',
-                    roomNumber: ''
+                    roomNumber: '',
+                    dateOfIncident: ''
                 });
 
             } else {
+                const finalSubject = formData.subject === 'Other' ? formData.otherSubject : formData.subject;
+
+                const metadata = user?.metadata as any;
+                const phoneStr = metadata?.phone ? metadata.phone : '';
+                const genderStr = metadata?.gender ? metadata.gender : '';
+                const extras = [phoneStr, genderStr].filter(Boolean).join(', ');
+                const studentNameString = extras ? `${user?.displayName || 'Student'} (${extras})` : user?.displayName || 'Student';
+
+                const compiledDescription = formData.dateOfIncident 
+                    ? `[Date of Incident: ${formData.dateOfIncident}]\n\n${formData.description}`
+                    : formData.description;
+
                 const newId = createTicket({
-                    studentName: user?.displayName || 'Student',
+                    studentName: studentNameString,
                     email: user?.email || 'student@email.com',
-                    department: formData.category === 'Hostel' ? 'Hostel' : formData.department,
+                    department: formData.category,
                     type: formData.category,
-                    subject: formData.subject,
-                    description: formData.description,
+                    subject: finalSubject,
+                    description: compiledDescription,
                     priority: 'Medium', // Default priority
                     proofUrl: '',
                     image: image || undefined,
@@ -241,11 +310,12 @@ function ComplaintsContent() {
                 // Reset form
                 setFormData({
                     category: '',
-                    department: 'General',
                     subject: '',
+                    otherSubject: '',
                     description: '',
                     hostelType: '',
-                    roomNumber: ''
+                    roomNumber: '',
+                    dateOfIncident: ''
                 });
             }
 
@@ -411,9 +481,14 @@ function ComplaintsContent() {
                                     </motion.div>
                                 ) : (
                                     <form className="space-y-8" onSubmit={handleSubmit}>
+                                        <div className="text-xs text-[#94a3b8] italic -mb-4 flex items-center">
+                                            <span className="text-red-500 font-bold text-sm mr-1">*</span> indicates a mandatory field
+                                        </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             <div className="space-y-2">
-                                                <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Complaint Category</label>
+                                                <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                    Complaint Category <span className="text-red-500 text-sm">*</span>
+                                                </label>
                                                 <select
                                                     name="category"
                                                     value={formData.category}
@@ -424,23 +499,48 @@ function ComplaintsContent() {
                                                     <option value="" disabled hidden>Select a category...</option>
                                                     <option value="Academic">Academic</option>
                                                     <option value="Hostel">Hostel</option>
-                                                    <option value="Sanitation">Sanitation</option>
-                                                    <option value="Ragging">Ragging</option>
-                                                    <option value="Other">Other</option>
+                                                    <option value="Mess">Mess</option>
                                                 </select>
                                             </div>
 
                                             <div className="space-y-2">
-                                                <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Subject</label>
-                                                <input
-                                                    type="text"
+                                                <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                    Subject <span className="text-red-500 text-sm">*</span>
+                                                </label>
+                                                <select
                                                     name="subject"
                                                     value={formData.subject}
                                                     onChange={handleChange}
-                                                    className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
-                                                    placeholder="Brief summary of the issue"
-                                                    required
-                                                />
+                                                    className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
+                                                    required={formData.category !== ''}
+                                                    disabled={formData.category === ''}
+                                                >
+                                                    <option value="" disabled hidden>
+                                                        {formData.category === '' ? 'Select a category first...' : 'Select a subject...'}
+                                                    </option>
+                                                    {formData.category && SUBJECT_OPTIONS[formData.category]?.map(subject => (
+                                                        <option key={subject} value={subject}>{subject}</option>
+                                                    ))}
+                                                    <option value="Other">Other (Custom Subject)</option>
+                                                </select>
+                                                
+                                                {formData.subject === 'Other' && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, height: 0 }}
+                                                        animate={{ opacity: 1, height: 'auto' }}
+                                                        className="pt-2"
+                                                    >
+                                                        <input
+                                                            type="text"
+                                                            name="otherSubject"
+                                                            value={formData.otherSubject}
+                                                            onChange={handleChange}
+                                                            className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
+                                                            placeholder="Enter your custom subject"
+                                                            required
+                                                        />
+                                                    </motion.div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -451,7 +551,9 @@ function ComplaintsContent() {
                                                 className="grid grid-cols-1 md:grid-cols-2 gap-8"
                                             >
                                                 <div className="space-y-2">
-                                                    <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Hostel Type</label>
+                                                    <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                        Hostel Type <span className="text-red-500 text-sm">*</span>
+                                                    </label>
                                                     <select
                                                         name="hostelType"
                                                         value={formData.hostelType}
@@ -465,7 +567,9 @@ function ComplaintsContent() {
                                                     </select>
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Room Number</label>
+                                                    <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                        Room Number <span className="text-red-500 text-sm">*</span>
+                                                    </label>
                                                     <input
                                                         type="text"
                                                         name="roomNumber"
@@ -479,8 +583,32 @@ function ComplaintsContent() {
                                             </motion.div>
                                         )}
 
+                                        {(formData.category === 'Hostel' || formData.category === 'Mess') && (
+                                            <motion.div 
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                className="grid grid-cols-1 md:grid-cols-2 gap-8"
+                                            >
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                        Date of Incident <span className="text-red-500 text-sm">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        name="dateOfIncident"
+                                                        value={formData.dateOfIncident}
+                                                        onChange={handleChange}
+                                                        className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
+                                                        required
+                                                    />
+                                                </div>
+                                            </motion.div>
+                                        )}
+
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Detailed Description</label>
+                                            <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                Detailed Description <span className="text-red-500 text-sm">*</span>
+                                            </label>
                                             <textarea
                                                 name="description"
                                                 value={formData.description}
@@ -494,7 +622,14 @@ function ComplaintsContent() {
 
                                         {/* Photo Upload Section */}
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">Upload Evidence (Optional)</label>
+                                            <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase flex items-center">
+                                                Upload Evidence 
+                                                {formData.category === 'Hostel' ? (
+                                                    <span className="text-red-500 text-sm ml-1">*</span>
+                                                ) : (
+                                                    <span className="text-[#6b7280] lowercase italic ml-2 opacity-70">(optional)</span>
+                                                )}
+                                            </label>
 
                                             {!isCameraOpen && !image && (
                                                 <div
@@ -568,11 +703,12 @@ function ComplaintsContent() {
                                                     }
                                                     setFormData({
                                                         category: '',
-                                                        department: 'General',
                                                         subject: '',
+                                                        otherSubject: '',
                                                         description: '',
                                                         hostelType: '',
-                                                        roomNumber: ''
+                                                        roomNumber: '',
+                                                        dateOfIncident: ''
                                                     });
                                                 }}
                                                 className="text-[15px] font-bold text-[#6b7280] hover:text-white transition-colors"
@@ -754,7 +890,8 @@ function ComplaintsContent() {
                                                     <div key={step.id || `${trackingResult.id}-step-${index}`} className="relative">
                                                         <div className={`absolute -left-[37px] w-4 h-4 rounded-full border-2 ${step.completed ? 'bg-cyan-500 border-cyan-500' : 'bg-black border-gray-600'}`} />
                                                         <h4 className={`font-medium ${step.completed ? 'text-white' : 'text-gray-500'}`}>{step.status}</h4>
-                                                        <p className="text-xs text-gray-500">{step.date}</p>
+                                                        {step.description && <p className="text-sm text-gray-300 mt-1 leading-relaxed">{step.description}</p>}
+                                                        <p className="text-[11px] text-[#64748B] font-mono mt-1.5">{step.date}</p>
                                                     </div>
                                                 ))}
                                             </div>

@@ -5,6 +5,7 @@ import { nhost } from '@/lib/nhost';
 import { SharedDataProvider } from '@/components/providers/SharedDataProvider';
 import { TicketProvider } from '@/lib/ticket-context';
 import { NotificationProvider } from '@/components/providers/NotificationProvider';
+import { ProfileGuard } from '@/components/auth/ProfileGuard';
 import {
   ApolloClient,
   ApolloProvider,
@@ -125,7 +126,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <SharedDataProvider>
           <TicketProvider>
             <NotificationProvider>
-              {children}
+              <ProfileGuard>
+                {children}
+              </ProfileGuard>
             </NotificationProvider>
           </TicketProvider>
         </SharedDataProvider>

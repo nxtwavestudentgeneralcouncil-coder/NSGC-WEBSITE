@@ -48,6 +48,23 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: Array.isArray(error) ? error[0]?.message : (error as any).message }, { status: 400 });
         }
 
+        // Try to trigger role sync in background
+        if (body.email) {
+            try {
+                import('@/lib/role-sync').then(({ syncUserRoleByEmail }) => {
+                    const isPresident = body.role?.toLowerCase() === 'president';
+                    const targetRole = isPresident ? 'president' : 'council';
+                    const targetExtra = isPresident ? ['president'] : ['council_member'];
+                    
+                    syncUserRoleByEmail(body.email, targetRole, targetExtra).catch(err => {
+                        console.error("[UpdateCouncilMember] role sync error:", err);
+                    });
+                });
+            } catch (e) {
+                console.error("[UpdateCouncilMember] failed to trigger role sync:", e);
+            }
+        }
+
         return NextResponse.json({ success: true, data }, { status: 200 });
     } catch (err: any) {
         console.error("Server error:", err);

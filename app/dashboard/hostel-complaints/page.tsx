@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { GlassModal } from '@/components/ui/glass-modal';
 import { 
     AlertTriangle, CheckCircle, LogOut, MessageSquare, 
-    ThumbsUp, Calendar, Users, Eye, FileText, Home, ArrowLeft
+    ThumbsUp, Calendar, Users, Eye, FileText, Home, ArrowLeft, Clock
 } from 'lucide-react';
 import { useTickets, TicketStatus } from '@/lib/ticket-context';
 import { useAuthenticationStatus, useUserData, useSignOut } from '@nhost/react';
@@ -21,6 +21,9 @@ export default function HostelComplaintsDashboard() {
     const { tickets, updateTicketStatus } = useTickets();
     const [selectedTicket, setSelectedTicket] = useState<any>(null);
     const [viewingImage, setViewingImage] = useState<string | null>(null);
+    const [filterType, setFilterType] = useState<string>('All');
+    const [reopenTicketId, setReopenTicketId] = useState<string | null>(null);
+    const [reopenReason, setReopenReason] = useState<string>('');
 
     const { signOut } = useSignOut();
 
@@ -31,11 +34,23 @@ export default function HostelComplaintsDashboard() {
 
     // Filter tickets to only show Hostel complaints
     // Check type, department, OR hostelType (for older complaints saved before the schema fix)
-    const hostelTickets = tickets.filter(t => 
+    const allHostelTickets = tickets.filter(t => 
         t.type === 'Hostel' || 
         t.department === 'Hostel' || 
         (t.hostelType && t.hostelType.length > 0)
     );
+
+    const hostelTickets = allHostelTickets.filter(ticket => {
+        if (filterType === 'All') return true;
+        if (filterType === 'Boys Hostel') return ticket.hostelType === 'Boys Hostel';
+        if (filterType === 'Girls Hostel') return ticket.hostelType === 'Girls Hostel';
+        
+        const nameStr = ticket.studentName?.toLowerCase() || '';
+        if (filterType === 'Male') return nameStr.includes('male') && !nameStr.includes('female');
+        if (filterType === 'Female') return nameStr.includes('female');
+        
+        return true;
+    });
 
     if (isLoading || !isAuthorized) {
         return (
@@ -125,8 +140,23 @@ export default function HostelComplaintsDashboard() {
 
                 {/* List Section */}
                 <div className="space-y-6">
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <h2 className="text-xl font-mono uppercase tracking-widest text-[#94a3b8]">Recent Hostel Complaints</h2>
+                        <div className="flex flex-wrap gap-2">
+                            {['All', 'Boys Hostel', 'Girls Hostel', 'Male', 'Female'].map(filter => (
+                                <button
+                                    key={filter}
+                                    onClick={() => setFilterType(filter)}
+                                    className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase transition-colors ${
+                                        filterType === filter 
+                                            ? 'bg-[#0ea5e9] text-black shadow-[0_0_15px_rgba(14,165,233,0.3)]' 
+                                            : 'bg-white/5 text-[#64748B] hover:text-white hover:bg-white/10'
+                                    }`}
+                                >
+                                    {filter}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     {hostelTickets.length === 0 ? (
@@ -138,7 +168,12 @@ export default function HostelComplaintsDashboard() {
                     ) : (
                         <div className="grid gap-4">
                             <AnimatePresence>
-                                {hostelTickets.map((ticket) => (
+                                {hostelTickets.map((ticket) => {
+                                    const dateMatch = ticket.description.match(/^\[Date of Incident: (.*?)\]\n\n/);
+                                    const displayDescription = dateMatch ? ticket.description.replace(dateMatch[0], '') : ticket.description;
+                                    const incidentDate = dateMatch ? dateMatch[1] : null;
+
+                                    return (
                                     <motion.div 
                                         key={ticket.id} 
                                         initial={{ opacity: 0, y: 10 }}
@@ -165,6 +200,12 @@ export default function HostelComplaintsDashboard() {
                                                                     {ticket.hostelType} {ticket.roomNumber ? `• Room ${ticket.roomNumber}` : ''}
                                                                 </Badge>
                                                             )}
+                                                            {incidentDate && (
+                                                                <Badge variant="outline" className="border-cyan-500/50 text-cyan-400 bg-cyan-500/5 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                                                                    <Clock className="w-3 h-3" />
+                                                                    Incident: {incidentDate}
+                                                                </Badge>
+                                                            )}
                                                             <span className="text-xs text-[#64748B] flex items-center gap-1 ml-2">
                                                                 <ThumbsUp className="w-3 h-3 text-[#0ea5e9]" />
                                                                 {ticket.votes || 0} Votes
@@ -173,7 +214,7 @@ export default function HostelComplaintsDashboard() {
 
                                                         <div>
                                                             <h3 className="text-xl font-bold text-white mb-2">{ticket.subject}</h3>
-                                                            <p className="text-[#94a3b8] text-sm leading-relaxed whitespace-pre-wrap">{ticket.description}</p>
+                                                            <p className="text-[#94a3b8] text-sm leading-relaxed whitespace-pre-wrap">{displayDescription}</p>
                                                         </div>
 
                                                         {ticket.image && (
@@ -244,7 +285,7 @@ export default function HostelComplaintsDashboard() {
                                                                         size="sm" 
                                                                         variant="outline"
                                                                         className="w-full border-white/10 hover:bg-white/5 text-white h-9"
-                                                                        onClick={() => updateTicketStatus(ticket.id, 'Pending', 'Complaint reopened by Hostel Warden')}
+                                                                        onClick={() => setReopenTicketId(ticket.id)}
                                                                     >
                                                                         Reopen Case
                                                                     </Button>
@@ -256,7 +297,7 @@ export default function HostelComplaintsDashboard() {
                                             </CardContent>
                                         </Card>
                                     </motion.div>
-                                ))}
+                                )})}
                             </AnimatePresence>
                         </div>
                     )}
@@ -282,6 +323,50 @@ export default function HostelComplaintsDashboard() {
                             className="max-w-full max-h-[70vh] object-contain rounded-md shadow-2xl" 
                         />
                     )}
+                </div>
+            </GlassModal>
+
+            {/* Reopen Complaint Modal */}
+            <GlassModal
+                isOpen={!!reopenTicketId}
+                onClose={() => { setReopenTicketId(null); setReopenReason(''); }}
+                title="Reason for Reopening"
+                footer={
+                    <div className="flex justify-end gap-3 w-full">
+                        <Button 
+                            variant="ghost" 
+                            onClick={() => { setReopenTicketId(null); setReopenReason(''); }}
+                            className="text-gray-300 hover:text-white"
+                        >
+                            Cancel
+                        </Button>
+                        <Button 
+                            className="bg-[#0ea5e9] text-black hover:bg-[#38bdf8] font-bold"
+                            onClick={() => {
+                                if (!reopenReason.trim() || !reopenTicketId) return;
+                                updateTicketStatus(reopenTicketId, 'Pending', `Reopened: ${reopenReason}`);
+                                setReopenTicketId(null);
+                                setReopenReason('');
+                            }}
+                            disabled={!reopenReason.trim()}
+                        >
+                            Confirm Reopen
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="p-2 space-y-4">
+                    <p className="text-sm text-[#94a3b8]">
+                        Please provide a reason for reopening this complaint. This reason will be visible to the student in their timeline.
+                    </p>
+                    <textarea 
+                        value={reopenReason}
+                        onChange={(e) => setReopenReason(e.target.value)}
+                        className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#0ea5e9]/50 transition-colors resize-none"
+                        rows={4}
+                        placeholder="Enter the reason here..."
+                        autoFocus
+                    />
                 </div>
             </GlassModal>
         </div>

@@ -88,7 +88,22 @@ function ComplaintsHistoryContent() {
                 {/* List */}
                 <div className="space-y-4">
                     {filteredTickets.length > 0 ? (
-                        filteredTickets.map((ticket, index) => (
+                        filteredTickets.map((ticket, index) => {
+                            const reopenedEvent = Array.isArray(ticket.timeline)
+                                ? ticket.timeline.slice().reverse().find((t: any) => t.description?.startsWith('Reopened:'))
+                                : null;
+
+                            let incidentDate = null;
+                            let displayDescription = ticket.description || '';
+                            if (displayDescription) {
+                                const dateMatch = displayDescription.match(/^\[Date of Incident: (.*?)\]\n\n/);
+                                if (dateMatch) {
+                                    incidentDate = dateMatch[1];
+                                    displayDescription = displayDescription.replace(dateMatch[0], '');
+                                }
+                            }
+
+                            return (
                             <motion.div
                                 key={ticket.id}
                                 initial={{ opacity: 0, y: 10 }}
@@ -111,14 +126,25 @@ function ComplaintsHistoryContent() {
                                                     }>
                                                         {ticket.status}
                                                     </Badge>
-                                                    <span className="text-xs text-gray-500">
-                                                        {new Date(ticket.createdAt).toLocaleDateString()} at {new Date(ticket.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    <span className="text-xs text-gray-500 flex items-center gap-2">
+                                                        <span>{new Date(ticket.createdAt).toLocaleDateString()} at {new Date(ticket.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        {incidentDate && (
+                                                            <>
+                                                                <span>•</span>
+                                                                <span className="text-cyan-400 font-bold tracking-wide">Incident: {incidentDate}</span>
+                                                            </>
+                                                        )}
                                                     </span>
                                                 </div>
                                                 <h3 className="text-xl font-bold break-words">{ticket.type}</h3>
                                                 <p className="text-gray-400 text-sm line-clamp-2 lg:line-clamp-none break-words">
-                                                    {ticket.description}
+                                                    {displayDescription}
                                                 </p>
+                                                {reopenedEvent?.description && (
+                                                    <div className="mt-2 text-sm text-amber-500/90 font-medium bg-amber-500/10 px-3 py-1.5 rounded inline-block">
+                                                        <span className="font-bold">Reopen Reason:</span> {reopenedEvent.description.replace('Reopened:', '').trim()}
+                                                    </div>
+                                                )}
                                                 <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 pt-2">
                                                     <span>Category: {ticket.department}</span>
                                                     <span className="hidden sm:inline">•</span>
@@ -148,7 +174,8 @@ function ComplaintsHistoryContent() {
                                     </CardContent>
                                 </Card>
                             </motion.div>
-                        ))
+                            );
+                        })
                     ) : (
                         <div className="text-center py-12 bg-white/5 rounded-lg border border-white/10">
                             <p className="text-gray-400 mb-4">No complaints found matching your criteria.</p>
