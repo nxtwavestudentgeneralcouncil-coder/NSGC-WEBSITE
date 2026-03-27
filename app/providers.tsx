@@ -25,6 +25,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const syncCookies = () => {
       const session = nhost.auth.getSession();
+      const authStatus = nhost.auth.getAuthenticationStatus();
+
       const cookieOptions = {
         expires: 30,
         path: '/',
@@ -33,7 +35,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       };
 
       if (session) {
-        // Logged In or Token Refreshed
+        // Logged In or Token Refreshed - Always sync cookies to be safe
         Cookies.set('nhostRefreshToken', session.refreshToken || '', cookieOptions);
         
         const rolesData = {
@@ -44,8 +46,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
           defaultRole: session.user?.defaultRole
         };
         Cookies.set('nhostRoles', JSON.stringify(rolesData), cookieOptions);
-      } else {
-        // Logged Out
+      } else if (!authStatus.isLoading && !authStatus.isAuthenticated) {
+        // Explicitly Logged Out and NO LONGER loading - Safe to remove
+        // This prevents deleting cookies during the split-second Nhost initializes on page load
         Cookies.remove('nhostRefreshToken');
         Cookies.remove('nhostRoles');
       }
