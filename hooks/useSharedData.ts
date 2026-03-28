@@ -103,9 +103,12 @@ export interface User {
     id: string;
     firstName: string;
     lastName: string;
+    displayName: string;
     email: string;
     status: 'Active' | 'Suspended';
     joinedDate: string;
+    avatarUrl?: string;
+    defaultRole?: string;
 }
 
 export interface PollOption {

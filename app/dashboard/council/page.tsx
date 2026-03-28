@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { GlassModal } from '@/components/ui/glass-modal';
 import {
-    Megaphone, Calendar, CheckCircle, XCircle, AlertTriangle, LogOut, ThumbsUp, Plus, Trash2, Star, Menu, MessageSquare, FileText, Users, Eye, ExternalLink, Camera, Upload, X, Trophy, BellOff
+    Megaphone, Calendar, CheckCircle, XCircle, AlertTriangle, LogOut, ThumbsUp, Plus, Trash2, Star, Menu, MessageSquare, FileText, Users, Eye, ExternalLink, Camera, Upload, X, Trophy, BellOff, Clock
 } from 'lucide-react';
 import { useTickets } from '@/lib/ticket-context';
 import Link from 'next/link';
@@ -27,12 +27,14 @@ function CouncilDashboardContent() {
     const [isAuthorized, setIsAuthorized] = useState(false);
 
     // Contexts
-    const { tickets, updateTicketStatus } = useTickets();
+    const { tickets, updateTicketStatus, setDeadline } = useTickets();
     const { announcements, setAnnouncements, events, setEvents, achievements, setAchievements, galleryImages, setGalleryImages, members, refetchAnnouncements, refetchEvents, refetchAchievements, refetchGalleryImages, isLoaded } = useSharedData();
     // UI States
     const [activeTab, setActiveTab] = useState('announcements');
     const [selectedTicket, setSelectedTicket] = useState<any>(null); // For viewing full complaint details
     const [viewingImage, setViewingImage] = useState<string | null>(null); // For standalone image views
+    const [deadlineTicketId, setDeadlineTicketId] = useState<string | null>(null);
+    const [deadlineValue, setDeadlineValue] = useState<string>('');
 
     // Modal States
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -753,6 +755,16 @@ function CouncilDashboardContent() {
                                                                         <Badge variant="outline" className="border-white/20 text-gray-400">
                                                                             {ticket.department}
                                                                         </Badge>
+                                                                        {ticket.dueAt && (
+                                                                            <Badge variant="outline" className={`${
+                                                                                new Date(ticket.dueAt).getTime() < Date.now() 
+                                                                                    ? 'border-red-500 text-red-500 bg-red-500/10' 
+                                                                                    : 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
+                                                                            } rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 animate-pulse`}>
+                                                                                <Clock className="w-3 h-3" />
+                                                                                {new Date(ticket.dueAt).getTime() < Date.now() ? 'Overdue' : `Due ${new Date(ticket.dueAt).toLocaleDateString()}`}
+                                                                            </Badge>
+                                                                        )}
                                                                     </div>
                                                                     <h3 className="text-lg font-bold text-white">{ticket.subject}</h3>
                                                                 </div>
@@ -853,6 +865,19 @@ function CouncilDashboardContent() {
                                                                         </Button>
                                                                     )}
                                                                 </div>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="h-8 text-xs border-[#f59e0b]/50 text-[#f59e0b] hover:bg-[#f59e0b]/10 w-full mt-2"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setDeadlineTicketId(ticket.id);
+                                                                        setDeadlineValue(ticket.dueAt ? new Date(ticket.dueAt).toISOString().slice(0, 16) : '');
+                                                                    }}
+                                                                >
+                                                                    <Clock className="w-3 h-3 mr-1" />
+                                                                    {ticket.dueAt ? 'Edit Deadline' : 'Set Deadline'}
+                                                                </Button>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1304,6 +1329,50 @@ function CouncilDashboardContent() {
                         )}
                     </GlassModal>
                 </div>
+
+                {/* Set Deadline Modal */}
+                <GlassModal
+                    isOpen={!!deadlineTicketId}
+                    onClose={() => { setDeadlineTicketId(null); setDeadlineValue(''); }}
+                    title="Set Resolution Deadline"
+                    footer={
+                        <div className="flex justify-end gap-3 w-full">
+                            <Button 
+                                variant="ghost" 
+                                onClick={() => { setDeadlineTicketId(null); setDeadlineValue(''); }}
+                                className="text-gray-300 hover:text-white"
+                            >
+                                Cancel
+                            </Button>
+                            <Button 
+                                className="bg-[#f59e0b] text-black hover:bg-[#f59e0b]/90 font-bold"
+                                onClick={() => {
+                                    if (!deadlineValue || !deadlineTicketId) return;
+                                    setDeadline(deadlineTicketId, new Date(deadlineValue).toISOString());
+                                    setDeadlineTicketId(null);
+                                    setDeadlineValue('');
+                                }}
+                                disabled={!deadlineValue}
+                            >
+                                Confirm Deadline
+                            </Button>
+                        </div>
+                    }
+                >
+                    <div className="p-2 space-y-4">
+                        <p className="text-sm text-[#94a3b8]">
+                            Set a target date and time by which this complaint should be resolved. The countdown will be visible on the ticket.
+                        </p>
+                        <input 
+                            type="datetime-local"
+                            value={deadlineValue}
+                            onChange={(e) => setDeadlineValue(e.target.value)}
+                            className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#f59e0b]/50 transition-colors [color-scheme:dark]"
+                            min={new Date().toISOString().slice(0, 16)}
+                            autoFocus
+                        />
+                    </div>
+                </GlassModal>
 
 
             </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createNhostClient } from '@nhost/nhost-js';
+import { sendPushNotifications, getUserIdsByRoles } from '@/lib/notifications';
 
 export async function POST(req: Request) {
     try {
@@ -43,6 +44,18 @@ export async function POST(req: Request) {
             const errorMessage = Array.isArray(error) ? error[0]?.message : (error as any).message || String(error);
             console.error('[insert-mess-change-request] Error:', errorMessage);
             return NextResponse.json({ message: errorMessage }, { status: 400 });
+        }
+
+        // Notify all users who can manage mess (mess_admin, admin, developer, president)
+        const messManagerIds = await getUserIdsByRoles(['mess_admin', 'admin', 'developer', 'president']);
+        if (messManagerIds.length > 0) {
+            sendPushNotifications({
+                title: `🍽️ New Mess Change Request`,
+                message: `${student_name || 'A student'} requested to change ${meal_type} on ${day}: "${suggested_item}"`,
+                type: 'mess_change',
+                link: '/dashboard/mess-admin',
+                targetUserIds: messManagerIds,
+            }).catch(err => console.error('[insert-mess-change-request] Notification error:', err));
         }
 
         return NextResponse.json({ success: true, data }, { status: 200 });

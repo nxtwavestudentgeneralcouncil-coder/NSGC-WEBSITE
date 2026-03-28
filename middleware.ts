@@ -89,6 +89,22 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/login', request.url));
       }
     }
+
+    // Boys Warden Protection
+    if (pathname.startsWith('/dashboard/boys-warden')) {
+      const hasBoysRole = allRoles.some((r: any) => ['boys-warden', 'boys_warden', 'admin', 'developer', 'president'].includes(r));
+      if (!hasBoysRole) {
+        return NextResponse.redirect(new URL('/dashboard/student', request.url));
+      }
+    }
+
+    // Girls Warden Protection
+    if (pathname.startsWith('/dashboard/girls-warden')) {
+      const hasGirlsRole = allRoles.some((r: any) => ['girls-warden', 'girls_warden', 'admin', 'developer', 'president'].includes(r));
+      if (!hasGirlsRole) {
+        return NextResponse.redirect(new URL('/dashboard/student', request.url));
+      }
+    }
   }
 
   return NextResponse.next();

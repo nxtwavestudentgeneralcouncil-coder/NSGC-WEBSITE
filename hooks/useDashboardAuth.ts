@@ -14,6 +14,10 @@ export type DashboardRole =
     | 'mess-admin'
     | 'hostel_complaints' 
     | 'hostel-complaints'
+    | 'boys-warden'
+    | 'boys_warden'
+    | 'girls-warden'
+    | 'girls_warden'
     | 'student' 
     | 'user' 
     | 'me_user';

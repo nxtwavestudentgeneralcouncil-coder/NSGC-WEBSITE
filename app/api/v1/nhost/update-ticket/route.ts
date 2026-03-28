@@ -1,15 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createNhostClient } from '@nhost/nhost-js';
 import { sendPushNotifications } from '@/lib/notifications';
+import { verifySession } from '@/lib/auth-utils';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { id, status, timeline, assigned_to } = body;
+        const { id, status, timeline, assigned_to, after_image_url, scheduled_date, time_slot, is_escalated, action_note, due_at } = body;
 
         if (!id) {
             return NextResponse.json({ success: false, message: 'Ticket ID is required' }, { status: 400 });
         }
+
+        // Verify session to get user ID for logging
+        const session = await verifySession(request);
+        const userId = session?.user?.id;
 
         const adminSecret = (process.env.NHOST_ADMIN_SECRET || '').replace(/^["']|["']$/g, '').trim();
         const nhost = createNhostClient({
@@ -18,131 +23,117 @@ export async function POST(request: Request) {
             adminSecret
         });
 
-        // Build the _set object dynamically — only include fields that are provided
+        // 1. Update the ticket
         const setFields: Record<string, any> = {};
         if (status !== undefined) setFields.status = status;
         if (timeline !== undefined) setFields.timeline = timeline;
         if (assigned_to !== undefined) setFields.assigned_to = assigned_to;
+        if (after_image_url !== undefined) setFields.after_image_url = after_image_url;
+        if (scheduled_date !== undefined) setFields.scheduled_date = scheduled_date;
+        if (time_slot !== undefined) setFields.time_slot = time_slot;
+        if (is_escalated !== undefined) setFields.is_escalated = is_escalated;
+        if (due_at !== undefined) setFields.due_at = due_at;
 
         if (Object.keys(setFields).length === 0) {
             return NextResponse.json({ success: false, message: 'No fields to update' }, { status: 400 });
         }
 
-        // Build a simple mutation with inline variables
-        const mutation = `
+        const updateMutation = `
             mutation UpdateTicket($id: uuid!, $_set: tickets_set_input!) {
-                update_tickets_by_pk(
-                    pk_columns: { id: $id },
-                    _set: $_set
-                ) {
+                update_tickets_by_pk(pk_columns: { id: $id }, _set: $_set) {
                     id
                     status
                     title
-                    timeline
-                    assigned_to
-                    updated_at
-                    submitted_by
                     submitted_by_email
                 }
             }
         `;
 
-        const result = await nhost.graphql.request(mutation, {
-                id,
-                _set: setFields
-            });
+        const updateResult = await nhost.graphql.request(updateMutation, { id, _set: setFields });
+        if (updateResult.error) {
+            return NextResponse.json({ success: false, message: 'Failed to update ticket' }, { status: 400 });
+        }
 
-        const { data, error } = result;
+        // 2. Log the activity if action is significant
+        let logAction = '';
+        if (assigned_to) logAction = 'assigned';
+        else if (status === 'Completed') logAction = 'resolved';
+        else if (status) logAction = 'status_changed';
+        else if (action_note?.includes('Comment')) logAction = 'comment_added';
 
-        if (error) {
-            const errorMessage = Array.isArray(error)
-                ? error.map((e: any) => e?.message).join('; ')
-                : (error as any).message || String(error);
-            
-            console.error('[update-ticket] GraphQL error:', errorMessage);
-            
-            // Fallback: try with raw fetch and explicit field setting
-            const subdomain = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN;
-            const region = process.env.NEXT_PUBLIC_NHOST_REGION;
-            const adminSecret = process.env.NHOST_ADMIN_SECRET;
-            const nhostUrl = `https://${subdomain}.graphql.${region}.nhost.run/v1/graphql`;
-
-            // Build a simpler mutation without the _set input type
-            const setClause = Object.entries(setFields)
-                .map(([key, _]) => `${key}: $${key}`)
-                .join(', ');
-            
-            const varDefs = Object.entries(setFields)
-                .map(([key, val]) => {
-                    if (key === 'status') return `$${key}: String`;
-                    if (key === 'assigned_to') return `$${key}: String`;
-                    if (key === 'timeline') return `$${key}: jsonb`;
-                    return `$${key}: String`;
-                })
-                .join(', ');
-
-            const fallbackMutation = `
-                mutation UpdateTicketFallback($id: uuid!, ${varDefs}) {
-                    update_tickets_by_pk(
-                        pk_columns: { id: $id },
-                        _set: { ${setClause} }
-                    ) {
+        if (logAction) {
+            const logMutation = `
+                mutation InsertLog($object: complaint_logs_insert_input!) {
+                    insert_complaint_logs_one(object: $object) {
                         id
-                        status
-                        title
                     }
                 }
             `;
-
-            const fallbackResponse = await fetch(nhostUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-hasura-admin-secret': adminSecret || '',
-                },
-                body: JSON.stringify({
-                    query: fallbackMutation,
-                    variables: { id, ...setFields },
-                }),
+            await nhost.graphql.request(logMutation, {
+                object: {
+                    complaint_id: id,
+                    action: logAction,
+                    description: action_note || `Ticket ${logAction}`,
+                    created_by: userId || null
+                }
             });
-
-            const fallbackResult = await fallbackResponse.json();
-
-            if (fallbackResult.errors) {
-                console.error('[update-ticket] Fallback also failed:', fallbackResult.errors);
-                return NextResponse.json({ success: false, errors: fallbackResult.errors }, { status: 500 });
-            }
-
-            // Send notification on fallback success too
-            if (status) {
-                const ticketTitle = fallbackResult.data?.update_tickets_by_pk?.title || 'Your complaint';
-                sendPushNotifications({
-                    title: `🔔 Complaint Update`,
-                    message: `"${ticketTitle}" status changed to ${status}`,
-                    type: 'complaint',
-                    link: '/complaints',
-                }).catch(err => console.error('[update-ticket] Notification error:', err));
-            }
-
-            console.log('[update-ticket] Fallback succeeded for ticket:', id);
-            return NextResponse.json({ success: true, data: fallbackResult.data?.update_tickets_by_pk });
         }
 
-        // Send push notification for status changes
-        if (status) {
-            const ticketData = (data as any)?.update_tickets_by_pk;
-            const ticketTitle = ticketData?.title || 'Your complaint';
-            
+        // 3. Send Notifications
+        const ticketTitle = updateResult.data?.update_tickets_by_pk?.title || 'Your complaint';
+        const submittedByEmail = updateResult.data?.update_tickets_by_pk?.submitted_by_email;
+
+        // Notify only the user who submitted the complaint
+        if ((status || due_at) && submittedByEmail) {
+            // Look up the submitter's user ID from their email
+            const userLookupQuery = `
+                query GetUserByEmail($email: citext!) {
+                    users(where: { email: { _eq: $email } }, limit: 1) {
+                        id
+                    }
+                }
+            `;
+            const userResult = await nhost.graphql.request(userLookupQuery, { email: submittedByEmail });
+            const submitterUserId = userResult.data?.users?.[0]?.id;
+
+            if (submitterUserId) {
+                if (status) {
+                    sendPushNotifications({
+                        title: `🔔 Complaint Update`,
+                        message: `"${ticketTitle}" status changed to ${status}`,
+                        type: 'complaint',
+                        link: '/complaints/history',
+                        targetUserId: submitterUserId,
+                    }).catch(err => console.error('[update-ticket] Notification error:', err));
+                }
+                
+                if (due_at) {
+                    const formattedDate = new Date(due_at).toLocaleDateString();
+                    sendPushNotifications({
+                        title: `⏰ Complaint Deadline Set`,
+                        message: `A resolution deadline of ${formattedDate} has been set for "${ticketTitle}"`,
+                        type: 'complaint',
+                        link: '/complaints/history',
+                        targetUserId: submitterUserId,
+                    }).catch(err => console.error('[update-ticket] Deadline notification error:', err));
+                }
+            } else {
+                console.warn(`[update-ticket] Could not find user for email: ${submittedByEmail}, skipping notification`);
+            }
+        }
+
+        // Notify staff about assignment
+        if (assigned_to) {
             sendPushNotifications({
-                title: `🔔 Complaint Update`,
-                message: `"${ticketTitle}" status changed to ${status}`,
-                type: 'complaint',
-                link: '/complaints',
-            }).catch(err => console.error('[update-ticket] Notification error:', err));
+                title: `📋 New Assignment`,
+                message: `You have been assigned to: "${ticketTitle}"`,
+                type: 'assignment',
+                link: '/dashboard/hostel-complaints',
+                targetUserId: assigned_to
+            }).catch(err => console.error('[update-ticket] Assignment notification error:', err));
         }
 
-        console.log('[update-ticket] Updated ticket:', id, 'to status:', status);
-        return NextResponse.json({ success: true, data: (data as any)?.update_tickets_by_pk });
+        return NextResponse.json({ success: true, data: updateResult.data?.update_tickets_by_pk });
     } catch (error: any) {
         console.error('[update-ticket] API Error:', error.message);
         return NextResponse.json({ success: false, message: error.message }, { status: 500 });

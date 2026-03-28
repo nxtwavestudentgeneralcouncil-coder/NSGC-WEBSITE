@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,8 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
     UtensilsCrossed, Save, Edit2, X, CheckCircle2, XCircle, 
     Calendar, Users, RotateCcw, Plus, Trash2, Loader2,
-    MessageSquare, Clock, Check
+    MessageSquare, Clock, Check, Eye, AlertTriangle
 } from 'lucide-react';
+import { useTickets } from '@/lib/ticket-context';
+import { GlassModal } from '@/components/ui/glass-modal';
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 
@@ -69,6 +71,18 @@ function MessAdminContent() {
     const [newDay, setNewDay] = useState('');
     const [newMealType, setNewMealType] = useState('');
     const [newItems, setNewItems] = useState('');
+
+    // Complaints logic
+    const { tickets, updateTicketStatus, setDeadline } = useTickets();
+    const [viewingImage, setViewingImage] = useState<string | null>(null);
+    const [deadlineTicketId, setDeadlineTicketId] = useState<string | null>(null);
+    const [deadlineValue, setDeadlineValue] = useState<string>('');
+
+    const messComplaints = useMemo(() => tickets.filter(t => 
+        t.type === 'Mess' || t.department === 'Mess'
+    ), [tickets]);
+
+    const activeMessComplaints = messComplaints.filter(t => t.status !== 'Completed');
 
 
     const fetchMenu = useCallback(async () => {
@@ -367,6 +381,12 @@ function MessAdminContent() {
                                 <Badge className="ml-2 bg-[#f59e0b] text-black text-[9px] px-1.5 py-0 rounded-full">{pendingRequests.length}</Badge>
                             )}
                         </TabsTrigger>
+                        <TabsTrigger value="complaints" className="data-[state=active]:bg-[#0ea5e9]/15 data-[state=active]:text-[#0ea5e9] text-xs font-bold uppercase tracking-widest rounded-lg px-4">
+                            <AlertTriangle className="w-3.5 h-3.5 mr-2" /> Complaints
+                            {activeMessComplaints.length > 0 && (
+                                <Badge className="ml-2 bg-[#0ea5e9] text-black text-[9px] px-1.5 py-0 rounded-full">{activeMessComplaints.length}</Badge>
+                            )}
+                        </TabsTrigger>
                     </TabsList>
 
                     {/* ===== MENU EDITOR TAB ===== */}
@@ -588,7 +608,191 @@ function MessAdminContent() {
                             )}
                         </div>
                     </TabsContent>
+
+                    {/* ===== COMPLAINTS TAB ===== */}
+                    <TabsContent value="complaints">
+                        <div className="bg-[#0F172A] rounded-xl border border-slate-800 overflow-hidden">
+                            <div className="p-6 border-b border-slate-800">
+                                <h2 className="text-lg font-bold text-white tracking-tight">Mess Complaints</h2>
+                                <p className="text-xs text-[#64748B] mt-1">Direct feedback and issues reported by students regarding mess facilities</p>
+                            </div>
+
+                            {messComplaints.length === 0 ? (
+                                <div className="p-12 text-center text-slate-400">
+                                    <AlertTriangle className="w-8 h-8 text-slate-600 mx-auto mb-3 opacity-20" />
+                                    <p className="text-sm">No complaints logged for mess category</p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-800/30">
+                                    {messComplaints.map(ticket => (
+                                        <div key={ticket.id} className="p-6 hover:bg-white/[0.01] transition-colors">
+                                            <div className="flex flex-col lg:flex-row gap-6">
+                                                <div className="flex-1 space-y-3">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <Badge className={`${
+                                                            ticket.priority === 'High' ? 'bg-red-500/20 text-red-500 border-red-500/10' : 
+                                                            ticket.priority === 'Medium' ? 'bg-[#f59e0b]/20 text-[#f59e0b] border-[#f59e0b]/10' : 
+                                                            'bg-emerald-500/20 text-emerald-500 border-emerald-500/10'
+                                                        } border text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full`}>
+                                                            {ticket.priority} Priority
+                                                        </Badge>
+                                                        <Badge variant="outline" className={`${
+                                                            ticket.status === 'Completed' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' :
+                                                            ticket.status === 'In Progress' ? 'border-[#0ea5e9]/30 text-[#0ea5e9] bg-[#0ea5e9]/5' :
+                                                            'border-slate-500/30 text-slate-400'
+                                                        } rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider`}>
+                                                            {ticket.status}
+                                                        </Badge>
+                                                        <span className="text-[10px] text-[#475569] font-mono">#{ticket.id.split('-')[0]}</span>
+                                                        {ticket.dueAt && (
+                                                            <Badge variant="outline" className={`${
+                                                                new Date(ticket.dueAt).getTime() < Date.now() 
+                                                                    ? 'border-red-500 text-red-500 bg-red-500/10' 
+                                                                    : 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
+                                                            } rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 animate-pulse`}>
+                                                                <Clock className="w-3 h-3" />
+                                                                {new Date(ticket.dueAt).getTime() < Date.now() ? 'Overdue' : `Due ${new Date(ticket.dueAt).toLocaleDateString()}`}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+
+                                                    <div>
+                                                        <h3 className="text-base font-bold text-white mb-1">{ticket.subject}</h3>
+                                                        <p className="text-sm text-[#94a3b8] leading-relaxed italic line-clamp-2">"{ticket.description}"</p>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap items-center gap-4 text-[10px] text-[#64748B] pt-2 font-bold tracking-widest uppercase">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Users className="w-3.5 h-3.5 text-[#10b981]" />
+                                                            <span className="text-slate-300">{ticket.studentName}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Calendar className="w-3.5 h-3.5" />
+                                                            <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="lg:w-48 flex flex-col justify-center gap-2">
+                                                    {ticket.status !== 'Completed' && (
+                                                        <>
+                                                            <Button 
+                                                                size="sm" 
+                                                                className={`h-8 font-bold text-[10px] uppercase tracking-wider ${ticket.status === 'In Progress' ? 'bg-[#0ea5e9] text-black hover:bg-[#0ea5e9]/90' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+                                                                onClick={() => updateTicketStatus(ticket.id, 'In Progress')}
+                                                            >
+                                                                {ticket.status === 'In Progress' ? 'Update Note' : 'In Progress'}
+                                                            </Button>
+                                                            <Button 
+                                                                size="sm" 
+                                                                className="h-8 font-bold text-[10px] uppercase tracking-wider bg-[#10b981] text-black hover:bg-[#10b981]/90"
+                                                                onClick={() => updateTicketStatus(ticket.id, 'Completed')}
+                                                            >
+                                                                Resolve
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                    {ticket.image && (
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            className="h-8 text-[10px] text-[#10b981] hover:bg-[#10b981]/10 uppercase font-bold tracking-widest"
+                                                            onClick={() => setViewingImage(ticket.image!)}
+                                                        >
+                                                            <Eye className="w-3.5 h-3.5 mr-2" /> Evidence
+                                                        </Button>
+                                                    )}
+                                                    <Button 
+                                                        size="sm" 
+                                                        className="h-8 font-bold text-[10px] uppercase tracking-wider bg-white/5 text-[#f59e0b] hover:bg-[#f59e0b]/10 border border-[#f59e0b]/20"
+                                                        onClick={() => {
+                                                            setDeadlineTicketId(ticket.id);
+                                                            setDeadlineValue(ticket.dueAt ? new Date(ticket.dueAt).toISOString().slice(0, 16) : '');
+                                                        }}
+                                                    >
+                                                        <Clock className="w-3 h-3 mr-1" />
+                                                        {ticket.dueAt ? 'Edit Deadline' : 'Set Deadline'}
+                                                    </Button>
+                                                    {ticket.status === 'Completed' && (
+                                                        <div className="flex items-center justify-center gap-1.5 text-emerald-500 font-bold text-[10px] uppercase tracking-widest py-2 bg-emerald-500/5 rounded-lg border border-emerald-500/10">
+                                                            <CheckCircle2 className="w-3.5 h-3.5" /> Resolved
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </TabsContent>
                 </Tabs>
+
+                {/* Evidence Modal */}
+                <GlassModal
+                    isOpen={!!viewingImage}
+                    onClose={() => setViewingImage(null)}
+                    title="Complaint Attachment"
+                    footer={
+                        <Button onClick={() => setViewingImage(null)} className="w-full bg-[#1A2133] text-white border border-white/10 hover:bg-white/5 font-bold uppercase tracking-widest text-xs h-12">
+                            Close
+                        </Button>
+                    }
+                >
+                    <div className="flex justify-center items-center bg-black/40 rounded-2xl overflow-hidden border border-white/5 p-1">
+                        {viewingImage && (
+                            <img 
+                                src={viewingImage} 
+                                alt="Complaint Evidence" 
+                                className="max-w-full max-h-[75vh] object-contain" 
+                            />
+                        )}
+                    </div>
+                </GlassModal>
+
+                {/* Set Deadline Modal */}
+                <GlassModal
+                    isOpen={!!deadlineTicketId}
+                    onClose={() => { setDeadlineTicketId(null); setDeadlineValue(''); }}
+                    title="Set Resolution Deadline"
+                    footer={
+                        <div className="flex justify-end gap-3 w-full p-2">
+                            <Button 
+                                variant="ghost" 
+                                onClick={() => { setDeadlineTicketId(null); setDeadlineValue(''); }}
+                                className="text-[#64748B] hover:text-white font-bold uppercase tracking-widest text-[10px]"
+                            >
+                                Cancel
+                            </Button>
+                            <Button 
+                                className="bg-[#f59e0b] text-black hover:bg-[#f59e0b]/90 font-bold uppercase tracking-widest text-[10px] px-6"
+                                onClick={() => {
+                                    if (!deadlineValue || !deadlineTicketId) return;
+                                    setDeadline(deadlineTicketId, new Date(deadlineValue).toISOString());
+                                    setDeadlineTicketId(null);
+                                    setDeadlineValue('');
+                                }}
+                                disabled={!deadlineValue}
+                            >
+                                Confirm Deadline
+                            </Button>
+                        </div>
+                    }
+                >
+                    <div className="py-2 space-y-4">
+                        <p className="text-xs text-[#94a3b8] font-medium leading-relaxed">
+                            Set a target date and time by which this complaint should be resolved.
+                        </p>
+                        <input 
+                            type="datetime-local"
+                            value={deadlineValue}
+                            onChange={(e) => setDeadlineValue(e.target.value)}
+                            className="w-full bg-[#0B0B14] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-[#f59e0b]/50 transition-all [color-scheme:dark]"
+                            min={new Date().toISOString().slice(0, 16)}
+                            autoFocus
+                        />
+                    </div>
+                </GlassModal>
 
             </div>
         </div>

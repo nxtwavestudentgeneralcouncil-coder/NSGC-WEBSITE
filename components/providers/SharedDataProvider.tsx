@@ -250,10 +250,12 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
                     id: u.id,
                     firstName: u.displayName?.split(' ')[0] || 'Student',
                     lastName: u.displayName?.split(' ').slice(1).join(' ') || '',
+                    displayName: u.displayName || 'Student',
                     email: u.email || '',
                     status: 'Active',
                     joinedDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A',
-                    avatarUrl: u.avatarUrl
+                    avatarUrl: u.avatarUrl,
+                    defaultRole: u.defaultRole
                 })),
                 polls: data.polls || [],
                 surveys: data.surveys || [],

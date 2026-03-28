@@ -36,6 +36,7 @@ function ComplaintsContent() {
         otherSubject: '',
         description: '',
         hostelType: '',
+        floor: '',
         roomNumber: '',
         dateOfIncident: ''
     });
@@ -53,6 +54,7 @@ function ComplaintsContent() {
 
     const { isAuthenticated, isLoading: authLoading } = useAuthenticationStatus();
     const user = useUserData();
+    const userGender = (user?.metadata as any)?.gender?.toLowerCase();
 
     useEffect(() => {
         // Hydrate the login state using Nhost auth status
@@ -84,8 +86,9 @@ function ComplaintsContent() {
                     subject: foundTicket.subject || '',
                     otherSubject: '',
                     description: cleanDescription,
-                    hostelType: '', // Or extract from description if possible, but keeping it empty for now
-                    roomNumber: '',
+                    hostelType: foundTicket.hostelType || '',
+                    floor: foundTicket.floor || '',
+                    roomNumber: foundTicket.roomNumber || '',
                     dateOfIncident: extractedDate
                 });
                 setImage(foundTicket.image || null);
@@ -136,6 +139,7 @@ function ComplaintsContent() {
                 subject: '', 
                 otherSubject: '', 
                 hostelType: '', 
+                floor: '',
                 roomNumber: '',
                 dateOfIncident: ''
             }));
@@ -212,6 +216,22 @@ function ComplaintsContent() {
         setImage(null);
     };
 
+    // Duplicate Detection logic
+    const showDuplicateWarning = formData.category === 'Hostel' && 
+        formData.floor && 
+        formData.roomNumber && 
+        formData.subject;
+
+    const existingDuplicates = showDuplicateWarning 
+        ? tickets.filter(t => 
+            t.type === 'Hostel' && 
+            t.floor === formData.floor && 
+            t.roomNumber === formData.roomNumber && 
+            t.subject === formData.subject &&
+            ['Pending', 'In Review', 'In Progress'].includes(t.status)
+        )
+        : [];
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -226,16 +246,18 @@ function ComplaintsContent() {
 
             // Hostel specific validation
             if (formData.category === 'Hostel') {
-                if (!formData.hostelType || !formData.roomNumber) {
-                    alert('Please provide Hostel Type and Room Number');
+                if (!formData.hostelType || !formData.floor || !formData.roomNumber) {
+                    alert('Please provide Hostel Type, Floor and Room Number');
                     setIsSubmitting(false);
                     return;
                 }
-                if (!image) {
-                    alert('Evidence/Photo is mandatory for Hostel complaints');
-                    setIsSubmitting(false);
-                    return;
-                }
+            }
+
+            // Evidence is mandatory for Hostel and Mess complaints
+            if ((formData.category === 'Hostel' || formData.category === 'Mess') && !image) {
+                alert(`Evidence/Photo is mandatory for ${formData.category} complaints`);
+                setIsSubmitting(false);
+                return;
             }
 
             if (editId) {
@@ -260,6 +282,7 @@ function ComplaintsContent() {
                     description: compiledDescription,
                     image: image || undefined,
                     hostelType: formData.category === 'Hostel' ? formData.hostelType : undefined,
+                    floor: formData.category === 'Hostel' ? formData.floor : undefined,
                     roomNumber: formData.category === 'Hostel' ? formData.roomNumber : undefined
                 });
 
@@ -273,6 +296,7 @@ function ComplaintsContent() {
                     otherSubject: '',
                     description: '',
                     hostelType: '',
+                    floor: '',
                     roomNumber: '',
                     dateOfIncident: ''
                 });
@@ -301,6 +325,7 @@ function ComplaintsContent() {
                     proofUrl: '',
                     image: image || undefined,
                     hostelType: formData.category === 'Hostel' ? formData.hostelType : undefined,
+                    floor: formData.category === 'Hostel' ? formData.floor : undefined,
                     roomNumber: formData.category === 'Hostel' ? formData.roomNumber : undefined
                 });
 
@@ -314,6 +339,7 @@ function ComplaintsContent() {
                     otherSubject: '',
                     description: '',
                     hostelType: '',
+                    floor: '',
                     roomNumber: '',
                     dateOfIncident: ''
                 });
@@ -545,42 +571,97 @@ function ComplaintsContent() {
                                         </div>
 
                                         {formData.category === 'Hostel' && (
-                                            <motion.div 
-                                                initial={{ opacity: 0, height: 0 }}
-                                                animate={{ opacity: 1, height: 'auto' }}
-                                                className="grid grid-cols-1 md:grid-cols-2 gap-8"
-                                            >
-                                                <div className="space-y-2">
-                                                    <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
-                                                        Hostel Type <span className="text-red-500 text-sm">*</span>
-                                                    </label>
-                                                    <select
-                                                        name="hostelType"
-                                                        value={formData.hostelType}
-                                                        onChange={handleChange}
-                                                        className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
-                                                        required
+                                            <div className="space-y-8">
+                                                <motion.div 
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    className="grid grid-cols-1 md:grid-cols-2 gap-8"
+                                                >
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                            Hostel Type <span className="text-red-500 text-sm">*</span>
+                                                        </label>
+                                                        <select
+                                                            name="hostelType"
+                                                            value={formData.hostelType}
+                                                            onChange={handleChange}
+                                                            className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
+                                                            required
+                                                        >
+                                                            <option value="" disabled hidden>Select hostel type...</option>
+                                                            {(!userGender || userGender === 'male') && (
+                                                                <option value="Boys Hostel">Boys Hostel</option>
+                                                            )}
+                                                            {(!userGender || userGender === 'female') && (
+                                                                <option value="Girls Hostel">Girls Hostel</option>
+                                                            )}
+                                                            {userGender && !['male', 'female'].includes(userGender) && (
+                                                                <>
+                                                                    <option value="Boys Hostel">Boys Hostel</option>
+                                                                    <option value="Girls Hostel">Girls Hostel</option>
+                                                                </>
+                                                            )}
+                                                        </select>
+                                                    </div>
+                                                </motion.div>
+
+                                                <motion.div 
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    className="grid grid-cols-1 md:grid-cols-2 gap-8"
+                                                >
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                            Floor <span className="text-red-500 text-sm">*</span>
+                                                        </label>
+                                                        <select
+                                                            name="floor"
+                                                            value={formData.floor}
+                                                            onChange={handleChange}
+                                                            className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
+                                                            required
+                                                        >
+                                                            <option value="" disabled hidden>Select floor...</option>
+                                                            <option value="Ground">Ground Floor</option>
+                                                            <option value="1st">1st Floor</option>
+                                                            <option value="2nd">2nd Floor</option>
+                                                            <option value="3rd">3rd Floor</option>
+                                                            <option value="4th">4th Floor</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                            Room Number <span className="text-red-500 text-sm">*</span>
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            name="roomNumber"
+                                                            value={formData.roomNumber}
+                                                            onChange={handleChange}
+                                                            className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
+                                                            placeholder="e.g. 101, B-202"
+                                                            required
+                                                        />
+                                                    </div>
+                                                </motion.div>
+
+                                                {existingDuplicates.length > 0 && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: -10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex gap-3 items-start"
                                                     >
-                                                        <option value="" disabled hidden>Select hostel type...</option>
-                                                        <option value="Boys Hostel">Boys Hostel</option>
-                                                        <option value="Girls Hostel">Girls Hostel</option>
-                                                    </select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
-                                                        Room Number <span className="text-red-500 text-sm">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        name="roomNumber"
-                                                        value={formData.roomNumber}
-                                                        onChange={handleChange}
-                                                        className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
-                                                        placeholder="e.g. 101, B-202"
-                                                        required
-                                                    />
-                                                </div>
-                                            </motion.div>
+                                                        <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                                                        <div className="space-y-1">
+                                                            <p className="text-amber-500 font-bold text-sm">Potential Duplicate Detected</p>
+                                                            <p className="text-xs text-amber-200/70">
+                                                                There are already {existingDuplicates.length} active complaints for Room {formData.roomNumber} regarding "{formData.subject}". 
+                                                                Submitting another might be redundant but will be prioritized if the issue is widespread.
+                                                            </p>
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </div>
                                         )}
 
                                         {(formData.category === 'Hostel' || formData.category === 'Mess') && (
@@ -624,7 +705,7 @@ function ComplaintsContent() {
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase flex items-center">
                                                 Upload Evidence 
-                                                {formData.category === 'Hostel' ? (
+                                                {(formData.category === 'Hostel' || formData.category === 'Mess') ? (
                                                     <span className="text-red-500 text-sm ml-1">*</span>
                                                 ) : (
                                                     <span className="text-[#6b7280] lowercase italic ml-2 opacity-70">(optional)</span>
@@ -707,6 +788,7 @@ function ComplaintsContent() {
                                                         otherSubject: '',
                                                         description: '',
                                                         hostelType: '',
+                                                        floor: '',
                                                         roomNumber: '',
                                                         dateOfIncident: ''
                                                     });

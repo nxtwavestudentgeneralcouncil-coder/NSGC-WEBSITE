@@ -344,9 +344,21 @@ function StudentDashboardContent() {
                                                         </div>
                                                     )}
                                                 </div>
-                                                <Badge variant="outline" className={`rounded-full px-3 py-1 font-bold tracking-widest text-[10px] uppercase border ${item.status === 'Completed' ? 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/30' : 'bg-[#0ea5e9]/10 text-[#0ea5e9] border-[#0ea5e9]/30'}`}>
-                                                    {item.status}
-                                                </Badge>
+                                                <div className="flex flex-col items-end gap-2">
+                                                    <Badge variant="outline" className={`rounded-full px-3 py-1 font-bold tracking-widest text-[10px] uppercase border ${item.status === 'Completed' ? 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/30' : 'bg-[#0ea5e9]/10 text-[#0ea5e9] border-[#0ea5e9]/30'}`}>
+                                                        {item.status}
+                                                    </Badge>
+                                                    {item.dueAt && item.status !== 'Completed' && (
+                                                        <Badge variant="outline" className={`rounded-full px-2 py-0.5 font-bold tracking-widest text-[9px] uppercase border flex items-center gap-1 ${
+                                                            new Date(item.dueAt).getTime() < Date.now() 
+                                                                ? 'bg-red-500/10 text-red-500 border-red-500/30 animate-pulse' 
+                                                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                                        }`}>
+                                                            <Clock className="w-2.5 h-2.5" />
+                                                            {new Date(item.dueAt).getTime() < Date.now() ? 'Overdue' : 'Due ' + new Date(item.dueAt).toLocaleDateString()}
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </div>
                                         )})}
                                     </div>

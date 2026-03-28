@@ -38,10 +38,12 @@ interface NotificationOptions {
   link?: string;
   /** If provided, only notify this specific user (e.g., for complaint status updates) */
   targetUserId?: string;
+  /** If provided, notify all these users (e.g., all mess admins) */
+  targetUserIds?: string[];
 }
 
 // ─── Fetch All Push Subscriptions ────────────────────────────────────────────
-async function getAllPushSubscriptions(targetUserId?: string): Promise<any[]> {
+async function getAllPushSubscriptions(targetUserId?: string, targetUserIds?: string[]): Promise<any[]> {
   const nhost = createNhostAdmin();
   
   const query = `
@@ -57,7 +59,11 @@ async function getAllPushSubscriptions(targetUserId?: string): Promise<any[]> {
   `;
 
   const variables = {
-    where: targetUserId ? { user_id: { _eq: targetUserId } } : {}
+    where: targetUserId 
+      ? { user_id: { _eq: targetUserId } } 
+      : Array.isArray(targetUserIds) && targetUserIds.length > 0
+        ? { user_id: { _in: targetUserIds } }
+        : {}
   };
 
   try {
@@ -115,25 +121,31 @@ async function createInAppNotification(options: NotificationOptions): Promise<vo
     if (!notificationId) return;
 
     // Step 2: Create notification_recipients for target users
-    if (options.targetUserId) {
-      // Targeted notification — single user
-      const insertRecipient = `
-        mutation InsertRecipient($notification_id: uuid!, $user_id: uuid!) {
-          insert_notification_recipients_one(object: {
-            notification_id: $notification_id,
-            user_id: $user_id,
-            is_read: false
-          }) {
-            id
+    // Collect all target user IDs
+    const allTargetIds: string[] = [];
+    if (options.targetUserId) allTargetIds.push(options.targetUserId);
+    if (options.targetUserIds) allTargetIds.push(...options.targetUserIds);
+    // Deduplicate
+    const uniqueTargetIds = [...new Set(allTargetIds)];
+
+    if (uniqueTargetIds.length > 0) {
+      // Targeted notification — specific users
+      const recipientObjects = uniqueTargetIds.map(uid => ({
+        notification_id: notificationId,
+        user_id: uid,
+        is_read: false,
+      }));
+
+      const insertManyRecipients = `
+        mutation InsertManyRecipients($objects: [notification_recipients_insert_input!]!) {
+          insert_notification_recipients(objects: $objects) {
+            affected_rows
           }
         }
       `;
       await nhost.graphql.request(
-        insertRecipient,
-        {
-          notification_id: notificationId,
-          user_id: options.targetUserId,
-        }
+        insertManyRecipients,
+        { objects: recipientObjects }
       );
     } else {
       // Broadcast — get all users and create recipients
@@ -188,7 +200,14 @@ export async function sendPushNotifications(options: NotificationOptions): Promi
     tasks.push(
       (async () => {
         try {
-          const subscriptions = await getAllPushSubscriptions(options.targetUserId);
+          const allIds: string[] = [];
+          if (options.targetUserId) allIds.push(options.targetUserId);
+          if (options.targetUserIds) allIds.push(...options.targetUserIds);
+          const subscriptions = allIds.length === 1
+            ? await getAllPushSubscriptions(allIds[0])
+            : allIds.length > 1
+              ? await getAllPushSubscriptions(undefined, allIds)
+              : await getAllPushSubscriptions();
           console.log(`[notifications] Found ${subscriptions.length} push subscription(s) for ${options.targetUserId || 'all users'}`);
 
           if (subscriptions.length === 0) return;
@@ -247,5 +266,70 @@ async function removeExpiredSubscription(subscriptionId: string): Promise<void> 
     console.log(`[notifications] Removed expired subscription: ${subscriptionId}`);
   } catch (err) {
     console.error('[notifications] Failed to remove expired subscription:', err);
+  }
+}
+
+// ─── Get User IDs by Role ────────────────────────────────────────────────────
+/**
+ * Look up all user IDs that have a specific role (e.g., 'mess_admin', 'hostel_complaints').
+ * Queries Nhost's authUserRoles table.
+ */
+export async function getUserIdsByRole(role: string): Promise<string[]> {
+  const nhost = createNhostAdmin();
+  try {
+    const query = `
+      query GetUsersByRole($role: String!) {
+        authUserRoles(where: { role: { _eq: $role } }) {
+          userId
+        }
+      }
+    `;
+    const result = await nhost.graphql.request(query, { role });
+    const { data, error } = result;
+
+    if (error) {
+      console.error(`[notifications] Failed to fetch users with role "${role}":`, error);
+      return [];
+    }
+
+    const userRoles = (data as any)?.authUserRoles || [];
+    const userIds = userRoles.map((ur: any) => ur.userId).filter(Boolean);
+    console.log(`[notifications] Found ${userIds.length} user(s) with role "${role}"`);
+    return userIds;
+  } catch (err) {
+    console.error(`[notifications] Error fetching users by role "${role}":`, err);
+    return [];
+  }
+}
+
+/**
+ * Look up all user IDs that have ANY of the specified roles.
+ * Returns deduplicated user IDs.
+ */
+export async function getUserIdsByRoles(roles: string[]): Promise<string[]> {
+  const nhost = createNhostAdmin();
+  try {
+    const query = `
+      query GetUsersByRoles($roles: [String!]!) {
+        authUserRoles(where: { role: { _in: $roles } }) {
+          userId
+        }
+      }
+    `;
+    const result = await nhost.graphql.request(query, { roles });
+    const { data, error } = result;
+
+    if (error) {
+      console.error(`[notifications] Failed to fetch users with roles [${roles.join(', ')}]:`, error);
+      return [];
+    }
+
+    const userRoles = (data as any)?.authUserRoles || [];
+    const userIds = [...new Set(userRoles.map((ur: any) => ur.userId).filter(Boolean))] as string[];
+    console.log(`[notifications] Found ${userIds.length} unique user(s) with roles [${roles.join(', ')}]`);
+    return userIds;
+  } catch (err) {
+    console.error(`[notifications] Error fetching users by roles [${roles.join(', ')}]:`, err);
+    return [];
   }
 }

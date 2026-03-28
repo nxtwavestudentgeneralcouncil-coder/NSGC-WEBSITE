@@ -26,7 +26,9 @@ const AVAILABLE_ROLES = [
     { id: 'president', label: 'President' },
     { id: 'council_member', label: 'Council' },
     { id: 'club_head', label: 'Club Manager' },
-    { id: 'hostel_complaints', label: 'Hostel Warden' },
+    { id: 'hostel_complaints', label: 'Hostel Manager' },
+    { id: 'boys-warden', label: 'Boys Warden' },
+    { id: 'girls-warden', label: 'Girls Warden' },
     { id: 'mess_admin', label: 'Mess Admin' }
 ];
 
@@ -190,6 +192,8 @@ export default function AdminDashboard() {
                                  : formData.roles.includes('council_member') ? 'council_member'
                                  : formData.roles.includes('club_head') ? 'club_head'
                                  : formData.roles.includes('hostel_complaints') ? 'hostel_complaints'
+                                 : formData.roles.includes('boys-warden') ? 'boys-warden'
+                                 : formData.roles.includes('girls-warden') ? 'girls-warden'
                                  : formData.roles.includes('mess_admin') ? 'mess_admin'
                                  : 'student';
 
@@ -343,6 +347,28 @@ export default function AdminDashboard() {
                             </div>
                         </CardContent>
                     </Card>
+                </div>
+
+                {/* Dashboard Access Links */}
+                <div className="mb-12">
+                    <h2 className="text-xl font-bold mb-4">Quick Dashboard Access</h2>
+                    <div className="flex flex-wrap gap-4">
+                        <Button variant="outline" className="border-cyan-500/30 text-cyan-500 hover:bg-cyan-500/10" onClick={() => router.push('/dashboard/hostel-complaints')}>
+                            Hostel Manager (Global)
+                        </Button>
+                        <Button variant="outline" className="border-[#0ea5e9]/30 text-[#0ea5e9] hover:bg-[#0ea5e9]/10" onClick={() => router.push('/dashboard/boys-warden')}>
+                            Boys Warden
+                        </Button>
+                        <Button variant="outline" className="border-[#ec4899]/30 text-[#ec4899] hover:bg-[#ec4899]/10" onClick={() => router.push('/dashboard/girls-warden')}>
+                            Girls Warden
+                        </Button>
+                        <Button variant="outline" className="border-[#f59e0b]/30 text-[#f59e0b] hover:bg-[#f59e0b]/10" onClick={() => router.push('/dashboard/mess-admin')}>
+                            Mess Admin
+                        </Button>
+                        <Button variant="outline" className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10" onClick={() => router.push('/dashboard/president')}>
+                            President
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Lockdown Warning Banner */}

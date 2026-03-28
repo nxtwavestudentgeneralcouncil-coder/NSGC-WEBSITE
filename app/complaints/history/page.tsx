@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Search, Filter, Pencil } from 'lucide-react';
+import { ArrowLeft, Search, Filter, Pencil, Clock } from 'lucide-react';
 import { useTickets, TicketProvider } from '@/lib/ticket-context';
 import { useState } from 'react';
 import { useUserData } from '@nhost/react';
@@ -126,6 +126,16 @@ function ComplaintsHistoryContent() {
                                                     }>
                                                         {ticket.status}
                                                     </Badge>
+                                                    {ticket.dueAt && ticket.status !== 'Completed' && (
+                                                        <Badge variant="outline" className={`border flex items-center gap-1.5 px-2.5 py-0.5 mt-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                                                            new Date(ticket.dueAt).getTime() < Date.now() 
+                                                                ? 'bg-red-500/10 text-red-500 border-red-500/30' 
+                                                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                                        }`}>
+                                                            <Clock className="w-3 h-3" />
+                                                            {new Date(ticket.dueAt).getTime() < Date.now() ? 'Overdue' : 'Due ' + new Date(ticket.dueAt).toLocaleDateString()}
+                                                        </Badge>
+                                                    )}
                                                     <span className="text-xs text-gray-500 flex items-center gap-2">
                                                         <span>{new Date(ticket.createdAt).toLocaleDateString()} at {new Date(ticket.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                         {incidentDate && (
