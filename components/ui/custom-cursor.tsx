@@ -5,53 +5,61 @@ import { motion, useMotionValue } from 'framer-motion';
 
 export function CustomCursor() {
   const [isMounted, setIsMounted] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   // Position of the actual mouse
   const mouseX = useMotionValue(-100);
   const mouseY = useMotionValue(-100);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
+    
+    // Check for touch device once on mount
+    const touchQuery = window.matchMedia('(pointer: coarse)');
+    setIsTouchDevice(touchQuery.matches);
 
     const moveCursor = (e: MouseEvent) => {
       mouseX.set(e.clientX);
       mouseY.set(e.clientY);
+      // Only trigger state change if transitioning to visible
+      setIsVisible(prev => prev ? prev : true);
     };
 
     const handleMouseOver = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      // Check if the element or any of its parents is a clickable element
-      // Removed getComputedStyle check as it forces expensive style recalculation
-      if (
+      if (!target) return;
+      
+      const isPointer = !!(
         target.tagName.toLowerCase() === 'button' ||
         target.tagName.toLowerCase() === 'a' ||
         target.closest('button') ||
         target.closest('a') ||
         target.classList.contains('cursor-pointer')
-      ) {
-        setIsHovering(true);
-      } else {
-        setIsHovering(false);
-      }
+      );
+      
+      setIsHovering(prev => prev === isPointer ? prev : isPointer);
     };
 
-    window.addEventListener('mousemove', moveCursor);
-    window.addEventListener('mouseover', handleMouseOver);
+    const handleMouseLeave = () => setIsVisible(false);
+    const handleMouseEnter = () => setIsVisible(true);
+
+    window.addEventListener('mousemove', moveCursor, { passive: true });
+    window.addEventListener('mouseover', handleMouseOver, { passive: true });
+    document.addEventListener('mouseleave', handleMouseLeave);
+    document.addEventListener('mouseenter', handleMouseEnter);
 
     return () => {
       window.removeEventListener('mousemove', moveCursor);
       window.removeEventListener('mouseover', handleMouseOver);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('mouseenter', handleMouseEnter);
     };
   }, [mouseX, mouseY]);
 
-  if (!isMounted) return null;
-
-  // Don't render custom cursor on touch devices where pointer is coarse
-  if (typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches) {
-    return null;
-  }
+  // Don't render anything until mounted or on touch devices
+  if (!isMounted || isTouchDevice) return null;
 
   return (
     <motion.div
@@ -61,9 +69,12 @@ export function CustomCursor() {
         y: mouseY,
         originX: 0,
         originY: 0,
+        opacity: isVisible ? 1 : 0
       }}
+      initial={{ opacity: 0 }}
       animate={{
         scale: isHovering ? 1.15 : 1,
+        opacity: isVisible ? 1 : 0,
         filter: isHovering 
           ? 'drop-shadow(0px 0px 12px rgba(6,182,212,0.9))' 
           : 'drop-shadow(0px 0px 8px rgba(6,182,212,0.5))',

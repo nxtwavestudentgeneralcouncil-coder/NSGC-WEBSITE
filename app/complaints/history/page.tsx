@@ -16,6 +16,12 @@ function ComplaintsHistoryContent() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('All');
 
+    const formatTrackingId = (id: string) => {
+        if (!id) return '';
+        if (id.startsWith('CMP-PENDING')) return id;
+        return `CMP-${id.slice(0, 8).toUpperCase()}`;
+    };
+
     // Filter tickets to only show the current student's own complaints
     const userEmail = user?.email?.toLowerCase() || '';
     const userName = user?.displayName || '';
@@ -27,6 +33,7 @@ function ComplaintsHistoryContent() {
 
     const filteredTickets = myTickets.filter(ticket => {
         const matchesSearch = ticket.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            formatTrackingId(ticket.id).toLowerCase().includes(searchTerm.toLowerCase()) ||
             ticket.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
             ticket.description.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = filterStatus === 'All' || ticket.status === filterStatus;
@@ -115,9 +122,10 @@ function ComplaintsHistoryContent() {
                                         <div className="flex flex-col lg:flex-row justify-between gap-6">
                                             <div className="space-y-2">
                                                 <div className="flex flex-wrap items-center gap-3">
-                                                    <Badge variant="outline" className="border-white/20 text-gray-300">
-                                                        {ticket.id}
+                                                    <Badge variant="outline" className="border-white/20 text-cyan-400 font-mono font-bold">
+                                                        {formatTrackingId(ticket.id)}
                                                     </Badge>
+                                                    <span className="text-[10px] text-gray-600 font-mono hidden sm:inline">({ticket.id.slice(0, 8)}...)</span>
                                                     <Badge className={
                                                         ticket.status === 'Completed' ? 'bg-green-500' :
                                                             ticket.status === 'In Progress' ? 'bg-blue-500' :

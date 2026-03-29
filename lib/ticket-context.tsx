@@ -50,7 +50,7 @@ export interface Ticket {
 
 interface TicketContextType {
     tickets: Ticket[];
-    createTicket: (ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'status' | 'assignedTo' | 'votes' | 'votedBy' | 'isEscalated'>) => string;
+    createTicket: (ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'status' | 'assignedTo' | 'votes' | 'votedBy' | 'isEscalated'>) => Promise<string>;
     updateTicketStatus: (id: string, status: TicketStatus, note?: string, afterImageUrl?: string) => void;
     updateTicketContent: (id: string, updates: Partial<Ticket>) => void;
     deleteTicket: (id: string) => void;
@@ -85,7 +85,7 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [isLoaded, tickets]);
 
-    const createTicket = (data: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'status' | 'assignedTo' | 'votes' | 'votedBy'>) => {
+    const createTicket = async (data: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'status' | 'assignedTo' | 'votes' | 'votedBy'>) => {
         const tempId = `CMP-PENDING-${Date.now()}`;
         
         // Optimistic update
@@ -111,20 +111,34 @@ export const TicketProvider = ({ children }: { children: ReactNode }) => {
         
         setLocalTickets(prev => [newTicket, ...prev]);
 
-        // Backend call
-        fetch('/api/v1/nhost/insert-ticket', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        }).then(res => res.json())
-          .then(resData => {
-            if (resData.success) {
-                refetchTickets();
+        try {
+            // Backend call
+            const response = await fetch('/api/v1/nhost/insert-ticket', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const resData = await response.json();
+            
+            if (resData.success && resData.data?.insert_tickets_one?.id) {
+                const realId = resData.data.insert_tickets_one.id;
+                
+                // Update the optimistic ticket in local state with the real ID
+                setLocalTickets(prev => prev.map(t => 
+                    t.id === tempId ? { ...t, id: realId } : t
+                ));
+                
+                await refetchTickets();
+                return realId;
+            } else {
+                console.error("Failed to get persistent ID from backend:", resData);
+                return tempId;
             }
-          })
-          .catch(err => console.error("Failed to save ticket:", err));
-
-        return tempId;
+        } catch (err) {
+            console.error("Failed to save ticket:", err);
+            return tempId;
+        }
     };
 
     const updateTicketStatus = (id: string, status: TicketStatus, note?: string, afterImageUrl?: string) => {

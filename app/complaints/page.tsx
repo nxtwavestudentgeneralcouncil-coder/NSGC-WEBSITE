@@ -23,6 +23,12 @@ function ComplaintsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { createTicket, updateTicketContent, tickets, upvoteTicket } = useTickets();
+    const formatTrackingId = (id: string) => {
+        if (!id) return '';
+        if (id.startsWith('CMP-PENDING')) return id;
+        // Use first 8 chars of UUID for a more readable tracking code
+        return `CMP-${id.slice(0, 8).toUpperCase()}`;
+    };
     const [activeTab, setActiveTab] = useState<'submit' | 'track' | 'details' | 'community'>('submit');
     const [complaintId, setComplaintId] = useState('');
     const [trackingResult, setTrackingResult] = useState<any>(null);
@@ -314,7 +320,7 @@ function ComplaintsContent() {
                     ? `[Date of Incident: ${formData.dateOfIncident}]\n\n${formData.description}`
                     : formData.description;
 
-                const newId = createTicket({
+                const newId = await createTicket({
                     studentName: studentNameString,
                     email: user?.email || 'student@email.com',
                     department: formData.category,
@@ -355,7 +361,11 @@ function ComplaintsContent() {
 
     const handleTrack = (e: React.FormEvent) => {
         e.preventDefault();
-        const foundTicket = tickets.find(t => t.id === complaintId);
+        const foundTicket = tickets.find(t => 
+            t.id === complaintId || 
+            formatTrackingId(t.id) === complaintId ||
+            t.id.toLowerCase() === complaintId.toLowerCase()
+        );
 
         if (foundTicket) {
             setTrackingResult({
@@ -367,7 +377,8 @@ function ComplaintsContent() {
                 department: foundTicket.department,
                 description: foundTicket.description,
                 timeline: foundTicket.timeline,
-                image: foundTicket.image
+                image: foundTicket.image,
+                trackingCode: formatTrackingId(foundTicket.id)
             });
         } else {
             setTrackingResult(null);
@@ -481,8 +492,9 @@ function ComplaintsContent() {
                                             Your complaint has been registered successfully. You can track its status using the Ticket ID below.
                                         </p>
                                         <div className="bg-black/50 p-4 rounded-md border border-white/10 inline-block">
-                                            <span className="text-gray-400 text-sm block mb-1">Ticket ID</span>
-                                            <span className="text-2xl font-mono text-cyan-500 font-bold tracking-wider">{submittedId}</span>
+                                            <span className="text-gray-400 text-sm block mb-1">Ticket Tracking ID</span>
+                                            <span className="text-2xl font-mono text-cyan-500 font-bold tracking-wider">{formatTrackingId(submittedId)}</span>
+                                            <p className="text-[10px] text-gray-500 mt-2 font-mono opacity-50">Internal ID: {submittedId}</p>
                                         </div>
                                         <div className="pt-4 flex gap-4 justify-center">
                                             <Button
@@ -507,7 +519,7 @@ function ComplaintsContent() {
                                     </motion.div>
                                 ) : (
                                     <form className="space-y-8" onSubmit={handleSubmit}>
-                                        <div className="text-xs text-[#94a3b8] italic -mb-4 flex items-center">
+                                        <div className="text-xs text-[#94a3b8] italic mb-4 flex items-center">
                                             <span className="text-red-500 font-bold text-sm mr-1">*</span> indicates a mandatory field
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -932,7 +944,9 @@ function ComplaintsContent() {
                                                         {trackingResult.status}
                                                     </Badge>
                                                     <CardTitle className="text-[22px] font-extrabold text-white break-words tracking-tight">{trackingResult.subject || trackingResult.title}</CardTitle>
-                                                    <CardDescription className="text-[#64748B] text-sm mt-1">ID: <span className="text-[#94a3b8] font-mono">{trackingResult.id}</span> • Submitted on {trackingResult.date}</CardDescription>
+                                                    <CardDescription className="text-[#64748B] text-sm mt-1">
+                                                        Tracking ID: <span className="text-[#94a3b8] font-mono font-bold">{formatTrackingId(trackingResult.id)}</span> • Submitted on {trackingResult.date}
+                                                    </CardDescription>
                                                 </div>
                                                 <Link href={`/complaints?view=${trackingResult.id}`} onClick={(e) => { e.preventDefault(); setActiveTab('details'); }} className="w-full sm:w-auto">
                                                     <Button variant="ghost" className="w-full sm:w-auto text-[#0ea5e9] hover:bg-[#0ea5e9]/10 hover:text-[#38bdf8] justify-start sm:justify-center px-4 font-bold tracking-wide rounded-xl">

@@ -284,7 +284,8 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
                     image: t.image_url,
                     hostelType: t.hostel_type,
                     roomNumber: t.room_number,
-                    votedBy: t.voted_by || []
+                    votedBy: t.voted_by || [],
+                    dueAt: t.due_at
                 })),
                 totalUsers: data.users?.length || 0,
                 isLoaded: true,

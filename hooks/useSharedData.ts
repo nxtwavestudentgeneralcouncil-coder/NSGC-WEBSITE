@@ -168,6 +168,7 @@ export interface Ticket {
     hostelType?: string;
     roomNumber?: string;
     votedBy: string[];
+    dueAt?: string;
 }
 
 // Default Data (Empty)

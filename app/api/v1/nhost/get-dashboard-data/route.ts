@@ -78,7 +78,7 @@ const QUERIES: Record<string, string> = {
             id title description status priority department votes
             assigned_to submitted_by submitted_by_email
             created_at updated_at timeline image_url
-            hostel_type room_number
+            hostel_type room_number due_at
         }
     }`,
     users: `
