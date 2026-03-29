@@ -78,8 +78,14 @@ function NotificationBellContent() {
       setNotifications(data);
       setError(null);
     } catch (err: any) {
-      console.error('[NotificationBell] Fetch exception:', err);
-      setError(err.message);
+      // Gracefully handle network-level 'Failed to fetch' which is often transient
+      if (err instanceof TypeError && err.message === 'Failed to fetch') {
+        console.warn('[NotificationBell] Network/CORS error (likely transient):', err.message);
+        // Don't set error state for transient network blips to keep UI clean
+      } else {
+        console.error('[NotificationBell] Fetch exception:', err);
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }

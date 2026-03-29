@@ -29,10 +29,91 @@ async function getManualNhostSession(req: NextRequest) {
   return { refreshToken, user };
 }
 
+// In-memory cache for lockdown status (dev mode preserves some global state, production uses instance reuse)
+let cachedLockdown: { active: boolean; timestamp: number } | null = null;
+const CACHE_TTL = 10000; // 10 seconds
+
+async function getLockdownStatus() {
+  const now = Date.now();
+  if (cachedLockdown && (now - cachedLockdown.timestamp < CACHE_TTL)) {
+    return cachedLockdown.active;
+  }
+
+  const subdomain = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN || process.env.NHOST_SUBDOMAIN || '';
+  const region = process.env.NEXT_PUBLIC_NHOST_REGION || process.env.NHOST_REGION || '';
+  const adminSecret = process.env.NHOST_ADMIN_SECRET || '';
+  
+  if (!subdomain || !region || !adminSecret) return false;
+
+  const url = `https://${subdomain.trim()}.graphql.${region.trim()}.nhost.run/v1/graphql`;
+  
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-hasura-admin-secret': adminSecret.replace(/^["']|["']$/g, '').trim()
+      },
+      body: JSON.stringify({
+        query: `query GetLockdownStatus { system_settings_by_pk(key: "lockdown") { value } }`
+      }),
+      // Use shorter timeout if supported by runtime
+      signal: AbortSignal.timeout(3000) as any
+    });
+    const result = await res.json();
+    const isActive = result?.data?.system_settings_by_pk?.value?.active === true;
+    
+    // Update cache
+    cachedLockdown = { active: isActive, timestamp: now };
+    return isActive;
+  } catch (e) {
+    console.error('[Middleware] Lockdown check failed', e);
+    // If we have a stale cache, use it as fallback. Otherwise default to unlocked.
+    return cachedLockdown?.active ?? false;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Define sensitive routes
+  // 1. Whitelist routes that are NEVER blocked (even in lockdown)
+  const isPublicAsset = pathname.startsWith('/_next') || pathname.startsWith('/static') || pathname.includes('.');
+  const isLockdownPage = pathname === '/lockdown';
+  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/api/auth');
+  const isSystemApi = pathname.startsWith('/api/v1/system');
+  
+  if (isPublicAsset || isLockdownPage || isSystemApi) {
+    return NextResponse.next();
+  }
+
+  // 2. Get Nhost session (Passive Verification)
+  const session = await getManualNhostSession(request);
+  const isAuthenticated = !!session && !!session.user;
+  
+  const userRole = session?.user?.defaultRole;
+  const roles = (session?.user as any)?.roles || [];
+  const allRoles = (userRole ? [userRole, ...roles] : roles).map((r: string) => r.toLowerCase());
+  const isAdmin = allRoles.some((r: string) => ['admin', 'developer'].includes(r));
+
+  // 3. Emergency Lockdown Check
+  if (!isAdmin && pathname !== '/lockdown') {
+    const isLockdownActive = await getLockdownStatus();
+    if (isLockdownActive) {
+      // If it's an API request, return JSON instead of redirecting to avoid client errors
+      if (pathname.startsWith('/api/')) {
+        return new NextResponse(
+          JSON.stringify({ 
+            error: 'System Lockdown', 
+            message: 'The system is currently in emergency lockdown mode. Access is temporarily suspended.' 
+          }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      return NextResponse.redirect(new URL('/lockdown', request.url));
+    }
+  }
+
+  // 4. Standard Route Protection
   const isDashboardRoute = pathname.startsWith('/dashboard');
   const isApiRoute = pathname.startsWith('/api/v1/nhost');
 
@@ -40,16 +121,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow diagnose route without auth (temporary)
+  // Allow diagnose route without auth
   if (pathname === '/api/v1/nhost/diagnose-users') {
     return NextResponse.next();
   }
 
-  // 2. Get Nhost session from cookies (Passive Verification)
-  const session = await getManualNhostSession(request);
-  const isAuthenticated = !!session && !!session.user;
-
-  // 3. Handle API routes (Return 401 if not authenticated)
+  // 5. Handle API routes
   if (isApiRoute) {
     if (!isAuthenticated) {
       return new NextResponse(
@@ -60,7 +137,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 4. Handle Dashboard routes
+  // 6. Handle Dashboard routes
   if (isDashboardRoute) {
     if (!isAuthenticated) {
       const loginUrl = new URL('/login', request.url);
@@ -68,10 +145,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Role-based redirection
-    const userRole = session?.user?.defaultRole;
-    const roles = (session?.user as any)?.roles || [];
-    const allRoles = (userRole ? [userRole, ...roles] : roles).map((r: string) => r.toLowerCase());
+    // Role-based redirection logic...
+    if (pathname.startsWith('/dashboard/admin') && !isAdmin) {
+        return NextResponse.redirect(new URL('/dashboard/student', request.url));
+    }
 
     // President Dashboard Protection
     if (pathname.startsWith('/dashboard/president')) {
@@ -82,8 +159,6 @@ export async function middleware(request: NextRequest) {
     }
 
     // Council Dashboard Protection
-    // Note: We allow all authenticated users to reach this route because the page level guard 
-    // will perform a specialized check against the database list for non-admin users.
     if (pathname.startsWith('/dashboard/council')) {
       if (!isAuthenticated) {
         return NextResponse.redirect(new URL('/login', request.url));
@@ -112,7 +187,12 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/api/v1/nhost/:path*',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

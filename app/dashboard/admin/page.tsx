@@ -35,6 +35,7 @@ const AVAILABLE_ROLES = [
 export default function AdminDashboard() {
     const router = useRouter();
     const [lockdownMode, setLockdownMode] = useState(false);
+    const [isUpdatingLockdown, setIsUpdatingLockdown] = useState(false);
 
     // Initial Data
     const [users, setUsers] = useState<User[]>([]);
@@ -108,9 +109,22 @@ export default function AdminDashboard() {
         }
     };
 
+    const fetchLockdownStatus = async () => {
+        try {
+            const response = await fetch('/api/v1/system/status');
+            const data = await response.json();
+            if (data && typeof data.active === 'boolean') {
+                setLockdownMode(data.active);
+            }
+        } catch (err) {
+            console.error("Failed to fetch lockdown status:", err);
+        }
+    };
+
     useEffect(() => {
         if (isAuthorized) {
             fetchUsers();
+            fetchLockdownStatus();
         }
     }, [isAuthorized]);
 
@@ -140,10 +154,32 @@ export default function AdminDashboard() {
         setShowLockdownModal(true);
     };
 
-    const confirmLockdownToggle = () => {
+    const confirmLockdownToggle = async () => {
+        setIsUpdatingLockdown(true);
         const newMode = !lockdownMode;
-        setLockdownMode(newMode);
-        setShowLockdownModal(false);
+        
+        try {
+            const response = await fetch('/api/v1/system/lockdown', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ active: newMode })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to update lockdown status');
+            }
+
+            setLockdownMode(newMode);
+            setShowLockdownModal(false);
+            setSuccessMessage(`System lockdown ${newMode ? 'activated' : 'deactivated'} successfully.`);
+            setShowSuccessModal(true);
+        } catch (err: any) {
+            console.error("Lockdown toggle error:", err);
+            alert(`Error: ${err.message}`);
+        } finally {
+            setIsUpdatingLockdown(false);
+        }
     };
 
     // Handlers
@@ -631,9 +667,10 @@ export default function AdminDashboard() {
                                 <div className="flex flex-col gap-3">
                                     <Button
                                         className="w-full bg-red-600 text-white hover:bg-red-700 font-bold py-6 text-lg tracking-wider uppercase"
+                                        disabled={isUpdatingLockdown}
                                         onClick={confirmLockdownToggle}
                                     >
-                                        {lockdownMode ? 'Restore System Access' : 'ACTIVATE LOCKDOWN'}
+                                        {isUpdatingLockdown ? 'Processing...' : (lockdownMode ? 'Restore System Access' : 'ACTIVATE LOCKDOWN')}
                                     </Button>
                                     <Button
                                         variant="ghost"

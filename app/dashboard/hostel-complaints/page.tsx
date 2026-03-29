@@ -98,8 +98,8 @@ export default function HostelComplaintsDashboard() {
         return hostelTicketsRaw.filter(ticket => {
             const matchesType = filterType === 'All' 
                 ? true 
-                : filterType === 'Boys Hostel' ? ticket.hostelType === 'Boys Hostel'
-                : filterType === 'Girls Hostel' ? ticket.hostelType === 'Girls Hostel'
+                : (filterType === 'Boys Hostel' || filterType === 'Male') ? ticket.hostelType === 'Boys Hostel'
+                : (filterType === 'Girls Hostel' || filterType === 'Female') ? ticket.hostelType === 'Girls Hostel'
                 : filterType === 'Mess' ? (ticket.type === 'Mess' || ticket.department === 'Mess')
                 : true;
             const matchesDate = !filterDate ? true : ticket.createdAt.startsWith(filterDate);
@@ -303,7 +303,7 @@ export default function HostelComplaintsDashboard() {
                         <div className="flex flex-wrap items-center gap-8">
                             <div className="flex items-center gap-3">
                                 <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mr-2">Filters:</span>
-                                {['All', 'Boys Hostel', 'Girls Hostel', 'Mess'].map(filter => (
+                                {['All', 'Male', 'Female', 'Boys Hostel', 'Girls Hostel', 'Mess'].map(filter => (
                                     <button
                                         key={filter}
                                         onClick={() => setFilterType(filter)}
