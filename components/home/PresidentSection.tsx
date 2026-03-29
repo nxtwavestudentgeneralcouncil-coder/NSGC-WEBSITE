@@ -15,7 +15,7 @@ export function PresidentSection() {
             <div className="absolute bottom-0 right-0 w-full h-px bg-gradient-to-l from-cyan-500/50 via-transparent to-transparent hidden md:block" />
 
             <div className="container mx-auto px-4 lg:px-12 relative z-10">
-                <div className="flex flex-col-reverse md:flex-row items-center gap-16 md:gap-8 lg:gap-24">
+                <div className="flex flex-col-reverse md:flex-row items-center gap-10 md:gap-16 px-2 sm:px-0">
 
                     {/* Text Side - Left Heavy */}
                     <motion.div
@@ -29,22 +29,22 @@ export function PresidentSection() {
                             [ PROFILE // COMMANDER ]
                         </div>
 
-                        <h2 className="text-4xl md:text-5xl lg:text-7xl font-display font-bold uppercase text-white mb-8 tracking-widest leading-none drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                        <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-display font-bold uppercase text-white mb-6 md:mb-8 tracking-widest leading-none drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] text-balance">
                             Meet the <br className="hidden md:block" />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-cyan-600">President</span>
                         </h2>
 
-                        <div className="glass-panel p-6 sm:p-8 mb-8 relative group">
+                        <div className="glass-panel p-5 sm:p-8 mb-8 relative group">
                             {/* Inner Bracket Accents */}
                             <div className="absolute -top-[1px] -left-[1px] w-4 h-4 border-t border-l border-white/20" />
                             <div className="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b border-r border-white/20" />
 
-                            <p className="text-gray-400 font-mono text-xs sm:text-sm leading-8 uppercase">
+                            <p className="text-gray-400 font-mono text-xs sm:text-sm leading-7 sm:leading-8 uppercase text-pretty">
                                 "Our mission is to bridge the gap between students and administration, fostering a campus environment where every voice is heard and every idea has the potential to spark change. Together, we are building a legacy of transparency, innovation, and unity."
                             </p>
                         </div>
 
-                        <div className="flex flex-wrap gap-4 mb-10 pl-2">
+                        <div className="flex flex-wrap gap-2 sm:gap-4 mb-10">
                             {['Leadership', 'Transparency', 'Student Welfare', 'Innovation'].map((tag, index) => (
                                 <motion.span
                                     key={tag}
@@ -52,7 +52,7 @@ export function PresidentSection() {
                                     whileInView={{ opacity: 1, scale: 1, y: 0 }}
                                     viewport={{ once: true }}
                                     transition={{ delay: 0.4 + index * 0.15 }}
-                                    className="px-3 py-1 bg-black border border-white/10 border-l-[2px] border-l-cyan-500 text-[10px] font-mono tracking-widest uppercase text-gray-400 hover:text-white hover:bg-white/5 transition-all cursor-crosshair animate-float-3"
+                                    className="px-2 sm:px-3 py-1 bg-black border border-white/10 border-l-[2px] border-l-cyan-500 text-[9px] sm:text-[10px] font-mono tracking-widest uppercase text-gray-400 hover:text-white hover:bg-white/5 transition-all cursor-crosshair animate-float-3 whitespace-nowrap"
                                     style={{ animationDelay: `${index * 0.2}s` }}
                                 >
                                     {tag}

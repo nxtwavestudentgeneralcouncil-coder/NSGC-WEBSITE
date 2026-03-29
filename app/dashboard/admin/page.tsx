@@ -318,15 +318,15 @@ export default function AdminDashboard() {
 
                 <div className="flex justify-between items-center mb-12">
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <h1 className="text-3xl md:text-4xl font-bold">System Administration</h1>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-balance">System Administration</h1>
                             {lockdownMode && (
-                                <Badge variant="destructive" className="animate-pulse bg-red-600 border-red-400">
+                                <Badge variant="destructive" className="animate-pulse bg-red-600 border-red-400 w-fit">
                                     LOCKDOWN ACTIVE
                                 </Badge>
                             )}
                         </div>
-                        <p className="text-gray-400">Manage users, roles, and system settings.</p>
+                        <p className="text-gray-400 text-sm sm:text-base">Manage users, roles, and system settings.</p>
                     </div>
                     <Button
                         variant={lockdownMode ? "outline" : "destructive"}

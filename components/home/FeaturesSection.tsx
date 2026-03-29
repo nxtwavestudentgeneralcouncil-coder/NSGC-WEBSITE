@@ -88,7 +88,7 @@ export function FeaturesSection() {
 
                 {/* Asymmetric Header */}
                 <motion.div
-                    className="mb-16 md:w-2/3 lg:w-1/2 border-l-[4px] border-blue-500 pl-6"
+                    className="mb-10 md:mb-16 md:w-2/3 lg:w-1/2 border-l-[4px] border-blue-500 pl-6"
                     initial={{ opacity: 0, x: -50 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
@@ -96,17 +96,17 @@ export function FeaturesSection() {
                     <div className="text-[10px] text-blue-500 font-mono tracking-[0.3em] uppercase mb-4">
                         [ OP_MATRIX // WHAT WE DO ]
                     </div>
-                    <h2 className="text-4xl md:text-6xl font-display font-bold uppercase tracking-widest text-white leading-tight mb-6">
-                        System <br /> Capabilities
+                    <h2 className="text-3xl sm:text-4xl md:text-6xl font-display font-bold uppercase tracking-widest text-white leading-tight mb-6 text-balance">
+                        System <br className="hidden sm:block" /> Capabilities
                     </h2>
-                    <p className="text-gray-400 font-mono text-sm leading-relaxed max-w-md">
+                    <p className="text-gray-400 font-mono text-xs sm:text-sm leading-relaxed max-w-md">
                         The nexus drives operational efficiency for campus policies, digital governance, and infrastructure development.
                     </p>
                 </motion.div>
 
                 {/* Destroyed Grid Layout - Floating Cards */}
                 <motion.div
-                    className="flex flex-wrap justify-center lg:justify-end gap-x-8 gap-y-16 pb-24"
+                    className="flex flex-wrap justify-center lg:justify-end gap-x-4 sm:gap-x-8 gap-y-8 sm:gap-y-16 pb-16 md:pb-24"
                     variants={container}
                     initial="hidden"
                     whileInView="show"
@@ -132,12 +132,12 @@ export function FeaturesSection() {
                                         {/* Glow Halos */}
                                         <div className="absolute -inset-1 bg-blue-500/20 rounded-sm blur opacity-0 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
 
-                                        <Card className="h-full relative glass-panel flex flex-col items-start border-l-[3px] border-l-blue-500 hover:border-l-cyan-500 transition-colors duration-500 min-h-[220px]">
-                                            <CardHeader className="pb-2">
-                                                <div className="w-10 h-10 bg-black border border-blue-500/30 flex items-center justify-center mb-4 text-blue-500 group-hover:text-cyan-500 group-hover:-translate-y-2 group-hover:rotate-12 transition-all duration-300">
-                                                    <feature.icon className="w-5 h-5" />
+                                        <Card className="h-full relative glass-panel flex flex-col items-start border-l-[3px] border-l-blue-500 hover:border-l-cyan-500 transition-colors duration-500 min-h-[180px] sm:min-h-[220px]">
+                                            <CardHeader className="pb-1 sm:pb-2">
+                                                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-black border border-blue-500/30 flex items-center justify-center mb-3 sm:mb-4 text-blue-500 group-hover:text-cyan-500 group-hover:-translate-y-2 group-hover:rotate-12 transition-all duration-300">
+                                                    <feature.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                                                 </div>
-                                                <CardTitle className="font-display tracking-widest text-lg uppercase bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">{feature.title}</CardTitle>
+                                                <CardTitle className="font-display tracking-widest text-base sm:text-lg uppercase bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">{feature.title}</CardTitle>
                                             </CardHeader>
                                             <CardContent>
                                                 <CardDescription className="font-mono text-xs leading-relaxed text-blue-500/60 uppercase">

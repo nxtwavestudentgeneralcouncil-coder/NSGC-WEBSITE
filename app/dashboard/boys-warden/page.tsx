@@ -237,7 +237,7 @@ export default function BoysWardenDashboard() {
                                                                 </Button>
                                                             )}
                                                             <Button 
-                                                                onClick={() => { setDeadlineTicketId(ticket.id); setDeadlineValue(ticket.dueAt ? new Date(ticket.dueAt).toISOString().slice(0, 16) : ''); }}
+                                                                onClick={() => { setDeadlineTicketId(ticket.id); setDeadlineValue(ticket.dueAt ? new Date(ticket.dueAt).toISOString().slice(0, 10) : ''); }}
                                                                 variant="outline" 
                                                                 className="w-full border-amber-500/30 text-amber-500 hover:bg-amber-500/10 text-xs"
                                                             >
@@ -313,10 +313,10 @@ export default function BoysWardenDashboard() {
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Due Date & Time</label>
                                 <input 
-                                    type="datetime-local" 
+                                    type="date" 
                                     value={deadlineValue}
                                     onChange={(e) => setDeadlineValue(e.target.value)}
-                                    className="w-full bg-[#0B0B14] border border-[#f59e0b]/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] shadow-inner"
+                                    className="w-full bg-[#0B0B14] border border-[#f59e0b]/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] shadow-inner [color-scheme:dark]"
                                 />
                             </div>
                             <div className="flex justify-end gap-3 mt-4">

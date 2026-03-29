@@ -707,7 +707,7 @@ function MessAdminContent() {
                                                         className="h-8 font-bold text-[10px] uppercase tracking-wider bg-white/5 text-[#f59e0b] hover:bg-[#f59e0b]/10 border border-[#f59e0b]/20"
                                                         onClick={() => {
                                                             setDeadlineTicketId(ticket.id);
-                                                            setDeadlineValue(ticket.dueAt ? new Date(ticket.dueAt).toISOString().slice(0, 16) : '');
+                                                            setDeadlineValue(ticket.dueAt ? new Date(ticket.dueAt).toISOString().slice(0, 10) : '');
                                                         }}
                                                     >
                                                         <Clock className="w-3 h-3 mr-1" />
@@ -784,11 +784,11 @@ function MessAdminContent() {
                             Set a target date and time by which this complaint should be resolved.
                         </p>
                         <input 
-                            type="datetime-local"
+                            type="date"
                             value={deadlineValue}
                             onChange={(e) => setDeadlineValue(e.target.value)}
                             className="w-full bg-[#0B0B14] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-[#f59e0b]/50 transition-all [color-scheme:dark]"
-                            min={new Date().toISOString().slice(0, 16)}
+                            min={new Date().toISOString().slice(0, 10)}
                             autoFocus
                         />
                     </div>

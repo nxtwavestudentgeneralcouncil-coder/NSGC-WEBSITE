@@ -412,9 +412,9 @@ function ComplaintsContent() {
         <div className="min-h-screen bg-[#0B0F19] text-white pt-24 md:pt-16 pb-20 font-sans selection:bg-cyan-500/30">
             <div className="container mx-auto px-4 max-w-5xl">
 
-                <div className="text-center mb-10">
-                    <h1 className="text-4xl md:text-5xl font-extrabold mb-3 tracking-tight">Student Grievance Redressal</h1>
-                    <p className="text-[#64748B] text-lg">We are here to listen and resolve your concerns efficiently.</p>
+                <div className="text-center mb-8 sm:mb-10 px-2">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-3 tracking-tight text-white px-4">Student Grievance Redressal</h1>
+                    <p className="text-[#64748B] text-sm sm:text-base md:text-lg max-w-2xl mx-auto px-4">We are here to listen and resolve your concerns efficiently.</p>
                 </div>
 
                 {/* Tabs */}
@@ -713,8 +713,7 @@ function ComplaintsContent() {
                                             </label>
 
                                             {!isCameraOpen && !image && (
-                                                <div
-                                                    className="border-[1.5px] border-dashed border-[#1f2937] hover:border-[#374151] rounded-xl p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 bg-transparent group"
+                                                    <div className="border-[1.5px] border-dashed border-[#1f2937] hover:border-[#374151] rounded-xl p-6 sm:p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 bg-transparent group"
                                                     onClick={() => document.getElementById('file-upload')?.click()}
                                                 >
                                                     <input
@@ -724,11 +723,11 @@ function ComplaintsContent() {
                                                         className="hidden"
                                                         onChange={handleFileUpload}
                                                     />
-                                                    <div className="flex items-center justify-center mb-4 transition-transform group-hover:-translate-y-1">
+                                                    <div className="flex items-center justify-center mb-3 sm:mb-4 transition-transform group-hover:-translate-y-1">
                                                         <CloudUpload className="w-8 h-8 text-[#9ca3af]" strokeWidth={1.5} />
                                                     </div>
-                                                    <h4 className="text-[15px] font-bold text-white mb-2 tracking-wide">Drag and drop files here</h4>
-                                                    <p className="text-[13px] text-[#6b7280] font-medium">JPG, PNG, PDF up to 10MB each</p>
+                                                    <h4 className="text-[14px] sm:text-[15px] font-bold text-white mb-2 tracking-wide">Drag and drop files here</h4>
+                                                    <p className="text-[12px] sm:text-[13px] text-[#6b7280] font-medium px-4">JPG, PNG, PDF up to 10MB each</p>
 
                                                     {/* Optional camera fallback button */}
                                                     <Button

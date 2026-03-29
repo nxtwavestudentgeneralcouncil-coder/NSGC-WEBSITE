@@ -15,6 +15,10 @@
   --animate-float-3: float-3 8s ease-in-out infinite;
   --animate-scanline: scanline 8s linear infinite;
   --animate-pulse-slow: pulse-slow 3s ease-in-out infinite;
+
+  /* Typography Utilities */
+  --text-balance: balance;
+  --text-pretty: pretty;
 }
 
 @keyframes float-1 {
@@ -189,9 +193,19 @@ body {
 
 @media (max-width: 768px) {
   .glass-panel {
-    backdrop-filter: none; /* Disable blur on small mobile for CPU relief */
-    background: rgba(15, 15, 20, 0.95);
+    backdrop-filter: blur(4px); /* Lower blur instead of none for better looks but low CPU */
+    background: rgba(15, 15, 20, 0.9);
+    padding: 1rem; /* Consistent smaller padding for mobile */
   }
+}
+
+/* Custom Text Balance / Pretty Utilities for Tailwind 4 if not natively supported yet */
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
 }
 
 /* Aggressive Scrollbar Hide Utility */
@@ -224,3 +238,15 @@ body {
 *::-webkit-scrollbar-corner {
   background: rgba(0, 0, 0, 0.5);
 }
+
+/* Make date picker icon visible on dark backgrounds */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}

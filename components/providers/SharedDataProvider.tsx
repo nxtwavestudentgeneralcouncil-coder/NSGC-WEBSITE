@@ -141,7 +141,8 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
                 if (res.status === 401) {
                     const Cookies = (await import('js-cookie')).default;
                     Cookies.remove('nhostRefreshToken');
-                    if (window.location.pathname !== '/login') {
+                    // Only redirect if NOT on the home page
+                    if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
                         window.location.href = '/login';
                     }
                     return;

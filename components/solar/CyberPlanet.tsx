@@ -1,6 +1,6 @@
 'use client';
 
-import { MeshDistortMaterial, Text, Ring } from '@react-three/drei';
+import { MeshDistortMaterial, Text, Ring, Billboard } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -91,10 +91,10 @@ export function CyberPlanet({ name, radius, distance, speed, color, route, descr
                         )}
                     </MotionMesh>
 
-                    {/* Label */}
-                    <group position={[0, radius + 0.5, 0]}>
+                    {/* Label - Billboarded to always face camera */}
+                    <Billboard position={[0, radius + 0.8, 0]} follow={true} lockX={false} lockY={false} lockZ={false}>
                         <Text
-                            fontSize={0.5}
+                            fontSize={radius < 1 ? 0.4 : 0.6}
                             color="white"
                             anchorX="center"
                             anchorY="bottom"
@@ -119,7 +119,7 @@ export function CyberPlanet({ name, radius, distance, speed, color, route, descr
                                 {description}
                             </Text>
                         )}
-                    </group>
+                    </Billboard>
                 </group>
             </group>
         </group>

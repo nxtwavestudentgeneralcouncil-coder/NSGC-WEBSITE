@@ -1339,7 +1339,7 @@ function PresidentDashboardContent() {
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     setDeadlineTicketId(ticket.id);
-                                                                    setDeadlineValue(ticket.dueAt ? new Date(ticket.dueAt).toISOString().slice(0, 16) : '');
+                                                                    setDeadlineValue(ticket.dueAt ? new Date(ticket.dueAt).toISOString().slice(0, 10) : '');
                                                                 }}
                                                             >
                                                                 <Clock className="w-3 h-3 mr-1" />
@@ -2447,11 +2447,11 @@ function PresidentDashboardContent() {
                         Set a target date and time by which this complaint should be resolved. The countdown will be visible on the ticket.
                     </p>
                     <input 
-                        type="datetime-local"
+                        type="date"
                         value={deadlineValue}
                         onChange={(e) => setDeadlineValue(e.target.value)}
                         className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#f59e0b]/50 transition-colors [color-scheme:dark]"
-                        min={new Date().toISOString().slice(0, 16)}
+                        min={new Date().toISOString().slice(0, 10)}
                         autoFocus
                     />
                 </div>

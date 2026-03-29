@@ -543,25 +543,25 @@ function StudentDashboardContent() {
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between p-6 border-b border-white/10">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 border-b border-white/10 gap-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-[#10b981]/15 flex items-center justify-center">
+                                <div className="w-10 h-10 rounded-xl bg-[#10b981]/15 flex items-center justify-center flex-shrink-0">
                                     <UtensilsCrossed className="w-5 h-5 text-[#10b981]" />
                                 </div>
-                                <div>
-                                    <h2 className="text-xl font-bold text-white tracking-tight">Weekly Mess Menu</h2>
-                                    <p className="text-xs text-[#64748B] font-mono uppercase tracking-widest">Sunday — Saturday</p>
+                                <div className="min-w-0">
+                                    <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight truncate">Weekly Mess Menu</h2>
+                                    <p className="text-[10px] text-[#64748B] font-mono uppercase tracking-widest truncate">Sunday — Saturday</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
                                 <button 
                                     onClick={() => { setChangeRequestOpen(!changeRequestOpen); setChangeRequestSubmitted(false); }}
-                                    className="px-3 py-2 rounded-lg bg-[#f59e0b]/10 hover:bg-[#f59e0b]/20 border border-[#f59e0b]/20 text-[#f59e0b] text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1.5"
+                                    className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-[#f59e0b]/10 hover:bg-[#f59e0b]/20 border border-[#f59e0b]/20 text-[#f59e0b] text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5"
                                 >
                                     <Edit2 className="w-3 h-3" />
                                     Request Change
                                 </button>
-                                <button onClick={() => setMessMenuOpen(false)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                                <button onClick={() => setMessMenuOpen(false)} className="w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors flex-shrink-0">
                                     <X className="w-4 h-4 text-gray-400" />
                                 </button>
                             </div>

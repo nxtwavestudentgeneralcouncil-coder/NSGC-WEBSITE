@@ -156,11 +156,11 @@ export default function HostelComplaintsDashboard() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 mt-4">
                     <div className="flex flex-col gap-2">
-                        <div className="flex flex-col md:flex-row md:items-center gap-4">
-                            <h1 className="text-3xl font-extrabold tracking-widest text-[#0ea5e9] uppercase leading-none font-mono flex items-center gap-3">
-                                <Home className="w-8 h-8" /> Hostel Manager Dashboard
+                        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-widest text-[#0ea5e9] uppercase leading-none font-mono flex items-center gap-3 text-balance">
+                                <Home className="w-6 h-6 sm:w-8 sm:h-8 shrink-0" /> Hostel Manager Dashboard
                             </h1>
-                            <Badge variant="outline" className="border-[#0ea5e9]/50 text-[#0ea5e9] bg-transparent rounded-full px-4 py-1 text-[10px] font-bold tracking-[0.2em] uppercase">
+                            <Badge variant="outline" className="border-[#0ea5e9]/50 text-[#0ea5e9] bg-transparent rounded-full px-4 py-1 text-[10px] font-bold tracking-[0.2em] uppercase w-fit">
                                 Advanced Management
                             </Badge>
                         </div>
@@ -300,7 +300,7 @@ export default function HostelComplaintsDashboard() {
                 <div className="space-y-6">
                     {/* Advanced Filters */}
                     <div className="bg-[#111625] border border-white/5 p-4 rounded-2xl flex flex-col lg:flex-row justify-between items-center gap-6">
-                        <div className="flex flex-wrap items-center gap-8">
+                        <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full lg:w-auto">
                             <div className="flex items-center gap-3">
                                 <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest mr-2">Filters:</span>
                                 {['All', 'Male', 'Female', 'Boys Hostel', 'Girls Hostel', 'Mess'].map(filter => (
@@ -477,7 +477,7 @@ export default function HostelComplaintsDashboard() {
                                                                         className="h-9 font-bold text-[10px] uppercase tracking-wider bg-white/5 text-[#f59e0b] hover:bg-[#f59e0b]/10 border border-[#f59e0b]/20"
                                                                         onClick={() => {
                                                                             setDeadlineTicketId(ticket.id);
-                                                                            setDeadlineValue(ticket.dueAt ? new Date(ticket.dueAt).toISOString().slice(0, 16) : '');
+                                                                            setDeadlineValue(ticket.dueAt ? new Date(ticket.dueAt).toISOString().slice(0, 10) : '');
                                                                         }}
                                                                     >
                                                                         <Clock className="w-3 h-3 mr-1" />
@@ -609,11 +609,11 @@ export default function HostelComplaintsDashboard() {
                         Set a target date and time by which this complaint should be resolved. The countdown will be visible on the ticket.
                     </p>
                     <input 
-                        type="datetime-local"
+                        type="date"
                         value={deadlineValue}
                         onChange={(e) => setDeadlineValue(e.target.value)}
                         className="w-full bg-[#0B0B14] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-[#f59e0b]/50 transition-all [color-scheme:dark]"
-                        min={new Date().toISOString().slice(0, 16)}
+                        min={new Date().toISOString().slice(0, 10)}
                         autoFocus
                     />
                 </div>
