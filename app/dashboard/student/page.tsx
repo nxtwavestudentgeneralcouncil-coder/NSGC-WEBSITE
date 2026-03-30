@@ -4,22 +4,47 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, ShoppingBag, BarChart2, Bell, Clock, Flag, Users, BellOff, Edit2, ListX, ChevronRight, PieChart, TerminalSquare, UtensilsCrossed, X, ChevronDown, Send, CheckCircle2 } from 'lucide-react';
+import { FileText, ShoppingBag, BarChart2, Bell, Clock, Flag, Users, BellOff, Edit2, ListX, ChevronRight, PieChart, TerminalSquare, UtensilsCrossed, X, ChevronDown, Send, CheckCircle2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useDashboardAuth } from '@/hooks/useDashboardAuth';
 import { useTickets } from '@/lib/ticket-context';
 import { useSharedData } from '@/hooks/useSharedData';
 import { useAuthenticationStatus, useUserData } from '@nhost/react';
 import { useClubData } from '@/hooks/useClubData';
+import { Star } from 'lucide-react';
+
+const RatingStars = ({ rating, setRating, disabled }: { rating: number, setRating: (r: number) => void, disabled?: boolean }) => {
+    return (
+        <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                    key={star}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => setRating(star)}
+                    className={`p-0.5 transition-all ${disabled ? 'cursor-default' : 'hover:scale-110 active:scale-95 cursor-pointer'}`}
+                >
+                    <Star
+                        className={`w-4 h-4 ${
+                            star <= rating
+                                ? 'fill-[#f59e0b] text-[#f59e0b]'
+                                : 'text-[#475569] hover:text-[#64748B]'
+                        }`}
+                    />
+                </button>
+            ))}
+        </div>
+    );
+};
 
 function StudentDashboardContent() {
     const router = useRouter();
     const [messMenuOpen, setMessMenuOpen] = useState(false);
-    const [messMenuData, setMessMenuData] = useState<{day: string; meals: Record<string, string>}[]>([]);
+    const [messMenuData, setMessMenuData] = useState<{day: string; meals: Record<string, { items: string, image_url?: string }>}[]>([]);
     const [messMenuLoading, setMessMenuLoading] = useState(false);
     const [changeRequestOpen, setChangeRequestOpen] = useState(false);
     const [changeRequestDay, setChangeRequestDay] = useState('');
@@ -29,22 +54,30 @@ function StudentDashboardContent() {
     const [changeRequestSubmitting, setChangeRequestSubmitting] = useState(false);
     const [myMenuRequests, setMyMenuRequests] = useState<any[]>([]);
     const [menuRequestsLoading, setMenuRequestsLoading] = useState(false);
+    const [submittingRating, setSubmittingRating] = useState<string | null>(null);
+    const [ratings, setRatings] = useState<Record<string, number>>({});
+    const [pendingRatings, setPendingRatings] = useState<Record<string, { rating: number, remark: string }>>({});
 
     // Fetch mess menu from DB
     const fetchMessMenu = async () => {
         setMessMenuLoading(true);
         try {
             const res = await fetch('/api/v1/nhost/get-mess-menu');
-            const data = await res.json();
-            if (Array.isArray(data)) {
-                // Transform flat DB rows into grouped day format
-                const dayMap: Record<string, Record<string, string>> = {};
-                data.forEach((item: any) => {
-                    if (!dayMap[item.day]) dayMap[item.day] = {};
-                    dayMap[item.day][item.meal_type] = item.items;
-                });
-                const DAYS_ORDER = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                setMessMenuData(DAYS_ORDER.filter(d => dayMap[d]).map(d => ({ day: d, meals: dayMap[d] })));
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    // Transform flat DB rows into grouped day format
+                    const dayMap: Record<string, Record<string, { items: string, image_url?: string }>> = {};
+                    data.forEach((item: any) => {
+                        if (!dayMap[item.day]) dayMap[item.day] = {};
+                        dayMap[item.day][item.meal_type] = {
+                            items: item.items,
+                            image_url: item.image_url
+                        };
+                    });
+                    const DAYS_ORDER = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    setMessMenuData(DAYS_ORDER.filter(d => dayMap[d]).map(d => ({ day: d, meals: dayMap[d] })));
+                }
             }
         } catch (err) {
             console.error('Failed to fetch mess menu:', err);
@@ -61,7 +94,7 @@ function StudentDashboardContent() {
         if (!changeRequestDay || !changeRequestMeal) return '';
         const dayData = messMenuData.find(d => d.day === changeRequestDay);
         if (!dayData) return '';
-        return dayData.meals[changeRequestMeal] || '';
+        return dayData.meals[changeRequestMeal]?.items || '';
     };
 
     const handleChangeRequestSubmit = async () => {
@@ -114,6 +147,40 @@ function StudentDashboardContent() {
             console.error('Failed to fetch menu requests:', err);
         } finally {
             setMenuRequestsLoading(false);
+        }
+    };
+
+    const handleRateMeal = async (day: string, mealType: string) => {
+        const pending = pendingRatings[`${day}-${mealType}`];
+        if (!user?.id || !pending?.rating) return;
+        
+        setSubmittingRating(`${day}-${mealType}`);
+        try {
+            const res = await fetch('/api/v1/nhost/insert-meal-rating', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    student_id: user.id,
+                    student_name: user.displayName || 'Anonymous',
+                    day,
+                    meal_type: mealType,
+                    rating: pending.rating,
+                    feedback: pending.remark.trim()
+                })
+            });
+            if (res.ok) {
+                // For UI feedback, we can store locally that this meal was rated
+                setRatings(prev => ({ ...prev, [`${day}-${mealType}`]: pending.rating }));
+                setPendingRatings(prev => {
+                    const newPending = { ...prev };
+                    delete newPending[`${day}-${mealType}`];
+                    return newPending;
+                });
+            }
+        } catch (err) {
+            console.error('Failed to submit rating:', err);
+        } finally {
+            setSubmittingRating(null);
         }
     };
 
@@ -601,7 +668,7 @@ function StudentDashboardContent() {
                                                         className="w-full bg-[#1A2133] border border-white/10 rounded-xl px-4 py-3 text-sm text-white appearance-none cursor-pointer focus:outline-none focus:border-[#f59e0b]/50 focus:ring-1 focus:ring-[#f59e0b]/20 transition-all"
                                                     >
                                                         <option value="" className="bg-[#1A2133]">— Choose a day —</option>
-                                                        {messMenuData.map((d: {day: string; meals: Record<string, string>}) => (
+                                                        {messMenuData.map((d: {day: string; meals: Record<string, { items: string, image_url?: string }>}) => (
                                                             <option key={d.day} value={d.day} className="bg-[#1A2133]">{d.day}</option>
                                                         ))}
                                                     </select>
@@ -682,30 +749,105 @@ function StudentDashboardContent() {
                                     <p className="text-xs text-[#475569] mt-1">The mess admin has not added the menu to the system.</p>
                                 </div>
                             ) : (
-                            <div className="space-y-4">
-                                {messMenuData.map((item: {day: string; meals: Record<string, string>}) => {
-                                    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-                                    const isToday = item.day === today;
-                                    return (
-                                        <div key={item.day} className={`rounded-xl border transition-all ${isToday ? 'bg-[#10b981]/10 border-[#10b981]/30 ring-1 ring-[#10b981]/20' : 'bg-[#1A2133] border-white/5 hover:border-white/10'}`}>
-                                            <div className="p-4">
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <h3 className={`font-bold text-sm tracking-wide uppercase ${isToday ? 'text-[#10b981]' : 'text-white'}`}>{item.day}</h3>
-                                                    {isToday && <Badge className="bg-[#10b981] text-black text-[9px] font-bold px-2 py-0.5 rounded-full">TODAY</Badge>}
-                                                </div>
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                                    {Object.entries(item.meals).map(([mealType, mealDesc]) => (
-                                                        <div key={mealType} className="bg-black/30 rounded-lg p-3">
-                                                            <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-widest mb-1.5">{mealType}</p>
-                                                            <p className="text-xs text-[#94a3b8] leading-relaxed">{mealDesc}</p>
-                                                        </div>
-                                                    ))}
+                                <div className="space-y-4">
+                                    {messMenuData.map((item: {day: string; meals: Record<string, { items: string, image_url?: string }>}) => {
+                                        const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+                                        const isToday = item.day === today;
+                                        return (
+                                            <div key={item.day} className={`rounded-xl border transition-all ${isToday ? 'bg-[#10b981]/10 border-[#10b981]/30 ring-1 ring-[#10b981]/20' : 'bg-[#1A2133] border-white/5 hover:border-white/10'}`}>
+                                                <div className="p-4">
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <h3 className={`font-bold text-sm tracking-wide uppercase ${isToday ? 'text-[#10b981]' : 'text-white'}`}>{item.day}</h3>
+                                                        {isToday && <Badge className="bg-[#10b981] text-black text-[9px] font-bold px-2 py-0.5 rounded-full">TODAY</Badge>}
+                                                    </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                                        {Object.entries(item.meals).map(([mealType, mealData]) => {
+                                                            const ratingKey = `${item.day}-${mealType}`;
+                                                            const userRating = ratings[ratingKey];
+                                                            const isSubmitting = submittingRating === ratingKey;
+
+                                                            return (
+                                                                <div key={mealType} className="bg-black/40 rounded-xl overflow-hidden flex flex-col border border-white/5">
+                                                                    {mealData.image_url && (
+                                                                        <div className="aspect-video w-full overflow-hidden border-b border-white/5 bg-black/50">
+                                                                            <img src={mealData.image_url} alt={mealType} className="w-full h-full object-cover transition-transform hover:scale-105 duration-500" />
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="p-3 flex flex-col flex-1 justify-between min-h-[100px]">
+                                                                        <div>
+                                                                            <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-[0.2em] mb-2">{mealType}</p>
+                                                                            <p className="text-xs text-[#E2E8F0] leading-relaxed font-medium">{mealData.items}</p>
+                                                                        </div>
+                                                                        
+                                                                        {isToday && (
+                                                                            <div className="mt-4 pt-4 border-t border-white/5">
+                                                                                {userRating ? (
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <RatingStars rating={userRating} setRating={() => {}} disabled />
+                                                                                        <span className="text-[9px] text-[#10b981] font-bold uppercase tracking-widest">Saved</span>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div className="flex flex-col gap-3">
+                                                                                        <div className="flex items-center justify-between">
+                                                                                            <span className="text-[8px] text-[#475569] font-bold uppercase tracking-widest flex items-center gap-1.5">
+                                                                                                <Star className="w-2.5 h-2.5" /> {pendingRatings[ratingKey] ? 'Review Meal' : 'Rate this meal'}
+                                                                                            </span>
+                                                                                            {isSubmitting && <Loader2 className="w-3 h-3 text-[#f59e0b] animate-spin" />}
+                                                                                        </div>
+                                                                                        
+                                                                                        <div className="space-y-3">
+                                                                                            <RatingStars 
+                                                                                                rating={pendingRatings[ratingKey]?.rating || 0} 
+                                                                                                setRating={(r) => setPendingRatings(prev => ({ 
+                                                                                                    ...prev, 
+                                                                                                    [ratingKey]: { rating: r, remark: prev[ratingKey]?.remark || '' } 
+                                                                                                }))} 
+                                                                                                disabled={!!submittingRating}
+                                                                                            />
+
+                                                                                            <AnimatePresence>
+                                                                                                {pendingRatings[ratingKey] && (
+                                                                                                    <motion.div
+                                                                                                        initial={{ height: 0, opacity: 0 }}
+                                                                                                        animate={{ height: 'auto', opacity: 1 }}
+                                                                                                        exit={{ height: 0, opacity: 0 }}
+                                                                                                        className="space-y-2 overflow-hidden"
+                                                                                                    >
+                                                                                                        <textarea
+                                                                                                            value={pendingRatings[ratingKey].remark}
+                                                                                                            onChange={(e) => setPendingRatings(prev => ({
+                                                                                                                ...prev,
+                                                                                                                [ratingKey]: { ...prev[ratingKey], remark: e.target.value }
+                                                                                                            }))}
+                                                                                                            placeholder="Remark (optional)..."
+                                                                                                            className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-[10px] text-white placeholder:text-[#475569] focus:outline-none focus:border-cyan-500/50 transition-all resize-none"
+                                                                                                            rows={2}
+                                                                                                        />
+                                                                                                        <button
+                                                                                                            onClick={() => handleRateMeal(item.day, mealType)}
+                                                                                                            disabled={!!submittingRating}
+                                                                                                            className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black text-[9px] font-bold uppercase tracking-widest py-1.5 rounded-lg transition-all"
+                                                                                                        >
+                                                                                                            Submit Review
+                                                                                                        </button>
+                                                                                                    </motion.div>
+                                                                                                )}
+                                                                                            </AnimatePresence>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                        );
+                                    })}
+                                </div>
                             )}
 
                             <p className="text-center text-[10px] text-[#475569] font-mono mt-6 tracking-widest uppercase">

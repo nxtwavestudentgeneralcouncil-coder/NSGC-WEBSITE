@@ -50,12 +50,33 @@ export async function POST(req: Request) {
             }
         }
 
-        // 3. SLA CALCULATION
+        // 3. SLA & CATEGORIZATION (Mess Specific)
         const now = new Date();
         let dueAt = new Date();
-        if (priority === 'High') dueAt.setHours(now.getHours() + 4);
-        else if (priority === 'Medium') dueAt.setHours(now.getHours() + 24);
-        else dueAt.setHours(now.getHours() + 72);
+        let category = body.category || null;
+
+        if (body.department === 'Mess') {
+            // Auto-categorize based on keywords
+            if (/dirty|stale|fly|insect|unhygienic|clean/i.test(descriptionLower + titleLower)) {
+                category = 'Hygiene';
+                priority = 'High';
+                dueAt.setHours(now.getHours() + 4);
+            } else if (/taste|salt|spice|undercooked|burnt|raw/i.test(descriptionLower + titleLower)) {
+                category = 'Quality';
+                dueAt.setHours(now.getHours() + 12);
+            } else if (/late|delay|time|schedule/i.test(descriptionLower + titleLower)) {
+                category = 'Delay';
+                dueAt.setHours(now.getHours() + 8);
+            } else {
+                category = 'General';
+                dueAt.setHours(now.getHours() + 24);
+            }
+        } else {
+            // Standard SLA for other departments
+            if (priority === 'High') dueAt.setHours(now.getHours() + 4);
+            else if (priority === 'Medium') dueAt.setHours(now.getHours() + 24);
+            else dueAt.setHours(now.getHours() + 72);
+        }
 
         const mutation = `
             mutation InsertTicket($object: tickets_insert_input!) {
@@ -80,6 +101,7 @@ export async function POST(req: Request) {
                     room_number: body.roomNumber || null,
                     block: body.block || null,
                     floor: body.floor || null,
+                    category: category,
                     tags: body.tags || [],
                     due_at: dueAt.toISOString(),
                     votes: 0,

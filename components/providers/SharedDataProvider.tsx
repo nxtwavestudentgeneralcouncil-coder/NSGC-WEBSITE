@@ -211,8 +211,8 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
 
             setState({
                 announcements: mappedAnnouncements,
-                events: [
-                    ...(data.events || []).map((e: any) => ({
+                events: Array.from(new Map([
+                    ...(data.events || []).map((e: any) => [e.id, {
                         id: e.id,
                         name: e.title,
                         description: e.description,
@@ -223,9 +223,9 @@ export function SharedDataProvider({ children }: { children: React.ReactNode }) 
                         registrationLink: e.registration_link,
                         addedByRole: e.added_by_role,
                         is_club_event: false
-                    })),
-                    ...allClubEvents
-                ],
+                    }]),
+                    ...allClubEvents.map((e: any) => [e.id, e])
+                ]).values()) as Event[],
                 members: data.council_members || [],
                 clubs: mappedClubs,
                 elections: (data.elections || []).map((el: any) => ({

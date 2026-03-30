@@ -4,7 +4,7 @@ import { createNhostClient } from '@nhost/nhost-js';
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { day, meal_type, items, updated_by } = body;
+        const { day, meal_type, items, image_url, updated_by } = body;
 
         if (!day || !meal_type || !items) {
             return NextResponse.json({ message: 'Missing required fields: day, meal_type, items' }, { status: 400 });
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
                     object: $object,
                     on_conflict: { constraint: mess_menu_day_meal_type_key, update_columns: $update_columns }
                 ) {
-                    id day meal_type items updated_at
+                    id day meal_type items image_url updated_at
                 }
             }
         `;
@@ -33,10 +33,11 @@ export async function POST(req: Request) {
                     day,
                     meal_type,
                     items,
+                    image_url: image_url || null,
                     updated_by: updated_by || null,
                     updated_at: new Date().toISOString()
                 },
-                update_columns: ['items', 'updated_at', 'updated_by']
+                update_columns: ['items', 'image_url', 'updated_at', 'updated_by']
             });
 
         const { data, error } = result;

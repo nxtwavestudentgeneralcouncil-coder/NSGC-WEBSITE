@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     User,
-    Shield,
     Bell,
     Monitor,
     LogOut,
@@ -26,7 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import Cookies from 'js-cookie';
 
-type SettingsTab = 'profile' | 'security' | 'notifications' | 'appearance';
+type SettingsTab = 'profile' | 'notifications' | 'appearance';
 
 function SettingsContent() {
     const router = useRouter();
@@ -53,7 +52,6 @@ function SettingsContent() {
         messages: false
     });
 
-    const [is2FAEnabled, setIs2FAEnabled] = useState(false);
 
 
     useEffect(() => {
@@ -72,7 +70,7 @@ function SettingsContent() {
 
         // Set active tab from URL query param if present
         const tab = searchParams.get('tab');
-        if (tab && ['profile', 'security', 'notifications', 'appearance'].includes(tab)) {
+        if (tab && ['profile', 'notifications', 'appearance'].includes(tab)) {
             setActiveTab(tab as SettingsTab);
         }
     }, [searchParams, user]);
@@ -118,7 +116,6 @@ function SettingsContent() {
 
     const tabs = [
         { id: 'profile', label: 'Profile', icon: User },
-        { id: 'security', label: 'Security', icon: Shield },
         { id: 'notifications', label: 'Notifications', icon: Bell },
         { id: 'appearance', label: 'Appearance', icon: Monitor },
     ];
@@ -249,38 +246,6 @@ function SettingsContent() {
                                                             <Save className="w-4 h-4 mr-2" />
                                                             {isLoading ? 'Saving...' : 'Save Changes'}
                                                         </Button>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* --- SECURITY TAB --- */}
-                                            {activeTab === 'security' && (
-                                                <div className="space-y-8 max-w-xl">
-                                                    <div className="space-y-4">
-                                                        <h3 className="text-lg font-medium border-b border-white/10 pb-2">Change Password</h3>
-                                                        <div className="space-y-2">
-                                                            <Label>Current Password</Label>
-                                                            <Input type="password" placeholder="••••••••" className="bg-black/50 border-white/10 text-white" />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label>New Password</Label>
-                                                            <Input type="password" placeholder="••••••••" className="bg-black/50 border-white/10 text-white" />
-                                                        </div>
-                                                        <Button variant="outline" className="border-white/10 hover:bg-white/5">Update Password</Button>
-                                                    </div>
-
-                                                    <div className="space-y-4">
-                                                        <h3 className="text-lg font-medium border-b border-white/10 pb-2">Two-Factor Authentication</h3>
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="space-y-0.5">
-                                                                <Label className="text-base">Enable 2FA</Label>
-                                                                <p className="text-sm text-gray-400">Add an extra layer of security to your account.</p>
-                                                            </div>
-                                                            <Switch
-                                                                checked={is2FAEnabled}
-                                                                onCheckedChange={setIs2FAEnabled}
-                                                            />
-                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
