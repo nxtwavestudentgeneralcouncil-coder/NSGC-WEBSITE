@@ -161,6 +161,25 @@ function ComplaintsContent() {
             return;
         }
 
+        if (name === 'hostelType') {
+            setFormData(prev => ({ 
+                ...prev, 
+                hostelType: value, 
+                floor: '', 
+                roomNumber: '' 
+            }));
+            return;
+        }
+
+        if (name === 'floor' && (formData.hostelType === 'Boys Hostel' || formData.hostelType === 'Girls Hostel')) {
+            setFormData(prev => ({ 
+                ...prev, 
+                floor: value, 
+                roomNumber: '' 
+            }));
+            return;
+        }
+
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
@@ -634,26 +653,75 @@ function ComplaintsContent() {
                                                             required
                                                         >
                                                             <option value="" disabled hidden>Select floor...</option>
-                                                            <option value="Ground">Ground Floor</option>
-                                                            <option value="1st">1st Floor</option>
-                                                            <option value="2nd">2nd Floor</option>
-                                                            <option value="3rd">3rd Floor</option>
-                                                            <option value="4th">4th Floor</option>
+                                                            {formData.hostelType === 'Boys Hostel' ? (
+                                                                <>
+                                                                    <option value="1st">1st Floor</option>
+                                                                    <option value="2nd">2nd Floor</option>
+                                                                </>
+                                                            ) : formData.hostelType === 'Girls Hostel' ? (
+                                                                <>
+                                                                    <option value="1st">1st Floor</option>
+                                                                    <option value="2nd">2nd Floor</option>
+                                                                    <option value="3rd">3rd Floor</option>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <option value="Ground">Ground Floor</option>
+                                                                    <option value="1st">1st Floor</option>
+                                                                    <option value="2nd">2nd Floor</option>
+                                                                    <option value="3rd">3rd Floor</option>
+                                                                    <option value="4th">4th Floor</option>
+                                                                </>
+                                                            )}
                                                         </select>
                                                     </div>
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
                                                             Room Number <span className="text-red-500 text-sm">*</span>
                                                         </label>
-                                                        <input
-                                                            type="text"
-                                                            name="roomNumber"
-                                                            value={formData.roomNumber}
-                                                            onChange={handleChange}
-                                                            className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
-                                                            placeholder="e.g. 101, B-202"
-                                                            required
-                                                        />
+                                                        {(formData.hostelType === 'Boys Hostel' && (formData.floor === '1st' || formData.floor === '2nd')) || (formData.hostelType === 'Girls Hostel' && formData.floor) ? (
+                                                            <select
+                                                                name="roomNumber"
+                                                                value={formData.roomNumber}
+                                                                onChange={handleChange}
+                                                                className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
+                                                                required
+                                                            >
+                                                                <option value="" disabled hidden>Select room...</option>
+                                                                {formData.hostelType === 'Boys Hostel' ? (
+                                                                    <>
+                                                                        {formData.floor === '1st' ? (
+                                                                            Array.from({ length: 26 }, (_, i) => 101 + i).map(num => (
+                                                                                <option key={num} value={num.toString()}>{num}</option>
+                                                                            ))
+                                                                        ) : (
+                                                                            Array.from({ length: 26 }, (_, i) => 201 + i).map(num => (
+                                                                                <option key={num} value={num.toString()}>{num}</option>
+                                                                            ))
+                                                                        )}
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        {(() => {
+                                                                            const prefixNum = formData.floor === 'Ground' ? 0 : parseInt(formData.floor.charAt(0));
+                                                                            return Array.from({ length: 5 }, (_, i) => (prefixNum * 100 + (1 + i)).toString().padStart(3, '0')).map(num => (
+                                                                                <option key={num} value={num}>{num}</option>
+                                                                            ));
+                                                                        })()}
+                                                                    </>
+                                                                )}
+                                                            </select>
+                                                        ) : (
+                                                            <input
+                                                                type="text"
+                                                                name="roomNumber"
+                                                                value={formData.roomNumber}
+                                                                onChange={handleChange}
+                                                                className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
+                                                                placeholder="e.g. 101, B-202"
+                                                                required
+                                                            />
+                                                        )}
                                                     </div>
                                                 </motion.div>
 
