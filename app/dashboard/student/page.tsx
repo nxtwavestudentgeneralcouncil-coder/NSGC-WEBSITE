@@ -87,7 +87,10 @@ function StudentDashboardContent() {
     };
 
     useEffect(() => {
-        if (messMenuOpen) fetchMessMenu();
+        if (messMenuOpen) {
+            fetchMessMenu();
+            fetchMyRatings();
+        }
     }, [messMenuOpen]);
 
     const getExistingItem = () => {
@@ -150,6 +153,24 @@ function StudentDashboardContent() {
         }
     };
 
+    const fetchMyRatings = async () => {
+        try {
+            const res = await fetch('/api/v1/nhost/get-my-meal-ratings');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data)) {
+                    const ratingMap: Record<string, number> = {};
+                    data.data.forEach((r: any) => {
+                        ratingMap[`${r.day}-${r.meal_type}`] = r.rating;
+                    });
+                    setRatings(ratingMap);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to fetch my ratings:', err);
+        }
+    };
+
     const handleRateMeal = async (day: string, mealType: string) => {
         const pending = pendingRatings[`${day}-${mealType}`];
         if (!user?.id || !pending?.rating) return;
@@ -203,6 +224,7 @@ function StudentDashboardContent() {
     useEffect(() => {
         if (isAuthorized && user?.email) {
             fetchMyMenuRequests();
+            fetchMyRatings();
         }
     }, [isAuthorized, user]);
     const { tickets } = useTickets();

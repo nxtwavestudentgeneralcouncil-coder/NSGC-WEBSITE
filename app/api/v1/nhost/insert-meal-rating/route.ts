@@ -23,6 +23,24 @@ export async function POST(request: NextRequest) {
             adminSecret
         });
 
+        // Check if user already rated this meal
+        const checkExistingQuery = `
+            query CheckExistingRating($userId: uuid!, $day: String!, $mealType: String!) {
+                meal_ratings(where: {
+                    user_id: { _eq: $userId },
+                    day: { _eq: $day },
+                    meal_type: { _eq: $mealType }
+                }) {
+                    id
+                }
+            }
+        `;
+
+        const checkResult = await nhost.graphql.request(checkExistingQuery, { userId, day, meal_type });
+        if ((checkResult.data as any)?.meal_ratings?.length > 0) {
+            return NextResponse.json({ success: false, message: 'You have already rated this meal' }, { status: 400 });
+        }
+
         // Insert rating
         const mutation = `
             mutation InsertMealRating($object: meal_ratings_insert_input!) {
