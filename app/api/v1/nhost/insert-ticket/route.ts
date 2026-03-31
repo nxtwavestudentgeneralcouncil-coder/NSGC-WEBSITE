@@ -50,32 +50,22 @@ export async function POST(req: Request) {
             }
         }
 
-        // 3. SLA & CATEGORIZATION (Mess Specific)
-        const now = new Date();
-        let dueAt = new Date();
+        // 3. Categorization (Mess Specific) - No auto-deadline
         let category = body.category || null;
+        let dueAt = null; // Start with no deadline until an admin assigns one
 
         if (body.department === 'Mess') {
-            // Auto-categorize based on keywords
+            // Auto-categorize based on keywords but don't set a deadline
             if (/dirty|stale|fly|insect|unhygienic|clean/i.test(descriptionLower + titleLower)) {
                 category = 'Hygiene';
                 priority = 'High';
-                dueAt.setHours(now.getHours() + 4);
             } else if (/taste|salt|spice|undercooked|burnt|raw/i.test(descriptionLower + titleLower)) {
                 category = 'Quality';
-                dueAt.setHours(now.getHours() + 12);
             } else if (/late|delay|time|schedule/i.test(descriptionLower + titleLower)) {
                 category = 'Delay';
-                dueAt.setHours(now.getHours() + 8);
             } else {
                 category = 'General';
-                dueAt.setHours(now.getHours() + 24);
             }
-        } else {
-            // Standard SLA for other departments
-            if (priority === 'High') dueAt.setHours(now.getHours() + 4);
-            else if (priority === 'Medium') dueAt.setHours(now.getHours() + 24);
-            else dueAt.setHours(now.getHours() + 72);
         }
 
         const mutation = `
@@ -103,7 +93,7 @@ export async function POST(req: Request) {
                     floor: body.floor || null,
                     category: category,
                     tags: body.tags || [],
-                    due_at: dueAt.toISOString(),
+                    due_at: dueAt ? (dueAt as Date).toISOString() : null,
                     votes: 0,
                     is_escalated: false
                 }

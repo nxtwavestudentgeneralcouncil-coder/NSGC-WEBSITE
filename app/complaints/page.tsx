@@ -1,4 +1,5 @@
 'use client';
+// Sub-subject for Room Maintenance implemented
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -14,10 +15,12 @@ import { useAuthenticationStatus, useUserData } from '@nhost/react';
 import { useRef } from 'react';
 
 const SUBJECT_OPTIONS: Record<string, string[]> = {
-    Academic: ['Course Content', 'Exam Schedule', 'Faculty Feedback', 'Lab Equipment', 'Resource Accessibility'],
-    Hostel: ['Room Maintenance', 'Water Supply', 'Electricity', 'Security', 'Cleanliness'],
+    Academic: ['Course Content', 'Exam Schedule', 'Faculty Feedback', 'Lab Equipment', 'Resource Accessibility', 'Network Issue'],
+    Hostel: ['Room Maintenance', 'Water Supply', 'Electricity', 'Security', 'Cleanliness', 'Network Issue'],
     Mess: ['Food Quality', 'Menu Variety', 'Hygiene Standards', 'Token Issues', 'Timings']
 };
+
+const ROOM_MAINTENANCE_SUB_SUBJECTS = ['AC', 'Cupboards', 'Switch Boards', 'Fans', 'Hangers', 'Mirrors', 'Beds', 'Cleanliness'];
 
 function ComplaintsContent() {
     const router = useRouter();
@@ -40,6 +43,7 @@ function ComplaintsContent() {
         category: '',
         subject: '',
         otherSubject: '',
+        subSubject: '',
         description: '',
         hostelType: '',
         floor: '',
@@ -87,10 +91,19 @@ function ComplaintsContent() {
                     cleanDescription = cleanDescription.replace(dateMatch[0], '');
                 }
 
+                let mainSubject = foundTicket.subject || '';
+                let subSubject = '';
+
+                if (mainSubject.startsWith('Room Maintenance - ')) {
+                    subSubject = mainSubject.replace('Room Maintenance - ', '');
+                    mainSubject = 'Room Maintenance';
+                }
+
                 setFormData({
                     category: foundTicket.type,
-                    subject: foundTicket.subject || '',
+                    subject: mainSubject,
                     otherSubject: '',
+                    subSubject: subSubject,
                     description: cleanDescription,
                     hostelType: foundTicket.hostelType || '',
                     floor: foundTicket.floor || '',
@@ -144,6 +157,7 @@ function ComplaintsContent() {
                 category: value, 
                 subject: '', 
                 otherSubject: '', 
+                subSubject: '',
                 hostelType: '', 
                 floor: '',
                 roomNumber: '',
@@ -156,7 +170,8 @@ function ComplaintsContent() {
             setFormData(prev => ({ 
                 ...prev, 
                 subject: value, 
-                otherSubject: '' 
+                otherSubject: '',
+                subSubject: ''
             }));
             return;
         }
@@ -286,7 +301,10 @@ function ComplaintsContent() {
             }
 
             if (editId) {
-                const finalSubject = formData.subject === 'Other' ? formData.otherSubject : formData.subject;
+                let finalSubject = formData.subject === 'Other' ? formData.otherSubject : formData.subject;
+                if (formData.subject === 'Room Maintenance' && formData.subSubject) {
+                    finalSubject = `Room Maintenance - ${formData.subSubject}`;
+                }
                 
                 const metadata = user?.metadata as any;
                 const phoneStr = metadata?.phone ? metadata.phone : '';
@@ -319,6 +337,7 @@ function ComplaintsContent() {
                     category: '',
                     subject: '',
                     otherSubject: '',
+                    subSubject: '',
                     description: '',
                     hostelType: '',
                     floor: '',
@@ -327,7 +346,10 @@ function ComplaintsContent() {
                 });
 
             } else {
-                const finalSubject = formData.subject === 'Other' ? formData.otherSubject : formData.subject;
+                let finalSubject = formData.subject === 'Other' ? formData.otherSubject : formData.subject;
+                if (formData.subject === 'Room Maintenance' && formData.subSubject) {
+                    finalSubject = `Room Maintenance - ${formData.subSubject}`;
+                }
 
                 const metadata = user?.metadata as any;
                 const phoneStr = metadata?.phone ? metadata.phone : '';
@@ -362,6 +384,7 @@ function ComplaintsContent() {
                     category: '',
                     subject: '',
                     otherSubject: '',
+                    subSubject: '',
                     description: '',
                     hostelType: '',
                     floor: '',
@@ -537,11 +560,13 @@ function ComplaintsContent() {
                                         </div>
                                     </motion.div>
                                 ) : (
-                                    <form className="space-y-8" onSubmit={handleSubmit}>
-                                        <div className="text-xs text-[#94a3b8] italic mb-4 flex items-center">
+                                    <form className="space-y-4" onSubmit={handleSubmit}>
+                                        <div className="text-xs text-[#94a3b8] italic mb-2 flex items-center">
                                             <span className="text-red-500 font-bold text-sm mr-1">*</span> indicates a mandatory field
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                                        {/* Basic Identification Grid */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
                                                     Complaint Category <span className="text-red-500 text-sm">*</span>
@@ -580,138 +605,116 @@ function ComplaintsContent() {
                                                     ))}
                                                     <option value="Other">Other (Custom Subject)</option>
                                                 </select>
-                                                
-                                                {formData.subject === 'Other' && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, height: 0 }}
-                                                        animate={{ opacity: 1, height: 'auto' }}
-                                                        className="pt-2"
-                                                    >
-                                                        <input
-                                                            type="text"
-                                                            name="otherSubject"
-                                                            value={formData.otherSubject}
-                                                            onChange={handleChange}
-                                                            className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
-                                                            placeholder="Enter your custom subject"
-                                                            required
-                                                        />
-                                                    </motion.div>
-                                                )}
                                             </div>
                                         </div>
 
-                                        {formData.category === 'Hostel' && (
-                                            <div className="space-y-8">
-                                                <motion.div 
-                                                    initial={{ opacity: 0, height: 0 }}
-                                                    animate={{ opacity: 1, height: 'auto' }}
-                                                    className="grid grid-cols-1 md:grid-cols-2 gap-8"
+                                        {/* Conditional Sub-Subject (Sequential Row) */}
+                                        {formData.subject === 'Room Maintenance' && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                className="space-y-2 overflow-hidden"
+                                            >
+                                                <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                    Sub-Subject <span className="text-red-500 text-sm">*</span>
+                                                </label>
+                                                <select
+                                                    name="subSubject"
+                                                    value={formData.subSubject}
+                                                    onChange={handleChange}
+                                                    className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
+                                                    required
                                                 >
-                                                    <div className="space-y-2">
-                                                        <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
-                                                            Hostel Type <span className="text-red-500 text-sm">*</span>
-                                                        </label>
-                                                        <select
-                                                            name="hostelType"
-                                                            value={formData.hostelType}
-                                                            onChange={handleChange}
-                                                            className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
-                                                            required
-                                                        >
-                                                            <option value="" disabled hidden>Select hostel type...</option>
-                                                            {(!userGender || userGender === 'male') && (
-                                                                <option value="Boys Hostel">Boys Hostel</option>
-                                                            )}
-                                                            {(!userGender || userGender === 'female') && (
-                                                                <option value="Girls Hostel">Girls Hostel</option>
-                                                            )}
-                                                            {userGender && !['male', 'female'].includes(userGender) && (
-                                                                <>
-                                                                    <option value="Boys Hostel">Boys Hostel</option>
-                                                                    <option value="Girls Hostel">Girls Hostel</option>
-                                                                </>
-                                                            )}
-                                                        </select>
-                                                    </div>
-                                                </motion.div>
+                                                    <option value="" disabled hidden>Select sub-subject...</option>
+                                                    {ROOM_MAINTENANCE_SUB_SUBJECTS.map(sub => (
+                                                        <option key={sub} value={sub}>{sub}</option>
+                                                    ))}
+                                                </select>
+                                            </motion.div>
+                                        )}
 
-                                                <motion.div 
-                                                    initial={{ opacity: 0, height: 0 }}
-                                                    animate={{ opacity: 1, height: 'auto' }}
-                                                    className="grid grid-cols-1 md:grid-cols-2 gap-8"
-                                                >
-                                                    <div className="space-y-2">
-                                                        <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
-                                                            Floor <span className="text-red-500 text-sm">*</span>
-                                                        </label>
-                                                        <select
-                                                            name="floor"
-                                                            value={formData.floor}
-                                                            onChange={handleChange}
-                                                            className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
-                                                            required
-                                                        >
-                                                            <option value="" disabled hidden>Select floor...</option>
-                                                            {formData.hostelType === 'Boys Hostel' ? (
-                                                                <>
-                                                                    <option value="1st">1st Floor</option>
-                                                                    <option value="2nd">2nd Floor</option>
-                                                                </>
-                                                            ) : formData.hostelType === 'Girls Hostel' ? (
-                                                                <>
-                                                                    <option value="1st">1st Floor</option>
-                                                                    <option value="2nd">2nd Floor</option>
-                                                                    <option value="3rd">3rd Floor</option>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <option value="Ground">Ground Floor</option>
-                                                                    <option value="1st">1st Floor</option>
-                                                                    <option value="2nd">2nd Floor</option>
-                                                                    <option value="3rd">3rd Floor</option>
-                                                                    <option value="4th">4th Floor</option>
-                                                                </>
-                                                            )}
-                                                        </select>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
-                                                            Room Number <span className="text-red-500 text-sm">*</span>
-                                                        </label>
-                                                        {(formData.hostelType === 'Boys Hostel' && (formData.floor === '1st' || formData.floor === '2nd')) || (formData.hostelType === 'Girls Hostel' && formData.floor) ? (
+                                        {/* Conditional Custom Subject (Sequential Row) */}
+                                        {formData.subject === 'Other' && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                className="space-y-2 overflow-hidden"
+                                            >
+                                                <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                    Specify Subject <span className="text-red-500 text-sm">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name="otherSubject"
+                                                    value={formData.otherSubject}
+                                                    onChange={handleChange}
+                                                    className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
+                                                    placeholder="Enter your custom subject"
+                                                    required
+                                                />
+                                            </motion.div>
+                                        )}
+
+                                        {/* Hostel Specific Section */}
+                                        {formData.category === 'Hostel' && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                className="space-y-4 overflow-hidden"
+                                            >
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                        Hostel Type <span className="text-red-500 text-sm">*</span>
+                                                    </label>
+                                                    <select
+                                                        name="hostelType"
+                                                        value={formData.hostelType}
+                                                        onChange={handleChange}
+                                                        className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
+                                                        required
+                                                    >
+                                                        <option value="" disabled hidden>Select hostel type...</option>
+                                                        {(!userGender || userGender === 'male') && <option value="Boys Hostel">Boys Hostel</option>}
+                                                        {(!userGender || userGender === 'female') && <option value="Girls Hostel">Girls Hostel</option>}
+                                                    </select>
+                                                </div>
+
+                                                {formData.hostelType && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, height: 0 }}
+                                                        animate={{ opacity: 1, height: 'auto' }}
+                                                        className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden"
+                                                    >
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                                Floor <span className="text-red-500 text-sm">*</span>
+                                                            </label>
                                                             <select
-                                                                name="roomNumber"
-                                                                value={formData.roomNumber}
+                                                                name="floor"
+                                                                value={formData.floor}
                                                                 onChange={handleChange}
                                                                 className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
                                                                 required
                                                             >
-                                                                <option value="" disabled hidden>Select room...</option>
+                                                                <option value="" disabled hidden>Select floor...</option>
                                                                 {formData.hostelType === 'Boys Hostel' ? (
                                                                     <>
-                                                                        {formData.floor === '1st' ? (
-                                                                            Array.from({ length: 26 }, (_, i) => 101 + i).map(num => (
-                                                                                <option key={num} value={num.toString()}>{num}</option>
-                                                                            ))
-                                                                        ) : (
-                                                                            Array.from({ length: 26 }, (_, i) => 201 + i).map(num => (
-                                                                                <option key={num} value={num.toString()}>{num}</option>
-                                                                            ))
-                                                                        )}
+                                                                        <option value="1st">1st Floor</option>
+                                                                        <option value="2nd">2nd Floor</option>
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        {(() => {
-                                                                            const prefixNum = formData.floor === 'Ground' ? 0 : parseInt(formData.floor.charAt(0));
-                                                                            return Array.from({ length: 5 }, (_, i) => (prefixNum * 100 + (1 + i)).toString().padStart(3, '0')).map(num => (
-                                                                                <option key={num} value={num}>{num}</option>
-                                                                            ));
-                                                                        })()}
+                                                                        <option value="1st">1st Floor</option>
+                                                                        <option value="2nd">2nd Floor</option>
+                                                                        <option value="3rd">3rd Floor</option>
                                                                     </>
                                                                 )}
                                                             </select>
-                                                        ) : (
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                                Room Number <span className="text-red-500 text-sm">*</span>
+                                                            </label>
                                                             <input
                                                                 type="text"
                                                                 name="roomNumber"
@@ -721,51 +724,51 @@ function ComplaintsContent() {
                                                                 placeholder="e.g. 101, B-202"
                                                                 required
                                                             />
-                                                        )}
-                                                    </div>
-                                                </motion.div>
-
-                                                {existingDuplicates.length > 0 && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: -10 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex gap-3 items-start"
-                                                    >
-                                                        <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
-                                                        <div className="space-y-1">
-                                                            <p className="text-amber-500 font-bold text-sm">Potential Duplicate Detected</p>
-                                                            <p className="text-xs text-amber-200/70">
-                                                                There are already {existingDuplicates.length} active complaints for Room {formData.roomNumber} regarding "{formData.subject}". 
-                                                                Submitting another might be redundant but will be prioritized if the issue is widespread.
-                                                            </p>
                                                         </div>
                                                     </motion.div>
                                                 )}
-                                            </div>
+                                            </motion.div>
                                         )}
 
-                                        {(formData.category === 'Hostel' || formData.category === 'Mess') && (
-                                            <motion.div 
-                                                initial={{ opacity: 0, height: 0 }}
-                                                animate={{ opacity: 1, height: 'auto' }}
-                                                className="grid grid-cols-1 md:grid-cols-2 gap-8"
+                                        {/* Duplicate Detection Alert */}
+                                        {existingDuplicates.length > 0 && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex gap-3 items-start"
                                             >
-                                                <div className="space-y-2">
-                                                    <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
-                                                        Date of Incident <span className="text-red-500 text-sm">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        name="dateOfIncident"
-                                                        value={formData.dateOfIncident}
-                                                        onChange={handleChange}
-                                                        className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
-                                                        required
-                                                    />
+                                                <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                                                <div className="space-y-1">
+                                                    <p className="text-amber-500 font-bold text-sm">Potential Duplicate Detected</p>
+                                                    <p className="text-xs text-amber-200/70">
+                                                        There are already {existingDuplicates.length} active complaints for Room {formData.roomNumber}.
+                                                    </p>
                                                 </div>
                                             </motion.div>
                                         )}
 
+                                        {/* Date of Incident (Full Width for alignment) */}
+                                        {(formData.category === 'Hostel' || formData.category === 'Mess') && (
+                                            <motion.div 
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                className="space-y-2 overflow-hidden"
+                                            >
+                                                <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
+                                                    Date of Incident <span className="text-red-500 text-sm">*</span>
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    name="dateOfIncident"
+                                                    value={formData.dateOfIncident}
+                                                    onChange={handleChange}
+                                                    className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
+                                                    required
+                                                />
+                                            </motion.div>
+                                        )}
+
+                                        {/* Description */}
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
                                                 Detailed Description <span className="text-red-500 text-sm">*</span>
@@ -776,112 +779,72 @@ function ComplaintsContent() {
                                                 onChange={handleChange}
                                                 rows={5}
                                                 className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-4 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 resize-none transition-colors shadow-inner"
-                                                placeholder="Please provide as much detail as possible about the incident or issue..."
+                                                placeholder="Please provide as much detail as possible..."
                                                 required
                                             />
                                         </div>
 
-                                        {/* Photo Upload Section */}
+                                        {/* Evidence Upload */}
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase flex items-center">
                                                 Upload Evidence 
-                                                {(formData.category === 'Hostel' || formData.category === 'Mess') ? (
-                                                    <span className="text-red-500 text-sm ml-1">*</span>
-                                                ) : (
-                                                    <span className="text-[#6b7280] lowercase italic ml-2 opacity-70">(optional)</span>
-                                                )}
+                                                {(formData.category === 'Hostel' || formData.category === 'Mess') && <span className="text-red-500 text-sm ml-1">*</span>}
                                             </label>
 
                                             {!isCameraOpen && !image && (
-                                                    <div className="border-[1.5px] border-dashed border-[#1f2937] hover:border-[#374151] rounded-xl p-6 sm:p-12 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 bg-transparent group"
+                                                <div 
+                                                    className="border-[1.5px] border-dashed border-[#1f2937] hover:border-[#374151] rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all bg-transparent group"
                                                     onClick={() => document.getElementById('file-upload')?.click()}
                                                 >
-                                                    <input
-                                                        id="file-upload"
-                                                        type="file"
-                                                        accept="image/*"
-                                                        className="hidden"
-                                                        onChange={handleFileUpload}
-                                                    />
-                                                    <div className="flex items-center justify-center mb-3 sm:mb-4 transition-transform group-hover:-translate-y-1">
-                                                        <CloudUpload className="w-8 h-8 text-[#9ca3af]" strokeWidth={1.5} />
-                                                    </div>
-                                                    <h4 className="text-[14px] sm:text-[15px] font-bold text-white mb-2 tracking-wide">Drag and drop files here</h4>
-                                                    <p className="text-[12px] sm:text-[13px] text-[#6b7280] font-medium px-4">JPG, PNG, PDF up to 10MB each</p>
-
-                                                    {/* Optional camera fallback button */}
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            startCamera();
-                                                        }}
-                                                        className="mt-6 text-xs text-[#6b7280] hover:text-white hover:bg-transparent tracking-widest uppercase font-bold"
-                                                    >
-                                                        <Camera className="w-3 h-3 mr-2 inline" /> OR USE CAMERA
+                                                    <input id="file-upload" type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                                                    <CloudUpload className="w-8 h-8 text-[#9ca3af] mb-3 group-hover:-translate-y-1 transition-transform" strokeWidth={1.5} />
+                                                    <h4 className="text-sm font-bold text-white mb-1">Drag and drop or click to upload</h4>
+                                                    <p className="text-xs text-[#6b7280]">JPG, PNG up to 10MB</p>
+                                                    <Button variant="ghost" className="mt-4 text-[10px] tracking-widest uppercase font-bold" onClick={(e) => { e.stopPropagation(); startCamera(); }}>
+                                                        <Camera className="w-3 h-3 mr-2" /> OR USE CAMERA
                                                     </Button>
                                                 </div>
                                             )}
 
                                             {isCameraOpen && (
-                                                <div className="relative bg-[#111827] border border-white/5 rounded-xl overflow-hidden max-w-md mx-auto aspect-video shadow-2xl">
-                                                    <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                                                    <canvas ref={canvasRef} className="hidden" />
+                                                <div className="relative bg-[#111827] border border-white/5 rounded-xl overflow-hidden shadow-2xl">
+                                                    <video ref={videoRef} autoPlay playsInline className="w-full aspect-video object-cover" />
                                                     <div className="absolute inset-x-0 bottom-4 flex justify-center gap-4">
-                                                        <Button type="button" onClick={capturePhoto} className="bg-white text-black hover:bg-gray-200 shadow-xl">
-                                                            <Camera className="w-4 h-4 mr-2" /> Capture
-                                                        </Button>
-                                                        <Button type="button" onClick={stopCamera} variant="destructive" className="bg-red-500/90 backdrop-blur hover:bg-red-600 shadow-xl">
-                                                            <X className="w-4 h-4 mr-1" /> Cancel
-                                                        </Button>
+                                                        <Button type="button" onClick={capturePhoto} className="bg-white text-black"><Camera className="w-4 h-4 mr-2" /> Capture</Button>
+                                                        <Button type="button" onClick={stopCamera} variant="destructive"><X className="w-4 h-4 mr-1" /> Cancel</Button>
                                                     </div>
                                                 </div>
                                             )}
 
                                             {image && (
-                                                <div className="relative inline-block mt-4 p-2 bg-[#111827] rounded-xl border border-white/5 shadow-xl">
-                                                    <img src={image} alt="Complaint Attachment" className="h-48 w-auto rounded-lg object-cover" />
-                                                    <button
-                                                        type="button"
-                                                        onClick={removePhoto}
-                                                        className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-xl transition-transform hover:scale-110"
-                                                    >
-                                                        <X className="w-4 h-4" strokeWidth={3} />
-                                                    </button>
+                                                <div className="relative inline-block mt-2 p-2 bg-[#111827] rounded-xl border border-white/5 shadow-xl">
+                                                    <img src={image} alt="Attachment" className="h-32 w-auto rounded-lg object-cover" />
+                                                    <button type="button" onClick={removePhoto} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-xl hover:scale-110 transition-transform"><X className="w-3 h-3" strokeWidth={3} /></button>
                                                 </div>
                                             )}
                                         </div>
 
-                                        <div className="flex flex-col sm:flex-row items-center justify-end gap-x-8 gap-y-4 pt-10 pb-4">
+                                        {/* Action Buttons */}
+                                        <div className="flex flex-col sm:flex-row items-center justify-end gap-6 pt-4 pb-2">
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    if (editId) {
-                                                        setEditId(null);
-                                                        router.push('/complaints/history');
-                                                    }
+                                                    if (editId) { setEditId(null); router.push('/complaints/history'); }
                                                     setFormData({
-                                                        category: '',
-                                                        subject: '',
-                                                        otherSubject: '',
-                                                        description: '',
-                                                        hostelType: '',
-                                                        floor: '',
-                                                        roomNumber: '',
-                                                        dateOfIncident: ''
+                                                        category: '', subject: '', otherSubject: '', subSubject: '',
+                                                        description: '', hostelType: '', floor: '', roomNumber: '', dateOfIncident: ''
                                                     });
                                                 }}
-                                                className="text-[15px] font-bold text-[#6b7280] hover:text-white transition-colors"
+                                                className="text-sm font-bold text-[#6b7280] hover:text-white transition-colors"
                                             >
-                                                Discard
+                                                Discard changes
                                             </button>
                                             <Button
                                                 type="submit"
                                                 disabled={isSubmitting}
-                                                className="w-full sm:w-auto bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold px-10 py-6 text-[15px] tracking-wide shadow-lg shadow-blue-500/20"
+                                                className="w-full sm:w-auto bg-[#3b82f6] hover:bg-[#2563eb] text-white font-bold px-10 py-5 shadow-lg shadow-blue-500/20"
                                             >
-                                                {isSubmitting ? (editId ? 'UPDATING...' : 'SUBMITTING...') : (editId ? 'UPDATE COMPLAINT' : 'SUBMIT COMPLAINT')}
+                                                {isSubmitting ? 'PROCESSING...' : (editId ? 'UPDATE COMPLAINT' : 'SUBMIT COMPLAINT')}
                                             </Button>
                                         </div>
                                     </form>

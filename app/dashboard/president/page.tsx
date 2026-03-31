@@ -1743,7 +1743,7 @@ function PresidentDashboardContent() {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-gray-300">Due Date</label>
-                                        <Input type="date" value={formData.dueDate || ''} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" style={{ colorScheme: 'dark' }} />
+                                        <Input type="date" value={formData.dueDate || ''} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -1822,7 +1822,7 @@ function PresidentDashboardContent() {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-gray-300">Due Date</label>
-                                        <Input type="date" value={formData.dueDate || ''} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" style={{ colorScheme: 'dark' }} />
+                                        <Input type="date" value={formData.dueDate || ''} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
                                     </div>
                                 </div>
                             </>
@@ -1921,7 +1921,7 @@ function PresidentDashboardContent() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-300">Date</label>
-                                    <Input type="date" required value={formData.date || ''} onChange={e => setFormData({ ...formData, date: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" style={{ colorScheme: 'dark' }} />
+                                    <Input type="date" required value={formData.date || ''} onChange={e => setFormData({ ...formData, date: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-300">Location</label>
@@ -1955,21 +1955,21 @@ function PresidentDashboardContent() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-gray-300">Start Date</label>
-                                        <Input type="date" required value={formData.startDate || ''} onChange={e => setFormData({ ...formData, startDate: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" style={{ colorScheme: 'dark' }} />
+                                        <Input type="date" required value={formData.startDate || ''} onChange={e => setFormData({ ...formData, startDate: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-gray-300">Start Time</label>
-                                        <Input type="time" required value={formData.startTime || ''} onChange={e => setFormData({ ...formData, startTime: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" style={{ colorScheme: 'dark' }} />
+                                        <Input type="time" required value={formData.startTime || ''} onChange={e => setFormData({ ...formData, startTime: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-gray-300">End Date</label>
-                                        <Input type="date" required value={formData.endDate || ''} onChange={e => setFormData({ ...formData, endDate: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" style={{ colorScheme: 'dark' }} />
+                                        <Input type="date" required value={formData.endDate || ''} onChange={e => setFormData({ ...formData, endDate: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-gray-300">End Time</label>
-                                        <Input type="time" required value={formData.endTime || ''} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" style={{ colorScheme: 'dark' }} />
+                                        <Input type="time" required value={formData.endTime || ''} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="bg-black/50 border-white/10 text-white focus:border-cyan-500/50" />
                                     </div>
                                 </div>
 
@@ -2450,7 +2450,7 @@ function PresidentDashboardContent() {
                         type="date"
                         value={deadlineValue}
                         onChange={(e) => setDeadlineValue(e.target.value)}
-                        className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#f59e0b]/50 transition-colors [color-scheme:dark]"
+                        className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#f59e0b]/50 transition-colors"
                         min={new Date().toISOString().slice(0, 10)}
                         autoFocus
                     />

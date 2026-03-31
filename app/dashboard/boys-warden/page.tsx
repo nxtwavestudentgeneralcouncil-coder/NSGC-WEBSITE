@@ -316,7 +316,7 @@ export default function BoysWardenDashboard() {
                                     type="date" 
                                     value={deadlineValue}
                                     onChange={(e) => setDeadlineValue(e.target.value)}
-                                    className="w-full bg-[#0B0B14] border border-[#f59e0b]/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] shadow-inner [color-scheme:dark]"
+                                    className="w-full bg-[#0B0B14] border border-[#f59e0b]/30 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#f59e0b] shadow-inner"
                                 />
                             </div>
                             <div className="flex justify-end gap-3 mt-4">

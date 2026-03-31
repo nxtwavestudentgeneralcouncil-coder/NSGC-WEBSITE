@@ -133,12 +133,12 @@ export default function HostelComplaintsDashboard() {
     const handleBulkAction = async (action: 'Resolve') => {
         if (selectedTickets.length === 0) return;
         
-        for (const id of selectedTickets) {
-            if (action === 'Resolve') {
-                await updateTicketStatus(id, 'Completed', 'Bulk resolved by admin');
-            }
+        const ticketsToUpdate = [...selectedTickets];
+        setSelectedTickets([]); // Optimistically clear selection
+        
+        if (action === 'Resolve') {
+            await Promise.all(ticketsToUpdate.map(id => updateTicketStatus(id, 'Completed', 'Bulk resolved by admin')));
         }
-        setSelectedTickets([]);
     };
 
     if (isLoading || !isAuthorized) {
@@ -325,7 +325,7 @@ export default function HostelComplaintsDashboard() {
                                         type="date" 
                                         value={filterDate}
                                         onChange={(e) => setFilterDate(e.target.value)}
-                                        className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-bold text-[#94a3b8] focus:outline-none focus:border-[#0ea5e9]/50 focus:ring-1 focus:ring-[#0ea5e9]/20 transition-all hover:text-white cursor-pointer [color-scheme:dark]"
+                                        className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-bold text-[#94a3b8] focus:outline-none focus:border-[#0ea5e9]/50 focus:ring-1 focus:ring-[#0ea5e9]/20 transition-all hover:text-white cursor-pointer"
                                     />
                                     {filterDate && (
                                         <button 
@@ -612,7 +612,7 @@ export default function HostelComplaintsDashboard() {
                         type="date"
                         value={deadlineValue}
                         onChange={(e) => setDeadlineValue(e.target.value)}
-                        className="w-full bg-[#0B0B14] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-[#f59e0b]/50 transition-all [color-scheme:dark]"
+                        className="w-full bg-[#0B0B14] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-[#f59e0b]/50 transition-all"
                         min={new Date().toISOString().slice(0, 10)}
                         autoFocus
                     />

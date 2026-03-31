@@ -1384,7 +1384,7 @@ function MessAdminContent() {
                             type="date"
                             value={deadlineValue}
                             onChange={(e) => setDeadlineValue(e.target.value)}
-                            className="w-full bg-[#0B0B14] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-[#f59e0b]/50 transition-all [color-scheme:dark]"
+                            className="w-full bg-[#0B0B14] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-[#f59e0b]/50 transition-all"
                             min={new Date().toISOString().slice(0, 10)}
                             autoFocus
                         />
