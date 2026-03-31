@@ -783,7 +783,9 @@ function StudentDashboardContent() {
                                                         {isToday && <Badge className="bg-[#10b981] text-black text-[9px] font-bold px-2 py-0.5 rounded-full">TODAY</Badge>}
                                                     </div>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                                        {Object.entries(item.meals).map(([mealType, mealData]) => {
+                                                        {['breakfast', 'lunch', 'snacks', 'dinner'].map((mealType) => {
+                                                            const mealData = item.meals[mealType];
+                                                            if (!mealData) return null;
                                                             const ratingKey = `${item.day}-${mealType}`;
                                                             const userRating = ratings[ratingKey];
                                                             const isSubmitting = submittingRating === ratingKey;
