@@ -104,6 +104,7 @@ body {
 }
 
 @media (pointer: fine) {
+  /* Hide the browser cursor globally on all elements */
   * {
     cursor: none !important;
   }

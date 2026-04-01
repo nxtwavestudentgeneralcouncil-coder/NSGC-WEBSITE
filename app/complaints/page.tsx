@@ -22,6 +22,18 @@ const SUBJECT_OPTIONS: Record<string, string[]> = {
 
 const ROOM_MAINTENANCE_SUB_SUBJECTS = ['AC', 'Cupboards', 'Switch Boards', 'Fans', 'Hangers', 'Mirrors', 'Beds', 'Cleanliness'];
 
+const HOSTEL_ROOM_OPTIONS: Record<string, Record<string, string[]>> = {
+    'Boys Hostel': {
+        '1st': Array.from({ length: 26 }, (_, i) => (101 + i).toString()),
+        '2nd': Array.from({ length: 26 }, (_, i) => (201 + i).toString()),
+    },
+    'Girls Hostel': {
+        '1st': Array.from({ length: 5 }, (_, i) => (101 + i).toString()),
+        '2nd': Array.from({ length: 5 }, (_, i) => (201 + i).toString()),
+        '3rd': Array.from({ length: 5 }, (_, i) => (301 + i).toString()),
+    }
+};
+
 function ComplaintsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -536,7 +548,6 @@ function ComplaintsContent() {
                                         <div className="bg-black/50 p-4 rounded-md border border-white/10 inline-block">
                                             <span className="text-gray-400 text-sm block mb-1">Ticket Tracking ID</span>
                                             <span className="text-2xl font-mono text-cyan-500 font-bold tracking-wider">{formatTrackingId(submittedId)}</span>
-                                            <p className="text-[10px] text-gray-500 mt-2 font-mono opacity-50">Internal ID: {submittedId}</p>
                                         </div>
                                         <div className="pt-4 flex gap-4 justify-center">
                                             <Button
@@ -549,7 +560,7 @@ function ComplaintsContent() {
                                             <Button
                                                 className="bg-cyan-500 text-black hover:bg-cyan-400"
                                                 onClick={() => {
-                                                    setComplaintId(submittedId); // Auto-fill tracking ID
+                                                    setComplaintId(formatTrackingId(submittedId)); // Auto-fill with formatted tracking ID
                                                     setSubmittedId(null);
                                                     setActiveTab('track');
                                                     // Optional: auto-search
@@ -715,15 +726,21 @@ function ComplaintsContent() {
                                                             <label className="text-xs font-bold tracking-widest text-[#6b7280] uppercase">
                                                                 Room Number <span className="text-red-500 text-sm">*</span>
                                                             </label>
-                                                            <input
-                                                                type="text"
+                                                            <select
                                                                 name="roomNumber"
                                                                 value={formData.roomNumber}
                                                                 onChange={handleChange}
-                                                                className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors shadow-inner"
-                                                                placeholder="e.g. 101, B-202"
+                                                                className="w-full bg-[#111827] border border-white/5 rounded-md px-4 py-3 text-sm text-gray-300 focus:outline-none focus:border-[#3b82f6]/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%239CA3AF%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] transition-colors shadow-inner"
                                                                 required
-                                                            />
+                                                                disabled={!formData.floor}
+                                                            >
+                                                                <option value="" disabled hidden>
+                                                                    {!formData.floor ? 'Select floor first...' : 'Select room...'}
+                                                                </option>
+                                                                {formData.floor && HOSTEL_ROOM_OPTIONS[formData.hostelType]?.[formData.floor]?.map((room: string) => (
+                                                                    <option key={room} value={room}>{room}</option>
+                                                                ))}
+                                                            </select>
                                                         </div>
                                                     </motion.div>
                                                 )}
@@ -861,7 +878,7 @@ function ComplaintsContent() {
                                         <CardTitle className="text-2xl">Complaint Details</CardTitle>
                                         <CardDescription>Details of your submission.</CardDescription>
                                     </div>
-                                    <Link href={`/complaints?track=${trackingResult.id}`} onClick={(e) => { e.preventDefault(); setActiveTab('track'); setComplaintId(trackingResult.id); }} className="w-full sm:w-auto">
+                                    <Link href={`/complaints?track=${formatTrackingId(trackingResult.id)}`} onClick={(e) => { e.preventDefault(); setActiveTab('track'); setComplaintId(formatTrackingId(trackingResult.id)); }} className="w-full sm:w-auto">
                                         <Button variant="outline" className="w-full sm:w-auto border-white/20 text-cyan-500 hover:text-cyan-400 hover:bg-white/10">
                                             Track Status
                                         </Button>

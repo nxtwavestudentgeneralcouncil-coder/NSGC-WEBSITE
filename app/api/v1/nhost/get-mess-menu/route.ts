@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
         const query = `
             query GetMessMenu {
                 mess_menu(order_by: { day: asc, meal_type: asc }) {
-                    id day meal_type items image_url updated_at
+                    id day meal_type items image_url items_json updated_at
                 }
             }
         `;

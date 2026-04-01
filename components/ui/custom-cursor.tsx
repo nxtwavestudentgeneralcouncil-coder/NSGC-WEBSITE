@@ -40,6 +40,8 @@ export function CustomCursor() {
       );
       
       setIsHovering(prev => prev === isPointer ? prev : isPointer);
+
+      setIsHovering(prev => prev === isPointer ? prev : isPointer);
     };
 
     const handleMouseLeave = () => setIsVisible(false);
@@ -63,7 +65,7 @@ export function CustomCursor() {
 
   return (
     <motion.div
-      className="pointer-events-none fixed top-0 left-0 z-[999999] text-cyan-400"
+      className="pointer-events-none fixed top-0 left-0 z-[1000000] text-cyan-400"
       style={{
         x: mouseX,
         y: mouseY,

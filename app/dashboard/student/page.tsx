@@ -44,7 +44,9 @@ const RatingStars = ({ rating, setRating, disabled }: { rating: number, setRatin
 function StudentDashboardContent() {
     const router = useRouter();
     const [messMenuOpen, setMessMenuOpen] = useState(false);
-    const [messMenuData, setMessMenuData] = useState<{day: string; meals: Record<string, { items: string, image_url?: string }>}[]>([]);
+    const [selectedMenuDay, setSelectedMenuDay] = useState('');
+    const [selectedMealType, setSelectedMealType] = useState('breakfast');
+    const [messMenuData, setMessMenuData] = useState<{day: string; meals: Record<string, { items: string, image_url?: string, items_json?: any[] }>}[]>([]);
     const [messMenuLoading, setMessMenuLoading] = useState(false);
     const [changeRequestOpen, setChangeRequestOpen] = useState(false);
     const [changeRequestDay, setChangeRequestDay] = useState('');
@@ -67,16 +69,17 @@ function StudentDashboardContent() {
                 const data = await res.json();
                 if (Array.isArray(data)) {
                     // Transform flat DB rows into grouped day format
-                    const dayMap: Record<string, Record<string, { items: string, image_url?: string }>> = {};
+                    const dayMap: Record<string, Record<string, { items: string, image_url?: string, items_json?: any[] }>> = {};
                     data.forEach((item: any) => {
                         if (!dayMap[item.day]) dayMap[item.day] = {};
                         dayMap[item.day][item.meal_type] = {
                             items: item.items,
-                            image_url: item.image_url
+                            image_url: item.image_url,
+                            items_json: item.items_json
                         };
                     });
                     const DAYS_ORDER = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                    setMessMenuData(DAYS_ORDER.filter(d => dayMap[d]).map(d => ({ day: d, meals: dayMap[d] })));
+                    setMessMenuData(DAYS_ORDER.map(d => ({ day: d, meals: dayMap[d] || {} })));
                 }
             }
         } catch (err) {
@@ -90,6 +93,7 @@ function StudentDashboardContent() {
         if (messMenuOpen) {
             fetchMessMenu();
             fetchMyRatings();
+            setSelectedMenuDay(new Date().toLocaleDateString('en-US', { weekday: 'long' }));
         }
     }, [messMenuOpen]);
 
@@ -628,7 +632,7 @@ function StudentDashboardContent() {
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         transition={{ duration: 0.25 }}
-                        className="bg-[#0F172A] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden shadow-2xl"
+                        className="bg-[#0F172A] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Header */}
@@ -654,6 +658,50 @@ function StudentDashboardContent() {
                                     <X className="w-4 h-4 text-gray-400" />
                                 </button>
                             </div>
+                        </div>
+                        
+                        {/* Day Selector Navigation */}
+                        <div className="px-6 py-3 border-b border-white/5 bg-[#1E293B]/30 overflow-x-auto flex items-center gap-2 scrollbar-hide">
+                            {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day) => {
+                                const isToday = day === new Date().toLocaleDateString('en-US', { weekday: 'long' });
+                                const isSelected = day === selectedMenuDay;
+                                return (
+                                    <button
+                                        key={day}
+                                        onClick={() => setSelectedMenuDay(day)}
+                                        className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap flex flex-col items-center gap-1 min-w-[90px] border ${
+                                            isSelected 
+                                                ? 'bg-[#10b981] text-black border-[#10b981] shadow-[0_0_15px_rgba(16,185,129,0.3)]' 
+                                                : isToday
+                                                    ? 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/30 hover:bg-[#10b981]/20'
+                                                    : 'bg-white/5 text-[#64748B] border-white/5 hover:bg-white/10 hover:text-white'
+                                        }`}
+                                    >
+                                        {day}
+                                        {isToday && <span className={`text-[8px] ${isSelected ? 'text-black/70' : 'text-[#10b981]/70'}`}>TODAY</span>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        
+                        {/* Meal Category Tab Bar (The "Line") */}
+                        <div className="px-6 py-2 border-b border-white/5 bg-black/20 flex items-center gap-1">
+                            {['breakfast', 'lunch', 'snacks', 'dinner'].map((type) => {
+                                const isActive = selectedMealType === type;
+                                return (
+                                    <button
+                                        key={type}
+                                        onClick={() => setSelectedMealType(type)}
+                                        className={`flex-1 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all rounded-lg border ${
+                                            isActive 
+                                                ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' 
+                                                : 'bg-transparent text-slate-500 border-transparent hover:text-slate-300'
+                                        }`}
+                                    >
+                                        {type}
+                                    </button>
+                                );
+                            })}
                         </div>
 
                         {/* Change Request Form */}
@@ -758,129 +806,158 @@ function StudentDashboardContent() {
                         )}
 
                         {/* Menu Content */}
-                        <div className="overflow-y-auto max-h-[calc(85vh-80px)] p-6">
+                        <div className="overflow-y-auto flex-1 p-6 scrollbar-hide">
                             {messMenuLoading ? (
                                 <div className="flex items-center justify-center py-12">
                                     <div className="w-6 h-6 border-2 border-[#10b981] border-t-transparent rounded-full animate-spin" />
                                     <span className="ml-3 text-sm text-slate-400">Loading menu...</span>
                                 </div>
-                            ) : messMenuData.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <UtensilsCrossed className="w-8 h-8 text-slate-600 mx-auto mb-3" />
-                                    <p className="text-sm text-slate-400">No menu available yet</p>
-                                    <p className="text-xs text-[#475569] mt-1">The mess admin has not added the menu to the system.</p>
-                                </div>
                             ) : (
-                                <div className="space-y-4">
-                                    {messMenuData.map((item: {day: string; meals: Record<string, { items: string, image_url?: string }>}) => {
+                                <div className="space-y-6">
+                                    {messMenuData.filter(d => d.day === selectedMenuDay).map((item) => {
                                         const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
                                         const isToday = item.day === today;
+                                        const mealData = item.meals[selectedMealType];
+                                        const ratingKey = `${item.day}-${selectedMealType}`;
+                                        const userRating = ratings[ratingKey];
+                                        const isSubmitting = submittingRating === ratingKey;
+
                                         return (
-                                            <div key={item.day} className={`rounded-xl border transition-all ${isToday ? 'bg-[#10b981]/10 border-[#10b981]/30 ring-1 ring-[#10b981]/20' : 'bg-[#1A2133] border-white/5 hover:border-white/10'}`}>
-                                                <div className="p-4">
-                                                    <div className="flex items-center gap-2 mb-3">
-                                                        <h3 className={`font-bold text-sm tracking-wide uppercase ${isToday ? 'text-[#10b981]' : 'text-white'}`}>{item.day}</h3>
-                                                        {isToday && <Badge className="bg-[#10b981] text-black text-[9px] font-bold px-2 py-0.5 rounded-full">TODAY</Badge>}
+                                            <div key={item.day} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+
+
+                                                {/* Items List View */}
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center justify-between px-1">
+                                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 flex items-center gap-2">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-cyan-500" /> Included Items
+                                                        </h4>
+                                                        {!mealData && <Badge variant="outline" className="text-[8px] text-slate-600 border-white/5 uppercase">Pending Entry</Badge>}
                                                     </div>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                                        {['breakfast', 'lunch', 'snacks', 'dinner'].map((mealType) => {
-                                                            const mealData = item.meals[mealType];
-                                                            if (!mealData) return null;
-                                                            const ratingKey = `${item.day}-${mealType}`;
-                                                            const userRating = ratings[ratingKey];
-                                                            const isSubmitting = submittingRating === ratingKey;
 
-                                                            return (
-                                                                <div key={mealType} className="bg-black/40 rounded-xl overflow-hidden flex flex-col border border-white/5">
-                                                                    {mealData.image_url && (
-                                                                        <div className="aspect-video w-full overflow-hidden border-b border-white/5 bg-black/50">
-                                                                            <img src={mealData.image_url} alt={mealType} className="w-full h-full object-cover transition-transform hover:scale-105 duration-500" />
-                                                                        </div>
-                                                                    )}
-                                                                    <div className="p-3 flex flex-col flex-1 justify-between min-h-[100px]">
-                                                                        <div>
-                                                                            <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-[0.2em] mb-2">{mealType}</p>
-                                                                            <p className="text-xs text-[#E2E8F0] leading-relaxed font-medium">{mealData.items}</p>
-                                                                        </div>
-                                                                        
-                                                                        {isToday && (
-                                                                            <div className="mt-4 pt-4 border-t border-white/5">
-                                                                                {userRating ? (
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <RatingStars rating={userRating} setRating={() => {}} disabled />
-                                                                                        <span className="text-[9px] text-[#10b981] font-bold uppercase tracking-widest">Saved</span>
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <div className="flex flex-col gap-3">
-                                                                                        <div className="flex items-center justify-between">
-                                                                                            <span className="text-[8px] text-[#475569] font-bold uppercase tracking-widest flex items-center gap-1.5">
-                                                                                                <Star className="w-2.5 h-2.5" /> {pendingRatings[ratingKey] ? 'Review Meal' : 'Rate this meal'}
-                                                                                            </span>
-                                                                                            {isSubmitting && <Loader2 className="w-3 h-3 text-[#f59e0b] animate-spin" />}
-                                                                                        </div>
-                                                                                        
-                                                                                        <div className="space-y-3">
-                                                                                            <RatingStars 
-                                                                                                rating={pendingRatings[ratingKey]?.rating || 0} 
-                                                                                                setRating={(r) => setPendingRatings(prev => ({ 
-                                                                                                    ...prev, 
-                                                                                                    [ratingKey]: { rating: r, remark: prev[ratingKey]?.remark || '' } 
-                                                                                                }))} 
-                                                                                                disabled={!!submittingRating}
-                                                                                            />
-
-                                                                                            <AnimatePresence>
-                                                                                                {pendingRatings[ratingKey] && (
-                                                                                                    <motion.div
-                                                                                                        initial={{ height: 0, opacity: 0 }}
-                                                                                                        animate={{ height: 'auto', opacity: 1 }}
-                                                                                                        exit={{ height: 0, opacity: 0 }}
-                                                                                                        className="space-y-2 overflow-hidden"
-                                                                                                    >
-                                                                                                        <textarea
-                                                                                                            value={pendingRatings[ratingKey].remark}
-                                                                                                            onChange={(e) => setPendingRatings(prev => ({
-                                                                                                                ...prev,
-                                                                                                                [ratingKey]: { ...prev[ratingKey], remark: e.target.value }
-                                                                                                            }))}
-                                                                                                            placeholder="Remark (optional)..."
-                                                                                                            className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-[10px] text-white placeholder:text-[#475569] focus:outline-none focus:border-cyan-500/50 transition-all resize-none"
-                                                                                                            rows={2}
-                                                                                                        />
-                                                                                                        <button
-                                                                                                            onClick={() => handleRateMeal(item.day, mealType)}
-                                                                                                            disabled={!!submittingRating}
-                                                                                                            className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black text-[9px] font-bold uppercase tracking-widest py-1.5 rounded-lg transition-all"
-                                                                                                        >
-                                                                                                            Submit Review
-                                                                                                        </button>
-                                                                                                    </motion.div>
-                                                                                                )}
-                                                                                            </AnimatePresence>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                )}
+                                                    <div className="grid grid-cols-1 gap-2.5">
+                                                        {mealData?.items_json && Array.isArray(mealData.items_json) && mealData.items_json.length > 0 ? (
+                                                            mealData.items_json.map((sub: any, idx: number) => (
+                                                                <div key={idx} className="flex items-center justify-between bg-white/[0.03] hover:bg-white/[0.06] p-4 rounded-2xl border border-white/5 transition-all group">
+                                                                    <div className="flex items-center gap-4">
+                                                                        {sub.image_url ? (
+                                                                            <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 flex-shrink-0 shadow-xl">
+                                                                                <img src={sub.image_url} alt={sub.name} className="w-full h-full object-cover" />
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center border border-white/5">
+                                                                                <UtensilsCrossed className="w-5 h-5 text-slate-700" />
                                                                             </div>
                                                                         )}
+                                                                        <div>
+                                                                            <span className="text-sm font-bold text-slate-100 uppercase tracking-wide">{sub.name}</span>
+                                                                            <p className="text-[10px] text-slate-600 font-medium uppercase tracking-widest mt-0.5">Chef's Choice</p>
+                                                                        </div>
                                                                     </div>
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-white/10 group-hover:bg-cyan-500 transition-colors" />
                                                                 </div>
-                                                            );
-                                                        })}
+                                                            ))
+                                                        ) : (
+                                                            <div className="bg-white/[0.03] p-6 rounded-2xl border border-white/5 text-center">
+                                                                <p className={`text-xs leading-relaxed font-medium ${!mealData ? 'text-[#475569] italic' : 'text-[#E2E8F0]'}`}>
+                                                                    {mealData?.items || 'No menu entries found for this meal category.'}
+                                                                </p>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
+
+                                                {/* Rating Section - Focused */}
+                                                {isToday && mealData && (
+                                                    <div className="mt-8 p-6 bg-cyan-500/[0.02] rounded-[2rem] border border-cyan-500/10 backdrop-blur-sm shadow-2xl">
+                                                        {userRating ? (
+                                                            <div className="flex flex-col items-center gap-3 py-2 text-center">
+                                                                <div className="w-12 h-12 rounded-full bg-cyan-500/10 flex items-center justify-center mb-1">
+                                                                    <CheckCircle2 className="w-6 h-6 text-cyan-500" />
+                                                                </div>
+                                                                <h5 className="text-xs font-bold text-white uppercase tracking-widest">Review Collected</h5>
+                                                                <div className="flex items-center gap-3">
+                                                                    <RatingStars rating={userRating} setRating={() => {}} disabled />
+                                                                    <span className="text-[10px] text-cyan-500/60 font-mono">#{ratingKey.replace(' ', '_')}</span>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-6">
+                                                                <div className="flex items-center justify-between">
+                                                                    <div>
+                                                                        <h4 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                                                            How was the <span className="text-cyan-500">{selectedMealType}</span>?
+                                                                        </h4>
+                                                                        <p className="text-[9px] text-slate-500 font-medium uppercase tracking-widest mt-1">Your feedback helps improve meal quality.</p>
+                                                                    </div>
+                                                                    {isSubmitting && <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />}
+                                                                </div>
+
+                                                                <div className="space-y-4">
+                                                                    <div className="flex justify-center py-2">
+                                                                        <RatingStars 
+                                                                            rating={pendingRatings[ratingKey]?.rating || 0} 
+                                                                            setRating={(r) => setPendingRatings(prev => ({ 
+                                                                                ...prev, 
+                                                                                [ratingKey]: { rating: r, remark: prev[ratingKey]?.remark || '' } 
+                                                                            }))} 
+                                                                            disabled={!!submittingRating}
+                                                                        />
+                                                                    </div>
+
+                                                                    <AnimatePresence>
+                                                                        {pendingRatings[ratingKey] && (
+                                                                            <motion.div
+                                                                                initial={{ height: 0, opacity: 0 }}
+                                                                                animate={{ height: 'auto', opacity: 1 }}
+                                                                                exit={{ height: 0, opacity: 0 }}
+                                                                                className="space-y-3 overflow-hidden"
+                                                                            >
+                                                                                <textarea
+                                                                                    value={pendingRatings[ratingKey].remark}
+                                                                                    onChange={(e) => setPendingRatings(prev => ({
+                                                                                        ...prev,
+                                                                                        [ratingKey]: { ...prev[ratingKey], remark: e.target.value }
+                                                                                    }))}
+                                                                                    placeholder="Provide details about taste or quality (optional)..."
+                                                                                    className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-xs text-white placeholder:text-[#475569] focus:outline-none focus:border-cyan-500/30 transition-all resize-none shadow-inner"
+                                                                                    rows={3}
+                                                                                />
+                                                                                <button
+                                                                                    onClick={() => handleRateMeal(item.day, selectedMealType)}
+                                                                                    disabled={!!submittingRating}
+                                                                                    className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black text-[10px] font-black uppercase tracking-[0.2em] py-4 rounded-2xl transition-all shadow-xl shadow-cyan-500/10"
+                                                                                >
+                                                                                    Confirm Review
+                                                                                </button>
+                                                                            </motion.div>
+                                                                        )}
+                                                                    </AnimatePresence>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}
+                                    
+                                    {/* If the current day has no data, show message */}
+                                    {messMenuData.filter(d => d.day === selectedMenuDay).length === 0 && (
+                                        <div className="text-center py-12">
+                                            <UtensilsCrossed className="w-8 h-8 text-slate-600 mx-auto mb-3" />
+                                            <p className="text-sm text-slate-400">No menu available for {selectedMenuDay}</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
-
-                            <p className="text-center text-[10px] text-[#475569] font-mono mt-6 tracking-widest uppercase">
-                                Menu subject to change without prior notice
-                            </p>
                         </div>
                     </motion.div>
                 </div>
             )}
+            <p className="text-center text-[10px] text-[#475569] font-mono mt-6 tracking-widest uppercase">
+                Menu subject to change without prior notice
+            </p>
         </div>
     );
 }

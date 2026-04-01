@@ -46,6 +46,8 @@ export interface Ticket {
     isEscalated?: boolean;
     scheduledDate?: string;
     timeSlot?: string;
+    phone?: string;
+    gender?: string;
 }
 
 interface TicketContextType {

@@ -169,6 +169,8 @@ export interface Ticket {
     roomNumber?: string;
     votedBy: string[];
     dueAt?: string;
+    phone?: string;
+    gender?: string;
 }
 
 // Default Data (Empty)
